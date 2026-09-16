@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Censura 18 — Streetwear desde 1989</title>
+<meta name="description" content="Loja online da Censura 18. Há 36 anos sendo referência no streetwear da Baixada Fluminense. Camisetas, moletons, bermudas e acessórios. 6 lojas físicas no Rio de Janeiro.">
+<meta name="theme-color" content="#000000">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Censura 18 — Streetwear desde 1989">
+<meta property="og:description" content="Há 36 anos sendo referência na BXD. Compre online e retire em uma das 6 lojas físicas.">
+<meta property="og:image" content="assets/img/hero.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='23' font-family='Impact,sans-serif' font-size='19' fill='%23fff' text-anchor='middle'%3EC18%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Ir para o conteúdo</a>
+
+<!-- ============================ BARRA DE ANÚNCIOS ============================ -->
+<div class="announce" aria-hidden="true">
+  <div class="announce__track">
+    <span class="announce__item">Frete grátis acima de R$ 299</span>
+    <span class="announce__item">6 lojas físicas na Baixada Fluminense</span>
+    <span class="announce__item">Parcele em até 3x sem juros</span>
+    <span class="announce__item">Troca garantida em até 30 dias</span>
+    <span class="announce__item">Since 1989</span>
+    <span class="announce__item">Frete grátis acima de R$ 299</span>
+    <span class="announce__item">6 lojas físicas na Baixada Fluminense</span>
+    <span class="announce__item">Parcele em até 3x sem juros</span>
+    <span class="announce__item">Troca garantida em até 30 dias</span>
+    <span class="announce__item">Since 1989</span>
+  </div>
+</div>
+
+<!-- ================================ CABEÇALHO ================================ -->
+<header class="header">
+  <div class="header__inner">
+
+    <a class="brand" href="index.html" aria-label="Censura 18 — página inicial">
+      <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img"
+           onerror="this.classList.add('is-missing')">
+      <span class="brand__fallback" aria-hidden="true">
+        <span class="bf-word">CENSURA</span><span class="bf-num">18</span>
+      </span>
+    </a>
+
+    <nav class="nav" aria-label="Navegação principal">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="produtos.html">Produtos</a>
+      <a class="nav__link" href="sobre.html">A marca</a>
+      <a class="nav__link" href="lojas.html">Lojas</a>
+      <a class="nav__link" href="contato.html">Contato</a>
+    </nav>
+
+    <div class="header__actions">
+      <form class="search" id="search-form" role="search">
+        <label for="search-input" class="visually-hidden">Buscar produtos</label>
+        <input class="search__input" id="search-input" type="search"
+               placeholder="Buscar…" autocomplete="off">
+      </form>
+
+      <button class="icon-btn" data-toggle-search aria-label="Buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/>
+        </svg>
+      </button>
+
+      <button class="icon-btn" data-open-cart aria-label="Abrir carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span class="icon-btn__count" data-cart-count>0</span>
+      </button>
+
+      <button class="icon-btn burger" data-open-nav aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 6h18M3 12h18M3 18h18"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<!-- =============================== MENU MOBILE =============================== -->
+<div class="mobile-nav" id="mobile-nav" aria-hidden="true">
+  <div class="mobile-nav__top">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img"
+           onerror="this.classList.add('is-missing')">
+      <span class="brand__fallback">
+        <span class="bf-word">CENSURA</span><span class="bf-num">18</span>
+      </span>
+    </a>
+    <button class="icon-btn" data-close-nav aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="mobile-nav__list" aria-label="Navegação mobile">
+    <a class="mobile-nav__link" href="index.html">Home</a>
+    <a class="mobile-nav__link" href="produtos.html">Produtos</a>
+    <a class="mobile-nav__link" href="sobre.html">A marca</a>
+    <a class="mobile-nav__link" href="lojas.html">Lojas</a>
+    <a class="mobile-nav__link" href="contato.html">Contato</a>
+  </nav>
+
+  <div class="mobile-nav__footer">
+    <strong style="color:#000">Central de atendimento</strong>
+    <a href="https://wa.me/5521998653133" target="_blank" rel="noopener">(21) 99865-3133</a>
+    <span>marketing@c18.com.br</span>
+  </div>
+</div>
+
+<main id="main">
+
+  <!-- ================================= HERO ================================= -->
+  <section class="hero">
+    <div class="hero__media">
+      <img src="assets/img/hero.jpg" alt="" onerror="this.style.display='none';this.parentElement.classList.add('is-missing')">
+    </div>
+
+    <div class="container">
+      <div class="hero__inner">
+        <div class="hero__logo">
+          <span class="brand brand--stacked" style="color:#fff;--bf-fg:#000">
+            <img src="assets/img/logos/logo-quadro.png" alt="Censura 18"
+                 class="brand__img brand__img--hero"
+                 onerror="this.classList.add('is-missing')">
+            <span class="brand__fallback">
+              <span class="bf-word">CENSURA</span><span class="bf-num">18</span>
+            </span>
+          </span>
+        </div>
+
+        <h1 class="hero__title">
+          <span>Streetwear</span>
+          <span class="outline">desde 1989</span>
+        </h1>
+
+        <p class="hero__text">
+          Há 36 anos vestindo a Baixada Fluminense. Pegada de rua, drops
+          semanais e qualidade de quem sabe que a peça precisa aguentar o
+          corre. Compre aqui e retire em uma das nossas 6 lojas físicas.
+        </p>
+
+        <div class="hero__actions">
+          <a class="btn btn--light btn--lg" href="produtos.html">Ver o catálogo</a>
+          <a class="btn btn--outline-light btn--lg" href="lojas.html">Achar uma loja</a>
+        </div>
+
+        <div class="hero__meta">
+          <div><strong>36</strong>anos de rua</div>
+          <div><strong>6</strong>lojas físicas</div>
+          <div><strong>25k</strong>seguidores</div>
+          <div><strong>1989</strong>a origem</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ FAIXA DE BENEFÍCIOS ============================ -->
+  <section class="perks">
+    <div class="container">
+      <div class="perks__grid">
+        <div class="perk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M1 3h13v13H1zM14 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/>
+          </svg>
+          <div><h4>Frete grátis</h4><p>Acima de R$ 299</p></div>
+        </div>
+        <div class="perk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 12a9 9 0 1 0 9-9v9z"/><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0-9-9z"/>
+          </svg>
+          <div><h4>3x sem juros</h4><p>Em qualquer peça</p></div>
+        </div>
+        <div class="perk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 12V5H4v14h8"/><path d="m14 16 3 3 5-5"/>
+          </svg>
+          <div><h4>Troca em 30 dias</h4><p>Sem burocracia</p></div>
+        </div>
+        <div class="perk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>
+          </svg>
+          <div><h4>Retire na loja</h4><p>6 endereços no Rio</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CATEGORIAS ============================== -->
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <div>
+          <span class="eyebrow">Navegue por</span>
+          <h2 class="section__title">Categorias</h2>
+        </div>
+        <a class="link-arrow" href="produtos.html">Ver tudo →</a>
+      </div>
+
+      <div class="cats">
+        <a class="cat" href="produtos.html?cat=camisetas">
+          <img src="assets/img/produtos/camiseta-oversized.jpg" alt="Camisetas" loading="lazy">
+          <span class="cat__label"><h3>Camisetas</h3><span>A base do look</span></span>
+        </a>
+        <a class="cat" href="produtos.html?cat=moletons">
+          <img src="assets/img/produtos/moletom-hoodie.jpg" alt="Moletons" loading="lazy">
+          <span class="cat__label"><h3>Moletons</h3><span>Pra esfriar a noite</span></span>
+        </a>
+        <a class="cat" href="produtos.html?cat=bermudas">
+          <img src="assets/img/produtos/bermuda-cargo.jpg" alt="Bermudas" loading="lazy">
+          <span class="cat__label"><h3>Bermudas</h3><span>Verão o ano inteiro</span></span>
+        </a>
+        <a class="cat" href="produtos.html?cat=acessorios">
+          <img src="assets/img/produtos/bone-estruturado.jpg" alt="Acessórios" loading="lazy">
+          <span class="cat__label"><h3>Acessórios</h3><span>O detalhe que fecha</span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DESTAQUES ============================== -->
+  <section class="section section--gray">
+    <div class="container">
+      <div class="section__head">
+        <div>
+          <span class="eyebrow">Escolha da semana</span>
+          <h2 class="section__title">Em destaque</h2>
+          <p class="section__sub">As peças que mais saíram dos nossos balcões
+          nos últimos dias. Se acabou aqui, ainda pode ter na loja física.</p>
+        </div>
+        <a class="link-arrow" href="produtos.html">Catálogo completo →</a>
+      </div>
+
+      <div class="products" id="featured-grid">
+        <!-- preenchido por assets/js/app.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ A MARCA (split) ============================ -->
+  <section class="section">
+    <div class="container">
+      <div class="split">
+        <div class="split__media">
+          <img src="assets/img/sobre.jpg" alt="Interior de uma loja da Censura 18" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('is-missing')">
+        </div>
+        <div>
+          <span class="eyebrow">Desde 1989</span>
+          <h2 class="section__title">Nada aqui é modinha. É referência.</h2>
+          <p style="color:var(--text-muted);margin-top:16px">
+            A Censura 18 começou num balcão pequeno na Baixada Fluminense e
+            virou ponto de encontro de quem entende de rua. Três décadas
+            depois, seguimos do mesmo jeito: peça boa, preço justo e atenção
+            de verdade pra quem entra na loja.
+          </p>
+          <p style="color:var(--text-muted);margin-top:12px">
+            Trabalhamos com as melhores marcas de streetwear, surfwear e
+            beachwear do país — e com coleção própria, desenhada e produzida
+            aqui.
+          </p>
+          <a class="btn btn--ghost" href="sobre.html" style="margin-top:26px">
+            Conhecer a história
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== NEWSLETTER ============================== -->
+  <section class="section section--dark">
+    <div class="container">
+      <div class="news">
+        <div>
+          <span class="eyebrow">Fique por dentro</span>
+          <h2>Drop novo toda semana</h2>
+          <p>Cadastre seu e-mail e receba os lançamentos antes de todo mundo,
+          com cupom exclusivo na primeira compra.</p>
+        </div>
+        <div>
+          <form class="news__form" id="news-form" novalidate>
+            <label for="news-email" class="visually-hidden">Seu e-mail</label>
+            <input type="email" id="news-email" placeholder="seu@email.com" required>
+            <button class="btn btn--light" type="submit">Quero receber</button>
+          </form>
+          <p class="news__msg" id="news-msg"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================================ RODAPÉ ================================ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+
+      <div class="footer__about">
+        <span class="brand" style="color:#fff;--bf-fg:#000">
+          <img src="assets/img/logos/logo_c18.png" alt="Censura 18"
+               class="brand__img brand__img--footer"
+               onerror="this.classList.add('is-missing')">
+          <span class="brand__fallback">
+            <span class="bf-word">CENSURA</span><span class="bf-num">18</span>
+          </span>
+        </span>
+        <p>Há 36 anos sendo referência no streetwear da Baixada Fluminense.
+        Moda urbana, surfwear e beachwear com atitude e qualidade de verdade.</p>
+        <div class="socials">
+          <a class="social" href="https://www.instagram.com/censura18/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+              <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+          <a class="social" href="https://www.facebook.com/censura18/" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 9h3V6h-3a4 4 0 0 0-4 4v2H8v3h2v7h3v-7h2.5l.5-3H13v-2a1 1 0 0 1 1-1Z"/>
+            </svg>
+          </a>
+          <a class="social" href="https://wa.me/5521998653133" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.25-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <h4>Loja</h4>
+        <ul>
+          <li><a href="produtos.html">Todos os produtos</a></li>
+          <li><a href="produtos.html?cat=camisetas">Camisetas</a></li>
+          <li><a href="produtos.html?cat=moletons">Moletons</a></li>
+          <li><a href="produtos.html?cat=bermudas">Bermudas</a></li>
+          <li><a href="produtos.html?cat=acessorios">Acessórios</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Institucional</h4>
+        <ul>
+          <li><a href="sobre.html">A marca</a></li>
+          <li><a href="lojas.html">Nossas lojas</a></li>
+          <li><a href="contato.html">Contato</a></li>
+          <li><a href="contato.html">Trocas e devoluções</a></li>
+          <li><a href="contato.html">Perguntas frequentes</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Lojas físicas</h4>
+        <ul>
+          <li>Nova Iguaçu — Calçadão</li>
+          <li>Nova Iguaçu — Beco do Ponto Frio</li>
+          <li>Nova Iguaçu — Top Shopping</li>
+          <li>Duque de Caxias — Centro</li>
+          <li>Nilópolis — Mirandela</li>
+          <li>Queimados — Centro</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer__bottom">
+      <span>© <span data-year>2026</span> Censura 18 — Todos os direitos reservados.</span>
+      <span class="payments">
+        <span class="pay-pill">Pix</span>
+        <span class="pay-pill">Visa</span>
+        <span class="pay-pill">Master</span>
+        <span class="pay-pill">Elo</span>
+        <span class="pay-pill">3x sem juros</span>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================= GAVETA DO CARRINHO ============================= -->
+<div class="overlay" id="overlay"></div>
+
+<aside class="drawer" id="cart-drawer" aria-hidden="true" aria-label="Carrinho de compras">
+  <div class="drawer__head">
+    <h2>Seu carrinho</h2>
+    <button class="icon-btn drawer__close" data-close-cart aria-label="Fechar carrinho">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="drawer__body" id="cart-body"></div>
+  <div class="drawer__foot" id="cart-foot"></div>
+</aside>
+
+<!-- ============================== BOTÕES FLUTUANTES ============================== -->
+<a class="fab-whats" href="https://wa.me/5521998653133?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Censura%2018%20%F0%9F%96%A4"
+   target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.25-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Z"/>
+  </svg>
+</a>
+
+<button class="fab-top" aria-label="Voltar ao topo">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+</button>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

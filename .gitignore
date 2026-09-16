@@ -1,0 +1,12 @@
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Editores
+.vscode/
+.idea/
+
+# Logos e fotos enviadas pelo cliente
+# (descomente se não quiser versionar)
+# assets/img/logos/*.png
