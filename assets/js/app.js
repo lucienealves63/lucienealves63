@@ -299,6 +299,31 @@
     return lines.filter(Boolean).join("\n");
   }
 
+  /* ------------------------------------------------- dados estruturados */
+  /* Injeta JSON-LD no <head> para o Google entender produto, loja e marca. */
+  function injectJSONLD(id, data) {
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement("script");
+      el.type = "application/ld+json";
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify(data);
+  }
+
+  /* ------------------------------------------------------- acordeões */
+  function bindAccordion(btn) {
+    if (btn.dataset.accBound) return;
+    btn.dataset.accBound = "1";
+    const acc = btn.closest(".acc");
+    btn.setAttribute("aria-expanded", String(acc.classList.contains("is-open")));
+    btn.addEventListener("click", () => {
+      const open = acc.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", String(open));
+    });
+  }
+
   /* ------------------------------------------------------- componentes */
   function cardHTML(p) {
     const off = offPercent(p.price, p.priceFrom);
@@ -311,6 +336,14 @@
           <img class="card__img" src="${escapeHTML(p.image)}"
                alt="${escapeHTML(p.name)}" loading="lazy"
                onerror="this.onerror=null;this.src='${PLACEHOLDER(p.name)}'">
+          ${
+            p.images && p.images[1]
+              ? `<img class="card__img card__img--alt" src="${escapeHTML(
+                  p.images[1]
+                )}" alt="" aria-hidden="true" loading="lazy"
+                     onerror="this.remove()">`
+              : ""
+          }
         </a>
         ${
           p.badge || off
@@ -426,6 +459,21 @@
           list.length === 1 ? "peça" : "peças"
         }`;
       }
+
+      const searchTitle = $("#search-title");
+      if (searchTitle) {
+        if (state.q) {
+          searchTitle.hidden = false;
+          searchTitle.innerHTML = `${list.length} ${
+            list.length === 1 ? "resultado" : "resultados"
+          } para <strong>“${escapeHTML(state.q)}”</strong>`;
+        } else {
+          searchTitle.hidden = true;
+        }
+      }
+
+      const h1 = $("#catalog-title");
+      if (h1 && state.q) h1.textContent = "Busca";
     }
 
     chips?.addEventListener("click", (e) => {
@@ -457,21 +505,23 @@
     apply();
   }
 
-  /* Adição rápida: pega o primeiro tamanho disponível e a primeira cor */
+  /* Adição rápida: usa o primeiro tamanho disponível e a primeira cor.
+     O aviso diz exatamente o que entrou, pra ninguém se surpreender depois. */
   function quickAdd(id) {
     const p = getProduct(id);
     if (!p) return;
     const size = p.sizes.find((s) => !p.soldOut.includes(s)) || p.sizes[0];
+    const color = p.colors[0].name;
     Cart.add({
       id: p.id,
       name: p.name,
       price: p.price,
       image: p.image,
       size: size,
-      color: p.colors[0].name,
+      color: color,
       qty: 1,
     });
-    Toast.show(`${p.name} adicionada ao carrinho`);
+    Toast.show(`${p.name} · tam. ${size}, ${color} — no carrinho`);
   }
 
   /* ------------------------------------------------------ página produto */
@@ -573,10 +623,10 @@
         <div class="opt">
           <div class="opt__head">
             <span>Tamanho</span>
-            <a href="#" class="val" style="text-decoration:underline"
-               onclick="alert('Tabela: P veste 36/38 · M veste 40 · G veste 42 · GG veste 44 · XG veste 46');return false;">
+            <button type="button" class="val guide-toggle" id="guide-toggle"
+                    aria-expanded="false" aria-controls="size-guide">
               Guia de medidas
-            </a>
+            </button>
           </div>
           <div class="opt__row" id="size-row">
             ${p.sizes
@@ -588,6 +638,24 @@
                 )}</button>`
               )
               .join("")}
+          </div>
+
+          <div class="guide" id="size-guide" hidden>
+            <table>
+              <thead>
+                <tr><th>Tam.</th><th>Tórax</th><th>Comprimento</th><th>Manga</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>P</td><td>52 cm</td><td>70 cm</td><td>20 cm</td></tr>
+                <tr><td>M</td><td>55 cm</td><td>72 cm</td><td>21 cm</td></tr>
+                <tr><td>G</td><td>58 cm</td><td>74 cm</td><td>22 cm</td></tr>
+                <tr><td>GG</td><td>61 cm</td><td>76 cm</td><td>23 cm</td></tr>
+                <tr><td>XG</td><td>64 cm</td><td>78 cm</td><td>24 cm</td></tr>
+              </tbody>
+            </table>
+            <p>Medidas aproximadas, tiradas com a peça reta — podem variar
+            até 2 cm por lote. Em dúvida entre dois tamanhos, escolha o
+            maior: o streetwear é pra ficar solto.</p>
           </div>
         </div>
 
@@ -650,6 +718,25 @@
         </div>
       </div>`;
 
+    injectJSONLD("ld-product", {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: p.name,
+      sku: p.id,
+      description: p.description,
+      image: [new URL(p.image, location.href).href],
+      brand: { "@type": "Brand", name: "Censura 18" },
+      category: categoryLabel(p.category),
+      offers: {
+        "@type": "Offer",
+        price: p.price.toFixed(2),
+        priceCurrency: "BRL",
+        availability: p.soldOut.length === p.sizes.length
+          ? "https://schema.org/OutOfStock"
+          : "https://schema.org/InStock",
+      },
+    });
+
     /* estado da página */
     let size = p.sizes.find((s) => !p.soldOut.includes(s)) || null;
     let color = p.colors[0].name;
@@ -678,11 +765,17 @@
       });
     });
 
-    $$(".acc__btn").forEach((btn) => {
-      btn.addEventListener("click", () =>
-        btn.closest(".acc").classList.toggle("is-open")
-      );
+    /* guia de medidas */
+    const guideBtn = $("#guide-toggle");
+    const guide = $("#size-guide");
+    guideBtn?.addEventListener("click", () => {
+      const open = guideBtn.getAttribute("aria-expanded") === "true";
+      guideBtn.setAttribute("aria-expanded", String(!open));
+      if (guide) guide.hidden = open;
     });
+
+    /* acordeões (detalhes, composição e entrega) */
+    $$(".acc__btn", root).forEach(bindAccordion);
 
     $$(".thumb").forEach((t) => {
       t.addEventListener("click", () => {
@@ -869,6 +962,9 @@
       if (href === here) a.classList.add("is-active");
     });
 
+    /* acordeões estáticos (FAQ, etc.) */
+    $$(".acc__btn").forEach(bindAccordion);
+
     /* abrir/fechar carrinho */
     $$("[data-open-cart]").forEach((b) =>
       b.addEventListener("click", (e) => {
@@ -937,6 +1033,24 @@
 
   /* ------------------------------------------------------------ boot */
   document.addEventListener("DOMContentLoaded", () => {
+    /* marca + lojas (vale para qualquer página) */
+    injectJSONLD("ld-org", {
+      "@context": "https://schema.org",
+      "@type": "Store",
+      name: "Censura 18",
+      description:
+        "Loja de streetwear, surfwear e beachwear na Baixada Fluminense desde 1989.",
+      email: BRAND.email,
+      telephone: "+55 21 99865-3133",
+      sameAs: [BRAND.instagram, BRAND.facebook, BRAND.threads],
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Nova Iguaçu",
+        addressRegion: "RJ",
+        addressCountry: "BR",
+      },
+    });
+
     Cart.load();
     Cart.render();
     initUI();

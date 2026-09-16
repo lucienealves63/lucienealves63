@@ -89,6 +89,10 @@ const PRODUCTS = [
     priceFrom: 159.9,
     badge: "Lançamento",
     image: "assets/img/produtos/camiseta-oversized.jpg",
+    images: [
+      "assets/img/produtos/camiseta-oversized.jpg",
+      "assets/img/produtos/camiseta-oversized-2.jpg",
+    ],
     colors: [
       { name: "Preto", hex: "#0b0b0b" },
       { name: "Branco", hex: "#f5f5f5" },
@@ -114,6 +118,10 @@ const PRODUCTS = [
     priceFrom: null,
     badge: "Mais vendido",
     image: "assets/img/produtos/moletom-hoodie.jpg",
+    images: [
+      "assets/img/produtos/moletom-hoodie.jpg",
+      "assets/img/produtos/moletom-hoodie-2.jpg",
+    ],
     colors: [
       { name: "Preto", hex: "#0b0b0b" },
       { name: "Cinza Chumbo", hex: "#5a5a5a" },
@@ -161,6 +169,10 @@ const PRODUCTS = [
     priceFrom: null,
     badge: null,
     image: "assets/img/produtos/bermuda-cargo.jpg",
+    images: [
+      "assets/img/produtos/bermuda-cargo.jpg",
+      "assets/img/produtos/bermuda-cargo-2.jpg",
+    ],
     colors: [
       { name: "Preto", hex: "#0b0b0b" },
       { name: "Cinza", hex: "#8a8a8a" },
@@ -209,6 +221,10 @@ const PRODUCTS = [
     priceFrom: null,
     badge: null,
     image: "assets/img/produtos/bone-estruturado.jpg",
+    images: [
+      "assets/img/produtos/bone-estruturado.jpg",
+      "assets/img/produtos/bone-estruturado-2.jpg",
+    ],
     colors: [
       { name: "Preto", hex: "#0b0b0b" },
       { name: "Cinza", hex: "#8a8a8a" },

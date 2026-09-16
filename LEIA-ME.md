@@ -160,6 +160,28 @@ função `buildWhatsMessage()` em `app.js`.
 
 ---
 
+## 🖼️ Fotos
+
+Cada peça tem uma foto principal (`image`). Quatro delas também têm uma foto
+de detalhe, usada na galeria da página do produto e no efeito de *hover* do
+card:
+
+```js
+image:  "assets/img/produtos/camiseta-oversized.jpg",
+images: [
+  "assets/img/produtos/camiseta-oversized.jpg",
+  "assets/img/produtos/camiseta-oversized-2.jpg",
+],
+```
+
+Quando existe mais de uma foto, a tira de miniaturas aparece sozinha na
+página do produto. Com uma só, ela nem é renderizada.
+
+Para trocar por fotos reais: coloque o arquivo em `assets/img/produtos/`
+com o mesmo nome, ou aponte os campos para os novos arquivos.
+
+---
+
 ## 🎨 Paleta e identidade
 
 Todas as cores estão em variáveis CSS no topo de `assets/css/style.css`:
@@ -195,12 +217,20 @@ Fontes: **Anton** (títulos) e **Inter** (texto), ambas pelo Google Fonts.
 - [x] Newsletter e rodapé completo
 - [x] Botão flutuante de WhatsApp e voltar ao topo
 - [x] Página 404 personalizada
+- [x] Galeria com miniaturas nas peças com mais de uma foto
+- [x] Foto de detalhe no hover do card
+- [x] Guia de medidas em tabela (sem `alert()`)
+- [x] Busca com título de "resultados para …"
+- [x] Dados estruturados JSON-LD (marca + produto) para SEO
 - [x] 100% responsivo (mobile, tablet, desktop)
-- [x] Acessibilidade: skip-link, foco visível, `aria-label`, `prefers-reduced-motion`
+- [x] Acessibilidade: skip-link, foco visível, `aria-label`,
+      `aria-expanded` nos acordeões e `prefers-reduced-motion`
 
 ## 🔜 Próximos passos sugeridos
 
 - [ ] Adicionar as logos oficiais em `assets/img/logos/`
+      (`logo_c18.png`, `logo-quadro.png`)
 - [ ] Substituir as fotos de exemplo pelas fotos reais do catálogo
+- [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages
 - [ ] Integrar um gateway de pagamento, se fizer sentido
