@@ -47,9 +47,30 @@ python3 -m http.server 8000
 
 ### Publicar no GitHub Pages
 
-1. `git push` nesta branch
-2. Em **Settings → Pages**, escolha a branch e a pasta `/ (root)`
-3. O site sai em `https://lucienealves63.github.io/lucienealves63/`
+O site é 100% estático, então o GitHub Pages serve ele sem nenhum build.
+
+**Primeira vez (só uma vez mesmo):**
+
+1. No repositório, vá em **Settings** → **Pages**
+2. Em *Source*, escolha **Deploy from a branch**
+3. Em *Branch*, escolha **`main`** e a pasta **`/ (root)`**
+4. Clique em **Save**
+
+Em 1 ou 2 minutos o site sai em:
+
+**→ https://lucienealves63.github.io/lucienealves63/**
+
+Depois disso, cada `git push` na `main` atualiza o site sozinho, em poucos
+segundos.
+
+> O arquivo `.nojekyll` na raiz diz ao GitHub para não processar o site pelo
+> Jekyll. Ele publica os arquivos exatamente como estão — mais rápido e sem
+> surpresa.
+
+**Quer usar um domínio próprio** (tipo `censura18.com.br`)? Em
+**Settings → Pages → Custom domain** é só digitar o domínio e criar um
+registro `CNAME` no seu provedor de DNS apontando para
+`lucienealves63.github.io`.
 
 ---
 
