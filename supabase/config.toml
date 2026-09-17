@@ -1,0 +1,7 @@
+project_id = "censura18-operacoes"
+
+[functions.integration-worker]
+verify_jwt = false
+
+[functions.clearsale-webhook]
+verify_jwt = false

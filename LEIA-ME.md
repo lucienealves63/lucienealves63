@@ -74,29 +74,19 @@ registro `CNAME` no seu provedor de DNS apontando para
 
 ---
 
-## 🖼️ Sobre as suas logos
+## 🖼️ Logos oficiais
 
-Os arquivos que você enviou ainda não chegaram ao repositório, então o site
-está preparado para recebê-los **sem precisar mexer em código**. Basta copiar
-para `assets/img/logos/` com estes nomes:
+As marcas fornecidas em PDF foram incorporadas ao site como PNGs de alta
+resolução com fundo transparente:
 
-| Arquivo esperado              | Onde aparece                             |
-| ----------------------------- | ---------------------------------------- |
-| `logo_c18.png`                | Cabeçalho, menu mobile e rodapé          |
-| `logo-quadro.png`             | Hero da home (versão grande, invertida)  |
-| `Novo-Logo-C18-preto-2.png`   | Reserva — use trocando o `src` no HTML   |
+| Arquivo                       | Origem                  | Onde aparece                            |
+| ----------------------------- | ----------------------- | --------------------------------------- |
+| `logo_c18.png`                | `Logo separado.pdf`     | Cabeçalho, menu mobile e rodapé         |
+| `logo-quadro.png`             | `logo c18 preta.pdf`    | Hero da home e favicon                  |
 
-**Enquanto o arquivo não existe**, o site mostra automaticamente um wordmark
-tipográfico `CENSURA 18` no lugar. Assim que você soltar o PNG na pasta, ele
-passa a ser usado — sem editar nada.
-
-Se preferir usar nomes diferentes, troque o `src` das tags
-`<img ... class="brand__img">` nos arquivos HTML.
-
-> Dica: as logos do cabeçalho e do rodapé ficam melhores em PNG com fundo
-> transparente. A do rodapé e do hero recebem `filter: invert(1)` — se a sua
-> logo já for branca, remova essa classe (`brand__img--footer`,
-> `brand__img--hero`).
+O rodapé e o hero aplicam `filter: invert(1)` para exibir as versões brancas
+sobre fundos escuros. O fallback tipográfico permanece no HTML apenas para o
+caso de falha no carregamento das imagens.
 
 ---
 
@@ -157,8 +147,12 @@ hoje pelo Instagram:
 
 1. Cliente escolhe tamanho, cor e quantidade
 2. Carrinho fica salvo no `localStorage` (não se perde ao recarregar)
-3. Na hora de finalizar, ele escolhe a loja num `<select>`
-4. O site monta uma mensagem completa e abre o WhatsApp daquela unidade
+3. No checkout, pode informar o **código do vendedor** e um **cupom de desconto**
+4. Escolhe a loja num `<select>`
+5. O site monta uma mensagem completa e abre o WhatsApp daquela unidade
+
+O cupom informado não altera o preço no navegador: ele segue identificado na
+mensagem para validação segura pela loja antes do pagamento.
 
 Exemplo de mensagem gerada:
 
@@ -171,7 +165,11 @@ Olá! Vim pelo site e quero fechar um pedido 🖤
 
 *Total dos itens:* R$ 259,80
 
-Podem confirmar disponibilidade em estoque e o frete?
+*Código do vendedor:* 042
+*Cupom informado:* PRIMEIRAC18 (validar desconto)
+*Observação:* total sujeito à validação do cupom pela loja.
+
+Podem confirmar disponibilidade em estoque, desconto e frete?
 
 CEP para entrega: ______
 ```
@@ -217,7 +215,11 @@ Todas as cores estão em variáveis CSS no topo de `assets/css/style.css`:
 --white: #ffffff;
 ```
 
-Fontes: **Anton** (títulos) e **Inter** (texto), ambas pelo Google Fonts.
+Fonte: **Jost** em títulos, navegação e textos, pelo Google Fonts. A família
+geométrica foi escolhida por seguir a construção visual dos materiais oficiais
+(próxima da tradição da Futura). Nos PDFs, as letras das marcas estão
+convertidas em curvas; por isso, a fonte original não está incorporada nem pode
+ser extraída diretamente dos arquivos.
 
 ---
 
@@ -249,8 +251,7 @@ Fontes: **Anton** (títulos) e **Inter** (texto), ambas pelo Google Fonts.
 
 ## 🔜 Próximos passos sugeridos
 
-- [ ] Adicionar as logos oficiais em `assets/img/logos/`
-      (`logo_c18.png`, `logo-quadro.png`)
+- [x] Incorporar as logos oficiais e alinhar a tipografia aos PDFs de marca
 - [ ] Substituir as fotos de exemplo pelas fotos reais do catálogo
 - [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages
