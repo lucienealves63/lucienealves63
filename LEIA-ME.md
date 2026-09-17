@@ -30,7 +30,11 @@ Paleta: **preto · branco · cinza**.
 │       ├── hero.jpg
 │       └── sobre.jpg
 │
-└── LEIA-ME.md            Este arquivo
+├── LEIA-ME.md            Este arquivo
+│
+├── admin/                Dashboard de operações (inclui Banners & Paleta)
+│   └── ver docs/DASHBOARD-OPERACOES.md
+└── supabase/             Migrations, RPCs e Edge Functions
 ```
 
 ---
@@ -245,14 +249,21 @@ ser extraída diretamente dos arquivos.
 - [x] Guia de medidas em tabela (sem `alert()`)
 - [x] Busca com título de "resultados para …"
 - [x] Dados estruturados JSON-LD (marca + produto) para SEO
-- [x] 100% responsivo (mobile, tablet, desktop)
+- [x] 100% responsivo (mobile, tablet, desktop) — site e painel
 - [x] Acessibilidade: skip-link, foco visível, `aria-label`,
       `aria-expanded` nos acordeões e `prefers-reduced-motion`
+- [x] Banners da home gerenciados no painel (upload, geração por IA por
+      prompt, agendamento e ativar/desativar) — `admin/` → Banners & Paleta
+- [x] Paleta de cores do site ajustável pelo painel (8 cores aplicadas em
+      tempo real via CSS variables, com restauração do padrão P&B)
 
 ## 🔜 Próximos passos sugeridos
 
 - [x] Incorporar as logos oficiais e alinhar a tipografia aos PDFs de marca
 - [ ] Substituir as fotos de exemplo pelas fotos reais do catálogo
+- [ ] Criar o projeto Supabase, rodar as migrations de `supabase/` e
+      ligar o painel (incluindo banners/paleta e geração por IA) ao ambiente
+      real — passo a passo em `docs/DASHBOARD-OPERACOES.md`
 - [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages
 - [ ] Integrar um gateway de pagamento, se fizer sentido

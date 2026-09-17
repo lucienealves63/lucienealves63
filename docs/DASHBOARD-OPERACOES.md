@@ -129,14 +129,54 @@ Solicitar à Alterdata:
 - Inclusão e atualização de pedidos;
 - Política de retentativa e idempotência.
 
+## Banners e paleta (site)
+
+A página **Banners & Paleta** do dashboard controla a identidade da loja
+sem deploy:
+
+- **Banners da home** (`site_banners`): arte do hero com título, texto e
+  dois CTAs. Cada banner tem origem (`upload`, `ai` ou `static`),
+  agendamento (`starts_at`/`ends_at`) e prioridade. Só **um banner por
+  posição** fica ativo; ao ativar, os demais da posição desativam.
+- **Geração por IA** (função `gerar-banner`): o operador descreve o banner
+  (prompt), escolhe estilo e proporção e a imagem é gerada no servidor e
+  salva no bucket público `banners`. A chave da IA fica em Supabase Secrets;
+  o navegador envia apenas o prompt e o JWT da sessão (papel `admin`).
+- **Paleta** (`site_palettes`): 8 cores (primária, texto sobre a primária,
+  seções escuras, texto nas escuras, fundo da página, texto principal,
+  texto secundário e linhas/bordas) que o site aplica em tempo real nas
+  variáveis CSS `--brand`, `--brand-contrast`, `--ink-inverse-bg`,
+  `--ink-inverse-fg`, `--bg`, `--text`, `--text-muted` e `--line`.
+  Ativar uma paleta desativa a anterior; “Restaurar P&B” reaplica o padrão
+  preto/branco/cinza da marca.
+
+Como o site consome: `assets/js/site-config.js` (carregado na `index.html`)
+busca, com a chave anônima e RLS, **somente** o banner ativo dentro da
+janela de datas e a paleta ativa — conteúdo inativo nunca sai do banco.
+Em `mode: "static"` (padrão), ele lê do `localStorage` do próprio
+navegador: no modo demonstração o `admin/` e a home vivem no mesmo
+navegador, então o que o painel ativa aparece na home ao recarregar.
+No modo demonstração a geração por IA é simulada (composição local com o
+prompt) para o fluxo ser testável sem credenciais.
+
+Implantação específica:
+
+1. Executar a migration `202609170002_banners_paletas.sql`;
+2. Cadastrar os segredos `BANNER_AI_PROVIDER`, `STABILITY_API_KEY`
+   (ou `OPENAI_API_KEY` + `OPENAI_IMAGE_MODEL`) via Supabase Secrets;
+3. Publicar a Edge Function `gerar-banner` (JWT verificado por padrão);
+4. Em `assets/js/site-config.js`, preencher `supabaseUrl` e
+   `supabaseAnonKey` e trocar `mode` para `"supabase"`.
+
 ## Implantação de homologação
 
 1. Criar projeto Supabase na região adequada;
 2. Executar `supabase/migrations/202609170001_operations.sql`;
 3. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 4. Cadastrar URL e anon key em `admin/assets/config.js`;
-5. Cadastrar os segredos de `.env.example` via Supabase Secrets;
-6. Publicar as Edge Functions;
+5. Cadastrar os segredos de `.env.example` via Supabase Secrets
+   (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
+6. Publicar as Edge Functions (incluindo `gerar-banner`);
 7. Testar importação com cópia anonimizada da planilha;
 8. Homologar Alterdata, Rede e ClearSale separadamente;
 9. Só então habilitar dados e credenciais de produção.
