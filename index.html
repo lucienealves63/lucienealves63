@@ -17,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="icon" type="image/png" href="assets/img/logos/logo-quadro.png">
+<script src="assets/js/site-config.js"></script>
 </head>
 <body>
 
@@ -125,8 +126,8 @@
 
   <!-- ================================= HERO ================================= -->
   <section class="hero">
-    <div class="hero__media">
-      <img src="assets/img/hero.jpg" alt="" onerror="this.style.display='none';this.parentElement.classList.add('is-missing')">
+    <div class="hero__media" id="hero-media">
+      <img id="hero-img" src="assets/img/hero.jpg" alt="" onerror="this.style.display='none';this.parentElement.classList.add('is-missing')">
     </div>
 
     <div class="container">
@@ -143,19 +144,19 @@
         </div>
 
         <h1 class="hero__title">
-          <span>Streetwear</span>
-          <span class="outline">desde 1989</span>
+          <span id="hero-title-1">Streetwear</span>
+          <span class="outline" id="hero-title-2">desde 1989</span>
         </h1>
 
-        <p class="hero__text">
+        <p class="hero__text" id="hero-text">
           Há 36 anos vestindo a Baixada Fluminense. Pegada de rua, drops
           semanais e qualidade de quem sabe que a peça precisa aguentar o
           corre. Compre aqui e retire em uma das nossas 6 lojas físicas.
         </p>
 
         <div class="hero__actions">
-          <a class="btn btn--light btn--lg" href="produtos.html">Ver o catálogo</a>
-          <a class="btn btn--outline-light btn--lg" href="lojas.html">Achar uma loja</a>
+          <a class="btn btn--light btn--lg" id="hero-cta" href="produtos.html">Ver o catálogo</a>
+          <a class="btn btn--outline-light btn--lg" id="hero-cta-2" href="lojas.html">Achar uma loja</a>
         </div>
 
         <div class="hero__meta">

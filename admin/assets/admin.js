@@ -4,6 +4,30 @@
   const CONFIG = window.C18_CONFIG || { mode: "demo", lowStockThreshold: 3 };
   const Importer = window.C18Importer;
   const STORE_KEY = "c18-operations-demo-v2";
+  const BANNER_DEMO_KEY = "c18:demo-banner";
+  const PALETTE_DEMO_KEY = "c18:demo-palette";
+  const DEFAULT_PALETTE = {
+    primary: "#000000",
+    primaryContrast: "#ffffff",
+    darkBg: "#000000",
+    darkText: "#ffffff",
+    pageBg: "#ffffff",
+    text: "#0b0b0b",
+    muted: "#6d6d6d",
+    line: "#dedede",
+  };
+  const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+  // variáveis usadas só na prévia da paleta (não afetam o tema do painel)
+  const PALETTE_PREVIEW_VARS = {
+    primary: "--pv-primary",
+    primaryContrast: "--pv-primary-contrast",
+    darkBg: "--pv-dark",
+    darkText: "--pv-dark-text",
+    pageBg: "--pv-page",
+    text: "--pv-text",
+    muted: "--pv-muted",
+    line: "--pv-line",
+  };
 
   const stores = [
     { id: "ni-calcadao", name: "Nova Iguaçu — Calçadão", short: "NI Calçadão" },
@@ -123,6 +147,29 @@
     { id: "clearsale", name: "ClearSale", initials: "CS", role: "Antifraude", status: "pending", environment: "Sandbox", lastSync: "Aguardando credenciais", queue: 0 },
   ];
 
+  const seedBanners = [
+    {
+      id: "banner-padrao",
+      name: "Padrão Censura 18",
+      position: "home-hero",
+      image_path: "../assets/img/hero.jpg",
+      title_top: "Streetwear",
+      title_bottom: "desde 1989",
+      body_text: "Há 36 anos vestindo a Baixada Fluminense. Pegada de rua, drops semanais e qualidade de quem sabe que a peça precisa aguentar o corre. Compre aqui e retire em uma das nossas 6 lojas físicas.",
+      cta_label: "Ver o catálogo",
+      cta_url: "produtos.html",
+      cta_secondary_label: "Achar uma loja",
+      cta_secondary_url: "lojas.html",
+      source: "static",
+      ai_prompt: "",
+      active: true,
+      priority: 100,
+      starts_at: null,
+      ends_at: null,
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
   function freshState() {
     return {
       inventory: seedInventory,
@@ -131,6 +178,8 @@
       receipts: seedReceipts,
       integrations: seedIntegrations,
       importBatches: [],
+      banners: seedBanners,
+      palette: null,
     };
   }
 
@@ -145,6 +194,8 @@
   }
 
   let state = loadState();
+  if (!Array.isArray(state.banners)) state.banners = seedBanners;
+  if (state.palette === undefined) state.palette = null;
   let currentPage = "overview";
   let currentOrderFilter = "all";
   let currentRole = CONFIG.mode === "demo" ? "admin" : "viewer";
@@ -165,6 +216,7 @@
     shipping: ["admin", "shipping"],
     fraud: ["admin"],
     integrations: ["admin"],
+    banners: ["admin"],
   };
 
   function can(permission) {
@@ -185,6 +237,9 @@
   let referenceOptions = [];
   let referenceIndex = new Map();
   let selectionMode = "collection";
+  let bannerEditingId = null;
+  let bannerImage = "";
+  let bannerImageSource = "";
   const selectedCollections = new Set();
   const selectedReferences = new Set();
 
@@ -369,6 +424,7 @@
     $("#welcome-name").textContent = firstName;
     $$('[data-permission="inventory"]').forEach((element) => { element.hidden = !can("inventory"); });
     $$('[data-permission="integrations"]').forEach((element) => { element.hidden = !can("integrations"); });
+    $$('[data-permission="banners"]').forEach((element) => { element.hidden = !can("banners"); });
   }
 
   function renderAll() {
@@ -383,13 +439,15 @@
     renderReceipts();
     renderShipping();
     renderIntegrations();
+    renderBanners();
+    renderPalette();
   }
 
   function navigate(page) {
     currentPage = page;
     $$("[data-page]").forEach((item) => item.classList.toggle("is-active", item.dataset.page === page));
     $$(".side-nav__item[data-nav]").forEach((item) => item.classList.toggle("is-active", item.dataset.nav === page));
-    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações" }[page];
+    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta" }[page];
     $("#page-title").textContent = label || "Operações";
     $("#sidebar").classList.remove("is-open");
     $("#sidebar-overlay").classList.remove("is-open");
@@ -782,13 +840,15 @@
 
   async function loadSupabaseData() {
     const client = window.C18_SUPABASE;
-    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult] = await Promise.all([
+    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult] = await Promise.all([
       client.from("stores").select("id, code, name").eq("active", true).order("name"),
       fetchAllRows("inventory_catalog_view", "*", "product_name"),
       client.from("orders").select("*, order_items(*), order_events(*), shipments(*)").order("created_at", { ascending: false }).limit(500),
       client.from("receipts").select("*").order("created_at", { ascending: false }).limit(500),
       client.from("integration_connections").select("*").order("id"),
       client.from("inventory_movements").select("id, store_id, kind, quantity_delta, note, created_at, product_variants(sku, products(name))").order("created_at", { ascending: false }).limit(100),
+      client.from("site_banners").select("*").order("priority", { ascending: true }).order("created_at", { ascending: false }).limit(200),
+      client.from("site_palettes").select("*").order("created_at", { ascending: false }).limit(100),
     ]);
 
     if (storeResult.error) throw storeResult.error;
@@ -881,6 +941,35 @@
         at: new Date(movement.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }),
         note: movement.note,
       }));
+    }
+
+    if (!bannerResult.error) {
+      state.banners = (bannerResult.data || []).map((banner) => ({
+        id: banner.id,
+        dbId: banner.id,
+        position: banner.position,
+        name: banner.name,
+        image_path: banner.image_path,
+        storagePath: storagePathFromUrl(banner.image_path),
+        title_top: banner.title_top || "",
+        title_bottom: banner.title_bottom || "",
+        body_text: banner.body_text || "",
+        cta_label: banner.cta_label || "",
+        cta_url: banner.cta_url || "",
+        cta_secondary_label: banner.cta_secondary_label || "",
+        cta_secondary_url: banner.cta_secondary_url || "",
+        source: banner.source,
+        ai_prompt: banner.ai_prompt || "",
+        active: Boolean(banner.active),
+        priority: Number(banner.priority || 100),
+        starts_at: banner.starts_at,
+        ends_at: banner.ends_at,
+        updatedAt: banner.updated_at,
+      }));
+    }
+
+    if (!paletteResult.error) {
+      state.palette = (paletteResult.data || []).find((palette) => palette.active) || null;
     }
 
     if (!integrationResult.error) {
@@ -988,10 +1077,490 @@
     });
   }
 
+
+  /* ================================== Banners & Paleta ================= */
+  function storagePathFromUrl(url) {
+    const marker = "/storage/v1/object/public/banners/";
+    if (typeof url !== "string") return "";
+    if (url.includes(marker)) return url.split(marker)[1];
+    if (!/^https?:\/\//i.test(url) && !url.startsWith("data:")) return url;
+    return "";
+  }
+
+  function bannerDisplayImage(banner) {
+    if (!banner || !banner.image_path) return "";
+    const path = banner.image_path;
+    if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
+    if (CONFIG.mode === "supabase" && CONFIG.supabaseUrl) {
+      return `${CONFIG.supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/banners/${path}`;
+    }
+    return path;
+  }
+
+  function renderBanners() {
+    const grid = $("#banners-grid");
+    if (!grid) return;
+    if (!state.banners.length) {
+      grid.innerHTML = '<p class="empty-options">Nenhum banner ainda. Clique em “Novo banner” para criar o primeiro.</p>';
+      return;
+    }
+    const now = new Date();
+    grid.innerHTML = state.banners.map((banner) => {
+      const scheduled = !banner.active && banner.starts_at && new Date(banner.starts_at) > now;
+      const status = banner.active ? badge("No ar", "success") : scheduled ? badge("Agendado", "info") : badge("Inativo", "neutral");
+      const sourceLabel = { upload: "Upload", ai: "Gerado por IA", static: "Padrão da marca" }[banner.source] || banner.source;
+      const positionLabel = banner.position === "home-hero" ? "Home — hero" : "Faixa promocional";
+      const until = banner.ends_at ? ` · até ${new Date(banner.ends_at).toLocaleDateString("pt-BR")}` : "";
+      return `<article class="banner-card${banner.active ? " is-active" : ""}">
+        <div class="banner-card__media">
+          <img src="${esc(bannerDisplayImage(banner))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('is-missing');this.remove()">
+          ${banner.active ? '<span class="banner-card__live">NO AR</span>' : ""}
+        </div>
+        <div class="banner-card__body">
+          <div class="banner-card__top"><strong>${esc(banner.name)}</strong>${status}</div>
+          <p>${esc(sourceLabel)} · ${esc(positionLabel)}${until}</p>
+          <div class="banner-card__actions">
+            <button class="btn ${banner.active ? "btn--secondary" : "btn--primary"}" data-banner-toggle="${esc(banner.id)}">${banner.active ? "Desativar" : "Ativar"}</button>
+            <button class="btn btn--secondary" data-banner-edit="${esc(banner.id)}">Editar</button>
+            <button class="icon-only" data-banner-delete="${esc(banner.id)}" aria-label="Excluir banner" title="Excluir"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </article>`;
+    }).join("");
+  }
+
+  function toDatetimeLocal(iso) {
+    if (!iso) return "";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function showBannerPreview(src) {
+    const img = $("#banner-preview-img");
+    const empty = $("#banner-preview-empty");
+    if (!img || !empty) return;
+    if (src) { img.src = src; img.hidden = false; empty.hidden = true; }
+    else { img.hidden = true; img.removeAttribute("src"); empty.hidden = false; }
+  }
+
+  function setBannerSource(tab) {
+    $$("[data-banner-source]").forEach((button) => button.classList.toggle("is-active", button.dataset.bannerSource === tab));
+    $$(".banner-source-pane").forEach((pane) => {
+      const active = pane.dataset.sourcePane === tab;
+      pane.hidden = !active;
+      pane.classList.toggle("is-active", active);
+    });
+  }
+
+  function openBannerModal(id = null) {
+    bannerEditingId = id;
+    bannerImage = "";
+    bannerImageSource = "";
+    const form = $("#banner-form");
+    form.reset();
+    setBannerSource("upload");
+    const banner = id ? state.banners.find((item) => item.id === id) : null;
+    if (banner) {
+      bannerImage = banner.image_path;
+      bannerImageSource = banner.source;
+      $("#banner-name").value = banner.name || "";
+      $("#banner-position").value = banner.position || "home-hero";
+      $("#banner-title-top").value = banner.title_top || "";
+      $("#banner-title-bottom").value = banner.title_bottom || "";
+      $("#banner-body").value = banner.body_text || "";
+      $("#banner-cta").value = banner.cta_label || "";
+      $("#banner-cta-url").value = banner.cta_url || "";
+      $("#banner-cta2").value = banner.cta_secondary_label || "";
+      $("#banner-cta2-url").value = banner.cta_secondary_url || "";
+      $("#banner-prompt").value = banner.ai_prompt || "";
+      $("#banner-starts").value = toDatetimeLocal(banner.starts_at);
+      $("#banner-ends").value = toDatetimeLocal(banner.ends_at);
+      $("#banner-active-check").checked = Boolean(banner.active);
+      $("#banner-modal-title").textContent = `Editar — ${banner.name}`;
+      if (banner.source === "ai" && banner.ai_prompt) setBannerSource("ai");
+    } else {
+      $("#banner-modal-title").textContent = "Novo banner";
+      $("#banner-active-check").checked = true;
+    }
+    showBannerPreview(banner ? bannerDisplayImage(banner) : "");
+    openModal("#banner-modal");
+  }
+
+  function readImageFile(file, maxWidth = 1600) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error("Nenhum arquivo selecionado."));
+      if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) return reject(new Error("Use uma imagem PNG, JPG ou WebP."));
+      if (file.size > 6 * 1024 * 1024) return reject(new Error("Imagem acima de 6 MB. Reduza a resolução e tente de novo."));
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const scale = Math.min(1, maxWidth / image.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        } catch (error) {
+          reject(new Error("Não foi possível processar a imagem."));
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Não foi possível ler a imagem.")); };
+      image.src = url;
+    });
+  }
+
+  async function handleBannerFile(file) {
+    if (!requirePermission("banners")) return;
+    try {
+      $("#banner-foot-note").textContent = "Processando a imagem…";
+      bannerImage = await readImageFile(file);
+      bannerImageSource = "upload";
+      showBannerPreview(bannerImage);
+      $("#banner-foot-note").textContent = "Imagem pronta. Preencha os textos e salve.";
+      toast("Imagem carregada para o banner.");
+    } catch (error) {
+      toast(error.message || "Não foi possível ler a imagem.", "alert");
+    }
+  }
+
+  function shadeHex(hex, percent) {
+    const clean = String(hex).replace("#", "");
+    const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean.slice(0, 6);
+    const num = parseInt(full, 16);
+    if (Number.isNaN(num)) return "#111111";
+    const clamp = (value) => Math.min(255, Math.max(0, Math.round(value)));
+    const amount = Math.round(2.55 * percent);
+    const r = clamp((num >> 16) + amount);
+    const g = clamp(((num >> 8) & 0xff) + amount);
+    const b = clamp((num & 0xff) + amount);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }
+
+  function currentPaletteColors() {
+    return { ...DEFAULT_PALETTE, ...((state.palette && state.palette.colors) || {}) };
+  }
+
+  // Simulação da IA no modo demonstração: composição escura com granulado,
+  // palavras do prompt em destaque e selo da marca.
+  function simulateAiImage(prompt, style) {
+    const palette = currentPaletteColors();
+    const canvas = document.createElement("canvas");
+    canvas.width = 1680;
+    canvas.height = 735;
+    const ctx = canvas.getContext("2d");
+    const base = HEX_COLOR.test(palette.darkBg) ? palette.darkBg : "#000000";
+    const gradient = ctx.createLinearGradient(0, 0, 1680, 735);
+    gradient.addColorStop(0, shadeHex(base, 14));
+    gradient.addColorStop(0.55, base);
+    gradient.addColorStop(1, shadeHex(base, -14));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1680, 735);
+    for (let i = 0; i < 9000; i += 1) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+      ctx.fillRect(Math.random() * 1680, Math.random() * 735, 1.4, 1.4);
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(0, 566, 1680, 4);
+    ctx.fillRect(1180, 0, 6, 735);
+
+    const words = prompt.split(/\s+/).filter(Boolean).slice(0, 8).join(" ").toUpperCase().split(" ");
+    ctx.fillStyle = HEX_COLOR.test(palette.darkText) ? palette.darkText : "#ffffff";
+    ctx.font = "700 92px 'Jost', Futura, Arial, sans-serif";
+    const lines = [];
+    let line = "";
+    words.forEach((word) => {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > 1060 && line) { lines.push(line); line = word; } else { line = test; }
+    });
+    if (line) lines.push(line);
+    lines.slice(0, 3).forEach((textLine, index) => ctx.fillText(textLine, 100, 268 + index * 108));
+
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(100, 92, 158, 46);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "700 22px 'Jost', Futura, Arial, sans-serif";
+    ctx.fillText("CENSURA 18", 112, 124);
+
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.font = "500 18px 'Jost', Futura, Arial, sans-serif";
+    const styleLabel = { "street-photography": "FOTO DE RUA", "graphic-art": "ARTE GRÁFICA", abstract: "ABSTRATO" }[style] || "IA";
+    ctx.fillText(`${styleLabel} · SIMULAÇÃO DA DEMONSTRAÇÃO`, 100, 668);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  }
+
+  async function runBannerAiGenerate() {
+    if (!requirePermission("banners")) return;
+    const prompt = $("#banner-prompt").value.trim();
+    if (!prompt) { toast("Descreva o banner no prompt para gerar a imagem.", "alert"); return; }
+    const style = $("#banner-style").value;
+    const aspect = $("#banner-aspect").value;
+    const button = $("#banner-ai-generate");
+    button.disabled = true;
+    const original = button.innerHTML;
+    button.innerHTML = '<svg><use href="#i-refresh"/></svg>Gerando…';
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      try {
+        const { data: sessionData } = await window.C18_SUPABASE.auth.getSession();
+        const functionUrl = `${CONFIG.supabaseUrl.replace(/\/$/, "")}/functions/v1/gerar-banner`;
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: CONFIG.supabaseAnonKey,
+            Authorization: `Bearer ${(sessionData && sessionData.session && sessionData.session.access_token) || ""}`,
+          },
+          body: JSON.stringify({ prompt, style, aspect }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) throw new Error(payload.error || "Falha ao gerar a imagem com IA.");
+        const { data } = window.C18_SUPABASE.storage.from("banners").getPublicUrl(payload.image_path);
+        bannerImage = data.publicUrl;
+        bannerImageSource = "ai";
+        showBannerPreview(bannerImage);
+        $("#banner-foot-note").textContent = "Imagem gerada pela IA e salva no servidor.";
+        toast("Imagem gerada pela IA com sucesso.");
+      } catch (error) {
+        toast(error.message || "Não foi possível gerar a imagem.", "alert");
+      }
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1600));
+      bannerImage = simulateAiImage(prompt, style);
+      bannerImageSource = "ai";
+      showBannerPreview(bannerImage);
+      $("#banner-foot-note").textContent = "Imagem simulada pronta (modo demonstração).";
+      toast("Imagem simulada gerada. Com o Supabase conectado, a IA real entra aqui.");
+    }
+
+    button.disabled = false;
+    button.innerHTML = original;
+  }
+
+  async function saveBanner(event) {
+    event.preventDefault();
+    if (!requirePermission("banners")) return;
+    const name = $("#banner-name").value.trim();
+    if (!name) { toast("Dê um nome ao banner antes de salvar.", "alert"); return; }
+    if (!bannerImage) { toast("Escolha uma imagem (upload ou IA) antes de salvar.", "alert"); return; }
+
+    const startsRaw = $("#banner-starts").value;
+    const endsRaw = $("#banner-ends").value;
+    const payload = {
+      id: bannerEditingId || "",
+      name,
+      position: $("#banner-position").value || "home-hero",
+      image_path: bannerImage,
+      title_top: $("#banner-title-top").value.trim(),
+      title_bottom: $("#banner-title-bottom").value.trim(),
+      body_text: $("#banner-body").value.trim(),
+      cta_label: $("#banner-cta").value.trim(),
+      cta_url: $("#banner-cta-url").value.trim(),
+      cta_secondary_label: $("#banner-cta2").value.trim(),
+      cta_secondary_url: $("#banner-cta2-url").value.trim(),
+      source: bannerImageSource || "upload",
+      ai_prompt: bannerImageSource === "ai" ? $("#banner-prompt").value.trim() : "",
+      priority: 100,
+      starts_at: startsRaw ? new Date(startsRaw).toISOString() : "",
+      ends_at: endsRaw ? new Date(endsRaw).toISOString() : "",
+      active: $("#banner-active-check").checked,
+    };
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const button = $("#banner-save");
+      button.disabled = true;
+      const { error } = await window.C18_SUPABASE.rpc("save_site_banner", { p_payload: payload });
+      button.disabled = false;
+      if (error) { toast(error.message || "Não foi possível salvar o banner.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderBanners();
+      closeModals();
+      toast(payload.active ? "Banner salvo e no ar na home." : "Banner salvo como inativo.");
+      return;
+    }
+
+    const record = { ...payload, id: payload.id || `banner-${Date.now()}`, updatedAt: new Date().toISOString() };
+    const index = state.banners.findIndex((item) => item.id === record.id);
+    if (index >= 0) state.banners[index] = record; else state.banners.push(record);
+    if (record.active) {
+      state.banners.forEach((item) => { if (item.id !== record.id && item.position === record.position) item.active = false; });
+    }
+    saveState();
+    syncDemoBanner();
+    renderBanners();
+    closeModals();
+    toast(record.active ? "Banner salvo e no ar na home." : "Banner salvo como inativo.");
+  }
+
+  async function toggleBannerActive(id) {
+    if (!requirePermission("banners")) return;
+    const banner = state.banners.find((item) => item.id === id);
+    if (!banner) return;
+    const nextActive = !banner.active;
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("set_site_banner_active", { p_id: banner.dbId || id, p_active: nextActive });
+      if (error) { toast(error.message || "Não foi possível alternar o banner.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderBanners();
+    } else {
+      banner.active = nextActive;
+      if (nextActive) {
+        state.banners.forEach((item) => { if (item.id !== id && item.position === banner.position) item.active = false; });
+      }
+      saveState();
+      syncDemoBanner();
+      renderBanners();
+    }
+    toast(nextActive ? "Banner ativado. A home já mostra a nova arte." : "Banner desativado. A home volta à arte padrão.");
+  }
+
+  async function deleteBanner(id) {
+    if (!requirePermission("banners")) return;
+    const banner = state.banners.find((item) => item.id === id);
+    if (!banner) return;
+    if (!window.confirm(`Excluir o banner "${banner.name}"?`)) return;
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      if (banner.storagePath) {
+        await window.C18_SUPABASE.storage.from("banners").remove([banner.storagePath]).catch(() => {});
+      }
+      const { error } = await window.C18_SUPABASE.rpc("delete_site_banner", { p_id: banner.dbId || id });
+      if (error) { toast(error.message || "Não foi possível excluir o banner.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderBanners();
+      toast("Banner excluído.");
+      return;
+    }
+
+    state.banners = state.banners.filter((item) => item.id !== id);
+    saveState();
+    syncDemoBanner();
+    renderBanners();
+    toast("Banner excluído.");
+  }
+
+  // No modo demonstração, o site e o painel vivem no mesmo navegador: a
+  // home (assets/js/site-config.js) lê essas chaves e aplica o que está no ar.
+  function syncDemoBanner() {
+    if (CONFIG.mode !== "demo") return;
+    const now = new Date();
+    const active = state.banners.find((item) =>
+      item.position === "home-hero" && item.active && item.source !== "static" &&
+      (!item.starts_at || new Date(item.starts_at) <= now) &&
+      (!item.ends_at || new Date(item.ends_at) >= now)
+    );
+    try {
+      if (active) localStorage.setItem(BANNER_DEMO_KEY, JSON.stringify(active));
+      else localStorage.removeItem(BANNER_DEMO_KEY);
+    } catch (_) {
+      toast("Limite de armazenamento do navegador atingido. Use imagens menores no modo demo.", "alert");
+    }
+  }
+
+  function applyPalettePreview(colors) {
+    const scope = $("#palette-preview");
+    if (!scope) return;
+    Object.entries(PALETTE_PREVIEW_VARS).forEach(([key, cssVar]) => {
+      const value = colors && colors[key];
+      if (typeof value === "string" && HEX_COLOR.test(value)) scope.style.setProperty(cssVar, value);
+    });
+  }
+
+  function collectPaletteColors() {
+    const colors = {};
+    $$("[data-palette-key]").forEach((input) => { colors[input.dataset.paletteKey] = input.value; });
+    return colors;
+  }
+
+  function renderPalette() {
+    const colors = { ...DEFAULT_PALETTE, ...((state.palette && state.palette.colors) || {}) };
+    $$("[data-palette-key]").forEach((input) => { input.value = colors[input.dataset.paletteKey] || "#000000"; });
+    const nameInput = $("#palette-name");
+    if (nameInput) nameInput.value = (state.palette && state.palette.name) || "";
+    const tag = $("#palette-active-tag");
+    if (tag) {
+      if (state.palette) { tag.textContent = state.palette.name; tag.classList.add("is-custom"); }
+      else { tag.textContent = "Padrão P&B"; tag.classList.remove("is-custom"); }
+    }
+    applyPalettePreview(colors);
+  }
+
+  function syncDemoPalette() {
+    if (CONFIG.mode !== "demo") return;
+    try {
+      if (state.palette) localStorage.setItem(PALETTE_DEMO_KEY, JSON.stringify(state.palette));
+      else localStorage.removeItem(PALETTE_DEMO_KEY);
+    } catch (_) {}
+  }
+
+  async function savePalette(event) {
+    event.preventDefault();
+    if (!requirePermission("banners")) return;
+    const name = $("#palette-name").value.trim();
+    if (!name) { toast("Dê um nome à paleta antes de aplicar.", "alert"); return; }
+    const colors = collectPaletteColors();
+    for (const [key, value] of Object.entries(colors)) {
+      if (!HEX_COLOR.test(value)) { toast(`Cor inválida em “${key}”.`, "alert"); return; }
+    }
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("save_site_palette", { p_name: name, p_colors: colors, p_activate: true });
+      if (error) { toast(error.message || "Não foi possível aplicar a paleta.", "alert"); return; }
+      const { data } = await window.C18_SUPABASE.from("site_palettes").select("*").eq("active", true).limit(1);
+      state.palette = (data && data[0]) || null;
+      renderPalette();
+      toast(`Paleta "${name}" aplicada ao site.`);
+      return;
+    }
+
+    state.palette = { name, colors, updatedAt: new Date().toISOString() };
+    saveState();
+    syncDemoPalette();
+    renderPalette();
+    toast(`Paleta "${name}" aplicada. Recarregue a home para ver o resultado.`);
+  }
+
+  async function resetPalette() {
+    if (!requirePermission("banners")) return;
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("save_site_palette", {
+        p_name: "Padrão P&B",
+        p_colors: DEFAULT_PALETTE,
+        p_activate: true,
+      });
+      if (error) { toast(error.message || "Não foi possível restaurar a paleta padrão.", "alert"); return; }
+      const { data } = await window.C18_SUPABASE.from("site_palettes").select("*").eq("active", true).limit(1);
+      state.palette = (data && data[0]) || null;
+    } else {
+      state.palette = null;
+      saveState();
+      syncDemoPalette();
+    }
+    renderPalette();
+    toast("Paleta padrão preto, branco e cinza restaurada.");
+  }
   function bindEvents() {
     document.addEventListener("click", (event) => {
       const nav = event.target.closest("[data-nav]");
       if (nav) { navigate(nav.dataset.nav); return; }
+      if (event.target.closest("#new-banner")) { if (requirePermission("banners")) openBannerModal(); return; }
+      const bannerTab = event.target.closest("[data-banner-source]");
+      if (bannerTab) { setBannerSource(bannerTab.dataset.bannerSource); return; }
+      const bannerToggle = event.target.closest("[data-banner-toggle]");
+      if (bannerToggle) { toggleBannerActive(bannerToggle.dataset.bannerToggle); return; }
+      const bannerEdit = event.target.closest("[data-banner-edit]");
+      if (bannerEdit) { if (requirePermission("banners")) openBannerModal(bannerEdit.dataset.bannerEdit); return; }
+      const bannerDelete = event.target.closest("[data-banner-delete]");
+      if (bannerDelete) { deleteBanner(bannerDelete.dataset.bannerDelete); return; }
       if (event.target.closest('[data-action="import"]')) { if (requirePermission("inventory")) { resetImport(); openModal("#import-modal"); } return; }
       if (event.target.closest('[data-action="manual"]')) { if (requirePermission("inventory")) openManual(); return; }
       if (event.target.closest("[data-close-modal]")) { closeModals(); return; }
@@ -1088,6 +1657,17 @@
     $("#global-search").addEventListener("keydown", (event) => {
       if (event.key === "Enter") { event.preventDefault(); navigate("inventory"); $("#inventory-search").value = event.target.value; renderInventory(); }
     });
+    $("#banners-refresh").addEventListener("click", () => { renderBanners(); toast("Banners e paleta atualizados."); });
+    $("#banner-file").addEventListener("change", (event) => { handleBannerFile(event.target.files[0]); event.target.value = ""; });
+    const bannerDropzone = $("#banner-dropzone");
+    ["dragenter", "dragover"].forEach((name) => bannerDropzone.addEventListener(name, (event) => { event.preventDefault(); bannerDropzone.classList.add("is-dragging"); }));
+    ["dragleave", "drop"].forEach((name) => bannerDropzone.addEventListener(name, (event) => { event.preventDefault(); bannerDropzone.classList.remove("is-dragging"); }));
+    bannerDropzone.addEventListener("drop", (event) => handleBannerFile(event.dataTransfer.files[0]));
+    $("#banner-ai-generate").addEventListener("click", runBannerAiGenerate);
+    $("#banner-form").addEventListener("submit", saveBanner);
+    $("#palette-form").addEventListener("submit", savePalette);
+    $("#palette-reset").addEventListener("click", resetPalette);
+    $$("[data-palette-key]").forEach((input) => input.addEventListener("input", () => applyPalettePreview(collectPaletteColors())));
     document.addEventListener("keydown", (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); $("#global-search").focus(); }
       if (event.key === "Escape") { closeModals(); closeDrawer(); }

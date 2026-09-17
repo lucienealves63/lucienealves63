@@ -44,13 +44,21 @@
   --gray-50: #f7f7f7;
   --white: #ffffff;
 
+  /* Identidade editável — o painel de operações (Banners & Paleta)
+     substitui esses valores em tempo real via site-config.js.
+     Os padrões preservam a marca: preto, branco e cinza. */
+  --brand: var(--black);
+  --brand-contrast: var(--white);
+  --ink-inverse-bg: var(--black);
+  --ink-inverse-fg: var(--white);
+
   /* Semânticos */
   --bg: var(--white);
   --bg-alt: var(--gray-50);
-  --bg-inverse: var(--black);
+  --bg-inverse: var(--ink-inverse-bg);
   --text: var(--ink);
   --text-muted: var(--gray-500);
-  --text-inverse: var(--white);
+  --text-inverse: var(--ink-inverse-fg);
   --line: var(--gray-200);
   --line-strong: var(--gray-300);
 
@@ -158,14 +166,14 @@ h4 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--black);
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
   border-radius: 2px;
 }
 
 ::selection {
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
 }
 
 /* 3. Utilitários -------------------------------------------------------- */
@@ -283,8 +291,8 @@ h4 {
   top: -100px;
   left: 16px;
   z-index: 999;
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   padding: 12px 20px;
   font-size: 14px;
   font-weight: 600;
@@ -398,8 +406,8 @@ h4 {
 
 /* 6. Barra de anúncios -------------------------------------------------- */
 .announce {
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -494,12 +502,12 @@ h4 {
   bottom: 0;
   width: 0;
   height: 2px;
-  background: var(--black);
+  background: var(--brand);
   transition: width var(--dur) var(--ease);
 }
 
 .nav__link:hover {
-  color: var(--black);
+  color: var(--brand);
 }
 
 .nav__link:hover::after,
@@ -508,7 +516,7 @@ h4 {
 }
 
 .nav__link.is-active {
-  color: var(--black);
+  color: var(--brand);
 }
 
 .header__actions {
@@ -545,8 +553,8 @@ h4 {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   font-size: 10px;
   font-weight: 700;
   border-radius: var(--radius-pill);
@@ -587,7 +595,7 @@ h4 {
 
 .search__input:focus {
   outline: none;
-  border-color: var(--black);
+  border-color: var(--brand);
 }
 
 .burger {
@@ -644,9 +652,9 @@ h4 {
 
 /* 9. Botões ------------------------------------------------------------- */
 .btn {
-  --btn-bg: var(--black);
-  --btn-fg: var(--white);
-  --btn-bd: var(--black);
+  --btn-bg: var(--brand);
+  --btn-fg: var(--brand-contrast);
+  --btn-bd: var(--brand);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -682,14 +690,14 @@ h4 {
 }
 
 .btn--ghost:hover {
-  --btn-bd: var(--black);
-  --btn-bg: var(--black);
-  --btn-fg: var(--white);
+  --btn-bd: var(--brand);
+  --btn-bg: var(--brand);
+  --btn-fg: var(--brand-contrast);
 }
 
 .btn--light {
   --btn-bg: var(--white);
-  --btn-fg: var(--black);
+  --btn-fg: var(--ink);
   --btn-bd: var(--white);
 }
 
@@ -701,7 +709,7 @@ h4 {
 
 .btn--outline-light:hover {
   --btn-bg: var(--white);
-  --btn-fg: var(--black);
+  --btn-fg: var(--ink);
   --btn-bd: var(--white);
 }
 
@@ -730,8 +738,8 @@ h4 {
   min-height: min(88vh, 760px);
   display: grid;
   align-items: center;
-  background: var(--black);
-  color: var(--white);
+  background: var(--ink-inverse-bg);
+  color: var(--ink-inverse-fg);
   overflow: hidden;
   isolation: isolate;
 }
@@ -765,11 +773,15 @@ h4 {
   z-index: -1;
   background: linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.92) 0%,
-      rgba(0, 0, 0, 0.55) 45%,
-      rgba(0, 0, 0, 0.25) 100%
+      color-mix(in srgb, var(--ink-inverse-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--ink-inverse-bg) 55%, transparent) 45%,
+      color-mix(in srgb, var(--ink-inverse-bg) 25%, transparent) 100%
     ),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 30%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ink-inverse-bg) 60%, transparent) 0%,
+      transparent 30%
+    );
 }
 
 .hero__inner {
@@ -792,7 +804,7 @@ h4 {
 }
 
 .hero__title .outline {
-  -webkit-text-stroke: 1.5px var(--white);
+  -webkit-text-stroke: 1.5px var(--ink-inverse-fg);
   color: transparent;
 }
 
@@ -861,7 +873,7 @@ h4 {
 .perk svg {
   width: 24px;
   height: 24px;
-  color: var(--black);
+  color: var(--ink);
   flex-shrink: 0;
 }
 
@@ -964,14 +976,14 @@ h4 {
 }
 
 .chip:hover {
-  border-color: var(--black);
-  color: var(--black);
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 .chip.is-active {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
 }
 
 .filters__right {
@@ -1060,8 +1072,8 @@ h4 {
 }
 
 .badge {
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1072,13 +1084,13 @@ h4 {
 
 .badge--light {
   background: var(--white);
-  color: var(--black);
-  border: 1px solid var(--black);
+  color: var(--ink);
+  border: 1px solid var(--brand);
 }
 
 .badge--sale {
   background: var(--white);
-  color: var(--black);
+  color: var(--ink);
 }
 
 .card__quick {
@@ -1151,8 +1163,8 @@ h4 {
 .card__price .off {
   font-size: 11px;
   font-weight: 700;
-  color: var(--white);
-  background: var(--black);
+  color: var(--brand-contrast);
+  background: var(--brand);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -1222,7 +1234,7 @@ h4 {
 
 .thumb.is-active,
 .thumb:hover {
-  border-color: var(--black);
+  border-color: var(--brand);
 }
 
 .pdp__info {
@@ -1305,13 +1317,13 @@ h4 {
 }
 
 .size-btn:hover:not([disabled]) {
-  border-color: var(--black);
+  border-color: var(--brand);
 }
 
 .size-btn.is-active {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
 }
 
 .size-btn[disabled] {
@@ -1332,7 +1344,7 @@ h4 {
 
 .color-btn.is-active {
   transform: scale(1.08);
-  box-shadow: inset 0 0 0 2px var(--white), 0 0 0 1.5px var(--black);
+  box-shadow: inset 0 0 0 2px var(--white), 0 0 0 1.5px var(--brand);
 }
 
 .qty {
@@ -1580,7 +1592,7 @@ h4 {
 }
 
 .cart-item__remove:hover {
-  color: var(--black);
+  color: var(--ink);
 }
 
 .drawer__foot {
@@ -1658,7 +1670,7 @@ h4 {
 }
 
 .checkout-field input:focus {
-  border-color: var(--black);
+  border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.07);
 }
 
@@ -1673,10 +1685,10 @@ h4 {
 
 .coupon-control button {
   padding: 0 13px;
-  border: 1px solid var(--black);
+  border: 1px solid var(--brand);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1749,7 +1761,7 @@ h4 {
 }
 
 .store:hover {
-  border-color: var(--black);
+  border-color: var(--ink);
   transform: translateY(-3px);
   box-shadow: var(--shadow);
 }
@@ -1785,8 +1797,8 @@ h4 {
 }
 
 .guide-toggle:hover {
-  color: var(--black);
-  border-color: var(--black);
+  color: var(--brand);
+  border-color: var(--brand);
 }
 
 .guide {
@@ -1873,7 +1885,7 @@ h4 {
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: var(--black);
+  border-color: var(--brand);
 }
 
 .form__row {
@@ -1915,12 +1927,6 @@ h4 {
 
 @media (max-width: 900px) {
   .contact-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 560px) {
-  .form__row {
     grid-template-columns: 1fr;
   }
 }
@@ -2069,7 +2075,7 @@ h4 {
 
 /* 19. Rodapé ------------------------------------------------------------ */
 .footer {
-  background: var(--black);
+  background: var(--ink-inverse-bg);
   color: var(--gray-300);
   padding-top: clamp(48px, 6vw, 80px);
 }
@@ -2175,7 +2181,7 @@ h4 {
 }
 
 .breadcrumb a:hover {
-  color: var(--black);
+  color: var(--ink);
 }
 
 .page-head {
@@ -2212,13 +2218,13 @@ h4 {
 }
 
 .pagination button:hover {
-  border-color: var(--black);
+  border-color: var(--brand);
 }
 
 .pagination button.is-active {
-  background: var(--black);
-  color: var(--white);
-  border-color: var(--black);
+  background: var(--brand);
+  color: var(--brand-contrast);
+  border-color: var(--brand);
 }
 
 .empty {
@@ -2246,8 +2252,8 @@ h4 {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   display: grid;
   place-items: center;
   box-shadow: var(--shadow);
@@ -2300,8 +2306,8 @@ h4 {
   bottom: 26px;
   z-index: 120;
   transform: translate(-50%, 120%);
-  background: var(--black);
-  color: var(--white);
+  background: var(--brand);
+  color: var(--brand-contrast);
   padding: 13px 24px;
   border-radius: var(--radius-pill);
   font-size: 13px;
@@ -2381,6 +2387,10 @@ h4 {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --header-h: 64px;
+  }
+
   .products {
     grid-template-columns: repeat(2, 1fr);
     gap: 22px 14px;
@@ -2421,12 +2431,219 @@ h4 {
     gap: 6px;
   }
 
+  .hero {
+    min-height: min(80vh, 640px);
+  }
+
+  .hero__inner {
+    padding-block: 56px;
+  }
+
+  .hero__actions {
+    margin-top: 28px;
+  }
+
+  .hero__actions .btn {
+    flex: 1 1 auto;
+  }
+
   .hero__meta {
-    gap: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 36px;
+  }
+
+  .cats {
+    gap: 12px;
+  }
+
+  .cat__label {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .cat__label h3 {
+    font-size: 20px;
+  }
+
+  .perks__grid {
+    gap: 0;
+  }
+
+  .perk {
+    padding: 18px 8px;
+    gap: 10px;
+  }
+
+  .perk svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .gallery__thumbs {
+    gap: 8px;
+  }
+
+  .pdp__title {
+    font-size: 28px;
+  }
+
+  .pdp__price .now {
+    font-size: 28px;
+  }
+
+  .news {
+    gap: 28px;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+  }
+
+  .mobile-nav__link {
+    font-size: 30px;
+  }
+
+  .fab-whats {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: 50px;
+    height: 50px;
+  }
+
+  .fab-whats svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .fab-top {
+    right: 14px;
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   }
 
   .news__form {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  .brand__img {
+    width: 148px;
+    height: 26px;
+  }
+
+  .btn {
+    padding: 13px 22px;
+  }
+
+  .btn--lg {
+    padding: 14px 24px;
+    font-size: 12px;
+  }
+
+  .hero__meta strong {
+    font-size: 22px;
+  }
+
+  .hero__meta div {
+    font-size: 11px;
+  }
+
+  .perk {
+    padding: 14px 6px;
+  }
+
+  .perk h4 {
+    font-size: 11px;
+  }
+
+  .perk p {
+    font-size: 11px;
+  }
+
+  .announce {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  .announce__track,
+  .announce__item {
+    gap: 32px;
+  }
+
+  .cats {
+    gap: 10px;
+  }
+
+  .section__head {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .card__body {
+    padding-top: 10px;
+  }
+
+  .card__name {
+    font-size: 13px;
+  }
+
+  .pdp__cta {
+    flex-direction: column;
+  }
+
+  .news__form input {
+    padding: 14px 18px;
+  }
+
+  .footer__bottom {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .timeline b {
+    font-size: 18px;
+  }
+
+  .guide th,
+  .guide td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .drawer__head {
+    padding: 16px 18px;
+  }
+
+  .drawer__head h2 {
+    font-size: 18px;
+  }
+
+  .drawer__body,
+  .drawer__foot {
+    padding-inline: 18px;
+  }
+
+  .cart-item {
+    grid-template-columns: 72px 1fr;
+  }
+
+  .checkout-field small {
+    font-size: 8px;
+  }
+
+  .store__actions {
+    flex-wrap: wrap;
+  }
+
+  .form__row {
+    grid-template-columns: 1fr;
   }
 }
 

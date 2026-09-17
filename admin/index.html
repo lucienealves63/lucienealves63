@@ -52,6 +52,10 @@
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5"/><path d="M18 11a7 7 0 0 0-12-3L4 11M6 13a7 7 0 0 0 12 3l2-3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 4 4 2.5-2.5L21 19"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M17.7 6.3l-2.5 2.5M8.8 15.2l-2.5 2.5"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.6-1-2.5c0-1.4 1-2 2.5-2H18a4 4 0 0 0 4-4c0-4.4-4-7.5-10-7.5Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></symbol>
   </svg>
 
   <aside class="sidebar" id="sidebar">
@@ -78,6 +82,9 @@
       </button>
       <button class="side-nav__item" data-nav="shipping">
         <svg><use href="#i-truck"/></svg><span>Expedição</span>
+      </button>
+      <button class="side-nav__item" data-nav="banners" data-permission="banners">
+        <svg><use href="#i-image"/></svg><span>Banners &amp; Paleta</span>
       </button>
 
       <p class="side-nav__label side-nav__label--spaced">Sistema</p>
@@ -201,6 +208,52 @@
         <div class="shipping-board" id="shipping-board"></div>
       </section>
 
+      <section class="page" data-page="banners">
+        <div class="page-head">
+          <div><p class="page-kicker">IDENTIDADE DA LOJA</p><h2>Banners &amp; Paleta</h2><p>Alterne a arte da home, gere imagens com IA por prompt e ajuste a paleta do site — tudo sem deploy.</p></div>
+          <div class="page-actions"><button class="btn btn--secondary" id="banners-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button><button class="btn btn--primary" id="new-banner"><svg><use href="#i-plus"/></svg>Novo banner</button></div>
+        </div>
+
+        <div class="banners-grid" id="banners-grid"></div>
+
+        <article class="panel palette-panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">IDENTIDADE VISUAL</span><h3>Paleta do site</h3></div><span class="palette-active-tag" id="palette-active-tag">Padrão P&amp;B</span></div>
+          <div class="palette-body">
+            <div class="palette-preview" id="palette-preview" aria-label="Prévia da paleta">
+              <div class="palette-preview__hero">
+                <span class="palette-preview__logo">C18</span>
+                <strong class="palette-preview__title">Streetwear <em>desde 1989</em></strong>
+                <span class="palette-preview__cta">Ver o catálogo</span>
+              </div>
+              <div class="palette-preview__card">
+                <div><span class="palette-preview__name">Camiseta Oversized</span><span class="palette-preview__price">R$ 129,90</span></div>
+                <span class="palette-preview__btn">Adicionar</span>
+              </div>
+            </div>
+            <form id="palette-form" class="palette-form">
+              <div class="palette-swatches" id="palette-swatches">
+                <label class="swatch-field"><input type="color" data-palette-key="primary" value="#000000"><span>Primária</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="primaryContrast" value="#ffffff"><span>Sobre a primária</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="darkBg" value="#000000"><span>Seções escuras</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="darkText" value="#ffffff"><span>Texto nas escuras</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="pageBg" value="#ffffff"><span>Fundo da página</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="text" value="#0b0b0b"><span>Texto principal</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="muted" value="#6d6d6d"><span>Texto secundário</span></label>
+                <label class="swatch-field"><input type="color" data-palette-key="line" value="#dedede"><span>Linhas e bordas</span></label>
+              </div>
+              <div class="palette-form__row">
+                <label class="form-field"><span>Nome da paleta <b>*</b></span><input id="palette-name" required maxlength="80" placeholder="Ex.: Campanha de inverno"></label>
+                <div class="palette-form__actions">
+                  <button type="button" class="btn btn--secondary" id="palette-reset">Restaurar P&amp;B</button>
+                  <button type="submit" class="btn btn--primary">Aplicar paleta</button>
+                </div>
+              </div>
+              <p class="palette-hint">A paleta ativa muda botões, chips, seções escuras e rodapé de todo o site em tempo real. As cores padrão da marca são preto, branco e cinza — use “Restaurar P&amp;B” para voltar a elas.</p>
+            </form>
+          </div>
+        </article>
+      </section>
+
       <section class="page" data-page="integrations">
         <div class="page-head">
           <div><p class="page-kicker">CONEXÕES</p><h2>Integrações</h2><p>Saúde, credenciais e histórico de sincronização.</p></div>
@@ -281,6 +334,70 @@
           <label class="form-field form-field--wide"><span>Motivo / observação <b>*</b></span><textarea name="note" required placeholder="Informe por que o estoque está sendo alterado"></textarea></label>
         </div>
         <footer class="modal__foot"><p>Todo ajuste fica registrado no histórico.</p><div><button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button><button class="btn btn--primary" type="submit">Salvar movimento</button></div></footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal" id="banner-modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal></div>
+    <section class="modal__dialog modal__dialog--lg" role="dialog" aria-modal="true" aria-labelledby="banner-modal-title">
+      <header class="modal__head"><div><span class="modal__kicker" id="banner-modal-kicker">BANNER DA HOME</span><h2 id="banner-modal-title">Novo banner</h2></div><button class="icon-only" data-close-modal aria-label="Fechar"><svg><use href="#i-close"/></svg></button></header>
+      <form id="banner-form">
+        <div class="modal__body banner-modal-body">
+          <div class="banner-source-tabs" role="tablist">
+            <button type="button" class="is-active" data-banner-source="upload"><svg><use href="#i-upload"/></svg>Upload de imagem</button>
+            <button type="button" data-banner-source="ai"><svg><use href="#i-spark"/></svg>Gerar com IA</button>
+          </div>
+          <div class="banner-modal-grid">
+            <div class="banner-preview-zone">
+              <div class="banner-preview" id="banner-preview">
+                <img id="banner-preview-img" alt="" hidden>
+                <span class="banner-preview__empty" id="banner-preview-empty">Prévia do banner</span>
+              </div>
+              <div class="banner-source-pane is-active" data-source-pane="upload">
+                <label class="dropzone dropzone--small" id="banner-dropzone">
+                  <input type="file" id="banner-file" accept="image/png,image/jpeg,image/webp">
+                  <span class="dropzone__icon"><svg><use href="#i-upload"/></svg></span>
+                  <strong>Arraste a imagem ou clique para selecionar</strong>
+                  <small>PNG, JPG ou WebP · até 6 MB · ideal 21:9</small>
+                  <em>Escolher arquivo</em>
+                </label>
+              </div>
+              <div class="banner-source-pane" data-source-pane="ai" hidden>
+                <label class="form-field"><span>Prompt para a IA <b>*</b></span><textarea id="banner-prompt" maxlength="500" placeholder="Ex.: modelo brasileiro em rua da Baixada Fluminense, jaqueta oversized, luz de fim de tarde, granulado de filme"></textarea></label>
+                <div class="banner-ai-row">
+                  <label class="form-field"><span>Estilo</span><select id="banner-style"><option value="street-photography">Fotografia de rua</option><option value="graphic-art">Arte gráfica</option><option value="abstract">Abstrato</option></select></label>
+                  <label class="form-field"><span>Proporção</span><select id="banner-aspect"><option value="21:9">21:9 — Home</option><option value="16:9">16:9</option><option value="1:1">1:1 — Social</option></select></label>
+                </div>
+                <button type="button" class="btn btn--primary banner-ai-generate" id="banner-ai-generate"><svg><use href="#i-spark"/></svg>Gerar imagem</button>
+                <p class="banner-ai-note" id="banner-ai-note">No modo demonstração a imagem é simulada. Com o Supabase conectado, a geração usa a IA configurada no servidor (segredos no .env.example).</p>
+              </div>
+            </div>
+            <div class="banner-fields">
+              <label class="form-field"><span>Nome do banner <b>*</b></span><input id="banner-name" required maxlength="120" placeholder="Ex.: Drop de inverno"></label>
+              <label class="form-field"><span>Posição</span><select id="banner-position"><option value="home-hero">Home — hero principal</option></select></label>
+              <div class="form-row-2">
+                <label class="form-field"><span>Linha 1 do título</span><input id="banner-title-top" maxlength="60" placeholder="Streetwear"></label>
+                <label class="form-field"><span>Linha 2 do título</span><input id="banner-title-bottom" maxlength="60" placeholder="desde 1989"></label>
+              </div>
+              <label class="form-field"><span>Texto de apoio</span><textarea id="banner-body" maxlength="300" placeholder="A legenda curta abaixo do título"></textarea></label>
+              <div class="form-row-2">
+                <label class="form-field"><span>Botão 1 — texto</span><input id="banner-cta" maxlength="40" placeholder="Ver o catálogo"></label>
+                <label class="form-field"><span>Botão 1 — link</span><input id="banner-cta-url" maxlength="200" placeholder="produtos.html"></label>
+              </div>
+              <div class="form-row-2">
+                <label class="form-field"><span>Botão 2 — texto</span><input id="banner-cta2" maxlength="40" placeholder="Achar uma loja"></label>
+                <label class="form-field"><span>Botão 2 — link</span><input id="banner-cta2-url" maxlength="200" placeholder="lojas.html"></label>
+              </div>
+              <div class="form-row-2">
+                <label class="form-field"><span>Ativar a partir de</span><input type="datetime-local" id="banner-starts"></label>
+                <label class="form-field"><span>Desativar em</span><input type="datetime-local" id="banner-ends"></label>
+              </div>
+              <label class="banner-active-check"><input type="checkbox" id="banner-active-check" checked><span>Ativar imediatamente (substitui o banner atual da home)</span></label>
+            </div>
+          </div>
+        </div>
+        <footer class="modal__foot"><p id="banner-foot-note">A imagem e os textos aparecem na home quando o banner é ativado.</p><div><button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button><button type="submit" class="btn btn--primary" id="banner-save">Salvar banner</button></div></footer>
       </form>
     </section>
   </div>
