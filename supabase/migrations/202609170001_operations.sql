@@ -164,6 +164,8 @@ create table public.orders (
   external_id text,
   source text not null default 'site',
   store_id uuid references public.stores(id),
+  seller_code text check (seller_code is null or char_length(seller_code) <= 24),
+  coupon_code text check (coupon_code is null or char_length(coupon_code) <= 32),
   customer jsonb not null default '{}'::jsonb,
   billing_address jsonb,
   shipping_address jsonb,
@@ -823,6 +825,8 @@ begin
       'alterdata:order:' || p_order_id::text || ':' || v_next::text,
       jsonb_build_object(
         'orderId', p_order_id, 'number', v_order.number, 'stage', v_next,
+        'sellerCode', v_order.seller_code, 'couponCode', v_order.coupon_code,
+        'discountAmount', v_order.discount_amount,
         'carrier', p_payload ->> 'carrier', 'tracking', p_payload ->> 'tracking'
       )
     )

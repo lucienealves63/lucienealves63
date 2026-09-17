@@ -147,8 +147,12 @@ hoje pelo Instagram:
 
 1. Cliente escolhe tamanho, cor e quantidade
 2. Carrinho fica salvo no `localStorage` (não se perde ao recarregar)
-3. Na hora de finalizar, ele escolhe a loja num `<select>`
-4. O site monta uma mensagem completa e abre o WhatsApp daquela unidade
+3. No checkout, pode informar o **código do vendedor** e um **cupom de desconto**
+4. Escolhe a loja num `<select>`
+5. O site monta uma mensagem completa e abre o WhatsApp daquela unidade
+
+O cupom informado não altera o preço no navegador: ele segue identificado na
+mensagem para validação segura pela loja antes do pagamento.
 
 Exemplo de mensagem gerada:
 
@@ -161,7 +165,11 @@ Olá! Vim pelo site e quero fechar um pedido 🖤
 
 *Total dos itens:* R$ 259,80
 
-Podem confirmar disponibilidade em estoque e o frete?
+*Código do vendedor:* 042
+*Cupom informado:* PRIMEIRAC18 (validar desconto)
+*Observação:* total sujeito à validação do cupom pela loja.
+
+Podem confirmar disponibilidade em estoque, desconto e frete?
 
 CEP para entrega: ______
 ```

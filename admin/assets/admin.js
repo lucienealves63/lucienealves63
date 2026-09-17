@@ -71,7 +71,7 @@
   const seedOrders = [
     {
       id: "C18-1048", customer: "Mariana Souza", date: demoDate("13:42"), origin: "Site", storeId: "ni-calcadao", total: 259.8,
-      payment: "approved", fraud: "approved", status: "picking",
+      payment: "approved", fraud: "approved", status: "picking", sellerCode: "042", couponCode: "PRIMEIRAC18", discountAmount: 20,
       items: [
         { code: "0000000080", name: "Regata Sport C18", color: "Branco", size: "P", qty: 1, checked: false },
         { code: "0000000023", name: "Boné Bordado", color: "Preto", size: "Único", qty: 1, checked: false },
@@ -694,7 +694,7 @@
     if (!order) return;
     currentOrderId = id;
     $("#drawer-title").textContent = `#${order.id}`;
-    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div><div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios</option><option>Loggi</option><option>Retirada na loja</option><option>Transportadora</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
+    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios</option><option>Loggi</option><option>Retirada na loja</option><option>Transportadora</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
     renderOrderActions(order);
     $("#order-drawer").classList.add("is-open");
     $("#order-drawer").setAttribute("aria-hidden", "false");
@@ -832,6 +832,9 @@
         origin: order.source,
         storeId: order.store_id,
         total: Number(order.total || 0),
+        discountAmount: Number(order.discount_amount || 0),
+        sellerCode: order.seller_code || "",
+        couponCode: order.coupon_code || "",
         payment: order.payment_status,
         fraud: order.fraud_status,
         status: order.stage,

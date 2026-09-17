@@ -64,6 +64,59 @@
 
   /* --------------------------------------------------------- carrinho */
   const CART_KEY = "c18:carrinho";
+  const CHECKOUT_KEY = "c18:checkout";
+  const CheckoutTools = window.C18Checkout || {
+    normalizeSellerCode: (value) => String(value || "").trim().toUpperCase().slice(0, 24),
+    normalizeCouponCode: (value) => String(value || "").trim().toUpperCase().slice(0, 32),
+    checkoutMessageLines: () => [],
+  };
+
+  const Checkout = {
+    sellerCode: "",
+    couponCode: "",
+    storeId: "",
+
+    load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CHECKOUT_KEY) || "{}");
+        this.sellerCode = CheckoutTools.normalizeSellerCode(saved.sellerCode);
+        this.couponCode = CheckoutTools.normalizeCouponCode(saved.couponCode);
+        this.storeId = String(saved.storeId || "");
+      } catch (_) {
+        this.sellerCode = "";
+        this.couponCode = "";
+        this.storeId = "";
+      }
+    },
+
+    save() {
+      try {
+        localStorage.setItem(CHECKOUT_KEY, JSON.stringify({
+          sellerCode: this.sellerCode,
+          couponCode: this.couponCode,
+          storeId: this.storeId,
+        }));
+      } catch (_) {
+        /* O checkout continua funcionando sem persistência local. */
+      }
+    },
+
+    updateFromDrawer() {
+      const seller = $("#seller-code");
+      const coupon = $("#coupon-code");
+      const store = $("#store-select");
+      if (seller) this.sellerCode = CheckoutTools.normalizeSellerCode(seller.value);
+      if (coupon) this.couponCode = CheckoutTools.normalizeCouponCode(coupon.value);
+      if (store) this.storeId = String(store.value || "");
+      this.save();
+    },
+
+    clear() {
+      this.sellerCode = "";
+      this.couponCode = "";
+      this.save();
+    },
+  };
 
   const Cart = {
     items: [],
@@ -119,6 +172,7 @@
 
     clear() {
       this.items = [];
+      Checkout.clear();
       this.save();
       this.render();
     },
@@ -202,17 +256,37 @@
               sub
             )}</span></div>
             <div class="drawer__line"><span>Frete</span><span>calculado na conversa</span></div>
-            <div class="drawer__total"><span>Total</span><span>${money(
+            <div class="drawer__total"><span>Total estimado</span><span>${money(
               sub
             )}</span></div>
-            <p class="drawer__note">O frete e a forma de pagamento são combinados
-            direto com a loja por WhatsApp. Sem cadastro, sem burocracia.</p>
+            <p class="drawer__note">O frete, o desconto e a forma de pagamento são confirmados
+            diretamente com a loja pelo WhatsApp.</p>
+            <div class="checkout-fields" aria-label="Informações do checkout">
+              <label class="checkout-field" for="seller-code">
+                <span>Código do vendedor <small>opcional</small></span>
+                <input id="seller-code" type="text" inputmode="text" maxlength="24"
+                       autocomplete="off" placeholder="Ex.: 042"
+                       value="${escapeHTML(Checkout.sellerCode)}">
+              </label>
+              <div class="checkout-field">
+                <label for="coupon-code">Cupom de desconto <small>opcional</small></label>
+                <div class="coupon-control">
+                  <input id="coupon-code" type="text" inputmode="text" maxlength="32"
+                         autocomplete="off" placeholder="Digite seu cupom"
+                         value="${escapeHTML(Checkout.couponCode)}">
+                  <button type="button" id="coupon-add">${Checkout.couponCode ? "Atualizar" : "Adicionar"}</button>
+                </div>
+                ${Checkout.couponCode
+                  ? `<p class="coupon-feedback"><strong>${escapeHTML(Checkout.couponCode)}</strong> será validado pela loja.<button type="button" data-remove-coupon>Remover</button></p>`
+                  : `<p class="checkout-help">O desconto será confirmado antes do pagamento.</p>`}
+              </div>
+            </div>
             <div class="drawer__store">
               <label for="store-select">Retirar / falar com</label>
               <select id="store-select">
                 ${STORES.map(
                   (s) =>
-                    `<option value="${s.id}">${escapeHTML(
+                    `<option value="${s.id}" ${Checkout.storeId === s.id ? "selected" : ""}>${escapeHTML(
                       s.city
                     )} — ${escapeHTML(s.district)}</option>`
                 ).join("")}
@@ -293,10 +367,13 @@
     lines.push("");
     lines.push(`*Total dos itens:* ${money(Cart.subtotal())}`);
     lines.push("");
-    lines.push("Podem confirmar disponibilidade em estoque e o frete?");
+    lines.push(...CheckoutTools.checkoutMessageLines(Checkout));
+    if (Checkout.couponCode) lines.push("*Observação:* total sujeito à validação do cupom pela loja.");
+    lines.push("");
+    lines.push("Podem confirmar disponibilidade em estoque, desconto e frete?");
     lines.push("");
     lines.push("CEP para entrega: ______");
-    return lines.filter(Boolean).join("\n");
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
 
   /* ------------------------------------------------- dados estruturados */
@@ -1001,6 +1078,26 @@
         return;
       }
 
+      if (e.target.closest("#coupon-add")) {
+        Checkout.updateFromDrawer();
+        if (!Checkout.couponCode) {
+          Toast.show("Digite um cupom para adicionar");
+          $("#coupon-code")?.focus();
+          return;
+        }
+        Cart.renderDrawer();
+        Toast.show(`Cupom ${Checkout.couponCode} informado`);
+        return;
+      }
+
+      if (e.target.closest("[data-remove-coupon]")) {
+        Checkout.couponCode = "";
+        Checkout.save();
+        Cart.renderDrawer();
+        Toast.show("Cupom removido");
+        return;
+      }
+
       const qa = e.target.closest("[data-quick-add]");
       if (qa) {
         quickAdd(qa.dataset.quickAdd);
@@ -1013,9 +1110,30 @@
       }
     });
 
+    document.addEventListener("change", (e) => {
+      if (e.target.id === "store-select") {
+        Checkout.storeId = String(e.target.value || "");
+        Checkout.save();
+      }
+    });
+
+    document.addEventListener("input", (e) => {
+      if (e.target.id === "seller-code") {
+        Checkout.sellerCode = CheckoutTools.normalizeSellerCode(e.target.value);
+        e.target.value = Checkout.sellerCode;
+        Checkout.save();
+      }
+      if (e.target.id === "coupon-code") {
+        Checkout.couponCode = CheckoutTools.normalizeCouponCode(e.target.value);
+        e.target.value = Checkout.couponCode;
+        Checkout.save();
+      }
+    });
+
     /* checkout por WhatsApp */
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#checkout-whats")) return;
+      Checkout.updateFromDrawer();
       const sel = $("#store-select");
       const store = STORES.find((s) => s.id === (sel && sel.value)) || STORES[0];
       const url = `https://wa.me/${store.whatsapp}?text=${encodeURIComponent(
@@ -1051,6 +1169,7 @@
       },
     });
 
+    Checkout.load();
     Cart.load();
     Cart.render();
     initUI();

@@ -83,6 +83,12 @@ Um pedido só entra na separação após aprovação da política de pagamento e
 antifraude. A conferência é por item e quantidade. A expedição registra
 transportadora, etiqueta, rastreio, operador e horário.
 
+O checkout também coleta, de forma opcional, `seller_code` (código do vendedor)
+e `coupon_code` (cupom). No fluxo atual por WhatsApp, ambos seguem na mensagem e
+o desconto é validado pela loja antes do pagamento — o navegador não inventa
+nem aplica percentuais. O modelo de pedidos já possui esses campos e o
+`discount_amount` calculado pelo backend para a futura integração de checkout.
+
 ## Integrações preparadas
 
 ### e.Rede
