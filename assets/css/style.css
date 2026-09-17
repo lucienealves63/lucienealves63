@@ -54,10 +54,11 @@
   --line: var(--gray-200);
   --line-strong: var(--gray-300);
 
-  /* Tipografia */
-  --font-display: "Anton", "Archivo Black", "Arial Narrow", Impact, sans-serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* Tipografia geométrica baseada nos desenhos oficiais da marca.
+     Jost preserva a construção próxima da Futura vista nos PDFs; os arquivos
+     originais usam letras convertidas em curvas, não uma fonte incorporada. */
+  --font-display: "Jost", Futura, "Century Gothic", Arial, sans-serif;
+  --font-body: "Jost", Futura, "Century Gothic", Arial, sans-serif;
 
   /* Métricas */
   --maxw: 1360px;
@@ -149,9 +150,9 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.02;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
   text-transform: uppercase;
   text-wrap: balance;
 }
@@ -303,18 +304,21 @@ h4 {
 }
 
 .brand__img {
-  height: 34px;
-  width: auto;
+  width: 172px;
+  height: auto;
+  max-height: 34px;
   object-fit: contain;
 }
 
 .brand__img--footer {
-  height: 40px;
+  width: 220px;
+  max-height: 40px;
   filter: invert(1);
 }
 
 .brand__img--hero {
-  height: clamp(56px, 9vw, 96px);
+  width: clamp(64px, 9vw, 96px);
+  max-height: none;
   filter: invert(1);
 }
 
