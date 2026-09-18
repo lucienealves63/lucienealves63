@@ -127,9 +127,19 @@
         assunto e mensagem do formulário de contato, e o conteúdo do pedido
         (itens, valores, CEP) — sempre <em>você</em> decide, clicando para
         abrir a conversa no WhatsApp da loja escolhida.</li>
+        <li><strong>Medição de audiência (só com o seu aceite):</strong> se
+        você escolher medir no aviso de privacidade, o site registra as
+        páginas visitadas, os cliques por região da página, a profundidade
+        de rolagem, o canal de origem (busca, rede social, anúncio com UTM),
+        o tipo de aparelho e a cidade que o seu navegador informar. A visita
+        é identificada por um <strong>número de sessão aleatório</strong>,
+        que expira após 30 minutos sem atividade. <strong>Não</strong>
+        coletamos endereço IP, user-agent, e-mail, telefone nem cookie de
+        terceiros.</li>
         <li><strong>O que não fazemos:</strong> não usamos cookies de
-        rastreamento, não rodamos anúncios de terceiros no site e não
-        criamos perfil ou pontuação de comportamento.</li>
+        rastreamento de terceiros, não rodamos anúncios de terceiros no
+        site, não criamos perfil individual nem pontuação de comportamento e
+        não vendemos dados de navegação.</li>
       </ul>
 
       <h2>3. Para que e com qual base legal</h2>
@@ -142,6 +152,12 @@
         saldo.</li>
         <li><strong>Cumprir obrigações fiscais e de garantia</strong> (base:
         obrigação legal) — notas fiscais, trocas e eventuais reembolsos.</li>
+        <li><strong>Melhorar a loja</strong> (base: consentimento, art. 7º,
+        I) — entender quais páginas e peças interessam, de onde vêm as
+        visitas e onde a jornada de compra trava. O consentimento pode ser
+        retirado a qualquer momento no aviso de privacidade; com
+        <em>"Só o essencial"</em>, nada é medido e o que estava na fila é
+        descartado.</li>
       </ul>
 
       <h2>4. Compartilhamento</h2>
@@ -151,14 +167,23 @@
       de rede de forma automatizada para segurança e disponibilidade. Se no
       futuro integrarmos meios de pagamento online, os dados de cartão serão
       tratados diretamente pelo provedor certificado, nunca por este site.</p>
+      <p>Quando a loja liga os canais de marketing (Meta Ads e Google
+      Analytics 4), as conversões medidas no site são enviadas
+      <strong>pelo nosso servidor</strong> com um hash do número de sessão
+      aleatório — sem nome, e-mail, telefone, endereço ou IP — apenas para
+      medir o retorno dos anúncios. Os segredos dessas plataformas nunca
+      passam pelo seu navegador.</p>
 
       <h2>5. Por quanto tempo guardamos</h2>
       <p>Os dados do carrinho e das preferências ficam no seu navegador e
       são apagados quando você limpa os dados de navegação (ou escolhe
       <em>"Só o essencial"</em> no aviso de privacidade — nesse caso, o site
-      deixa de gravar cupom, código de vendedor e cartão presente). As
-      conversas e pedidos seguem a política de retenção do WhatsApp e os
-      prazos legais fiscais e de garantia.</p>
+      deixa de gravar cupom, código de vendedor e cartão presente). Os
+      eventos de audiência ficam <strong>no máximo 13 meses</strong> e são
+      apagados automaticamente depois disso (função
+      <code>purge_analytics_events</code>, executada todo mês). As conversas
+      e pedidos seguem a política de retenção do WhatsApp e os prazos legais
+      fiscais e de garantia.</p>
 
       <h2>6. Seus direitos</h2>
       <p>Você pode pedir a qualquer momento (art. 18 da LGPD):
@@ -283,5 +308,6 @@
 <script src="assets/js/coupons.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/lgpd.js"></script>
+<script src="assets/js/analytics.js"></script>
 </body>
 </html>

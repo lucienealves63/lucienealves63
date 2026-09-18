@@ -174,17 +174,36 @@ Implantação específica:
 2. Executar `supabase/migrations/202609170001_operations.sql`;
 3. Executar `supabase/migrations/202609170002_banners_paletas.sql`
    (banners e paleta), `supabase/migrations/202609180001_gift_cards.sql`
-   (cartão presente: emitir, consultar e resgatar saldo por RPC) e
+   (cartão presente: emitir, consultar e resgatar saldo por RPC),
    `supabase/migrations/202609180002_discount_coupons.sql` (cupons de
-   desconto);
+   desconto), `supabase/migrations/202609180003_category_banners.sql`
+   (banner de categoria), `202609180004_analytics_audience.sql` (audiência
+   do site), `202609180005_sales_channels.sql` (canais de venda, já com os
+   8 canais no seed) e `202609180006_growth_schedules.sql` (agendamentos);
 4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 5. Cadastrar URL e anon key em `admin/assets/config.js`;
 6. Cadastrar os segredos de `.env.example` via Supabase Secrets
    (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
-7. Publicar as Edge Functions (incluindo `gerar-banner`);
-8. Testar importação com cópia anonimizada da planilha;
-9. Homologar Alterdata, Rede e ClearSale separadamente;
-10. Só então habilitar dados e credenciais de produção.
+7. Publicar as Edge Functions (`gerar-banner`, `integration-worker`,
+   `clearsale-webhook`, `google-merchant-feed`, `marketing-events` e
+   `channel-publish`);
+8. Conferir os agendamentos criados por `202609180006_growth_schedules.sql`
+   (`select jobname, schedule from cron.job`): retenção da audiência todo dia
+   1º, `marketing-events` com `{"flush":true}` a cada 15 minutos,
+   `channel-publish` a cada 30 minutos e `integration-worker` a cada 5. Se
+   `pg_cron`/`pg_net`/Vault não estiverem habilitados, a migration só emite um
+   `NOTICE` — nesse caso dispare as funções por fora (POST com o cabeçalho
+   `x-worker-secret`) com o mesmo corpo;
+9. Guardar `INTEGRATION_WORKER_SECRET` também no **Vault** do Supabase (além
+   de Supabase Secrets): é de lá que os agendamentos leem o cabeçalho no
+   momento da execução, sem gravar segredo em `cron.job`;
+10. Testar importação com cópia anonimizada da planilha;
+11. Homologar Alterdata, Rede e ClearSale separadamente;
+12. Cadastrar os canais em **Canais & Marketing** (identificadores públicos),
+    conferir a prévia do feed e só então habilitar;
+13. Cadastrar a URL `…/functions/v1/google-merchant-feed?token=…` como feed
+    primário agendado no Merchant Center e enviar o catálogo para revisão;
+14. Só então habilitar dados e credenciais de produção.
 
 ## Cartão presente
 
@@ -228,6 +247,141 @@ No servidor, a migration `202609180002_discount_coupons.sql` cria a tabela
 - `check_discount_coupon(code)` — consulta pública de um código ativo e
   dentro da janela de datas (anon + authenticated).
 
+## Audiência do site
+
+A página **Audiência** do dashboard responde três perguntas: quais páginas
+vendem, onde o visitante clica e de onde ele vem. Os números são medidos pelo
+próprio site (`assets/js/analytics.js`) — sem Google Tag Manager, sem pixel de
+terceiro no modo demonstração.
+
+| Painel | O que mostra |
+| --- | --- |
+| Métricas do período | sessões, páginas vistas, visitantes, conversões, páginas por sessão, tempo médio, saídas sem interagir, rolagem média — cada uma com o comparativo do período anterior |
+| Evolução diária | barras de sessões + linha de páginas vistas (SVG, sem biblioteca) |
+| Páginas mais visitadas | barra proporcional, sessões, participação e conversões por página |
+| Região de calor | faixas da página (cabeçalho, hero, filtros, grade, rodapé) pintadas por intensidade, grade 12 × 18 de cliques e pontos quentes (elemento clicado) |
+| Origem do tráfego | direto, orgânico, social, e-mail, parceiros, pago e campanha UTM (inclusive `gclid`/`fbclid`/`ttclid`), mais sites de referência |
+| Jornada | funil visitou → viu produto → adicionou → finalizou → WhatsApp |
+| Dispositivos e cidades | participação por tipo de aparelho e cidade informada pelo navegador |
+| Rolagem | média e marcos de 25/50/75/100% por página |
+
+Permissões: leitura para `admin` e `viewer` (`requirePermission("audience")`
+no painel e `has_role` na RPC).
+
+RPCs da migration `202609180004_analytics_audience.sql`:
+
+- `track_site_events(p_events jsonb)` — escrita anônima **validada**: lote de
+  até 40 eventos, tipos e canais em enum, comprimentos limitados, UTM e região
+  só com chaves conhecidas, data nunca futura e teto de 120 eventos por sessão
+  por minuto. Evento inválido é descartado em silêncio (o visitante não recebe
+  erro de rastreamento);
+- `audience_report(p_from, p_to, p_path, p_cols, p_rows)` — devolve exatamente
+  o formato que `aggregate()` produz no navegador, então o painel tem um único
+  código de desenho nos dois modos; inclui `previous` (período imediatamente
+  anterior) para o comparativo dos cartões;
+- `audience_report_window(...)` — a janela de agregação usada duas vezes
+  (período atual e anterior);
+- `purge_analytics_events(p_before)` — retenção LGPD (padrão 13 meses, papel
+  `admin`).
+
+Privacidade: nenhum IP, `user-agent`, e-mail ou telefone é gravado; o visitante
+é um id de sessão aleatório que expira após 30 minutos de inatividade. A
+medição só começa depois do aceite no aviso de privacidade
+(`assets/js/lgpd.js`) e para por completo com "Só o essencial". A RLS não
+libera leitura de `analytics_events` para a chave anônima — só `admin` e
+`viewer` autenticados leem, e o agregado sai pela RPC.
+
+No modo demonstração o painel soma os eventos medidos naquele navegador à base
+de exemplo (sintética, determinística por *seed*, nunca gravada) e avisa isso
+na tela; o botão *Base de exemplo* desliga a simulação para ver só o tráfego
+verdadeiro.
+
+## Canais de venda e marketing
+
+A página **Canais & Marketing** agrupa mídia (Google Merchant Center, Meta
+Ads), medição (GA4) e os marketplaces mais usados no varejo de moda brasileiro
+(Mercado Livre, Shopee, Amazon, Magazine Luiza, Americanas).
+
+Fluxo de publicação:
+
+1. o painel monta a **prévia** do feed com `admin/assets/channels.js`
+   (colunas exatas do canal, pendências por item, preço do site × preço do
+   canal) e permite o download (XML no Google, TSV na Amazon, CSV nos demais);
+2. *Publicar* chama `publish_catalog_to_channel(channel, options)`, que
+   recalcula preço e estoque **no banco**, grava `channel_listings` e enfileira
+   um job em `integration_outbox` (`service = 'channels'`);
+3. a Edge Function `channel-publish` consome a fila e chama a API do provedor
+   com os segredos do ambiente, atualizando `external_id`, status e
+   `metadata.lastPush` (retentativa com backoff exponencial e `dead_letter`
+   após 8 tentativas, igual ao `integration-worker`);
+4. `marketing-events` encaminha as conversões do site para a Meta Conversions
+   API e o GA4 Measurement Protocol, com `event_id` igual ao do Pixel do
+   navegador para a Meta deduplicar.
+
+Política por canal (`sales_channels.config.policy`):
+
+| Campo | Efeito |
+| --- | --- |
+| `markup` | percentual aplicado sobre o preço de varejo |
+| `rounding` | `psychological` (preço termina em `,90`), `cent` ou `none` |
+| `stockBuffer` | unidades reservadas por segurança (0 publica o saldo inteiro) |
+| `maxPublished` | teto de unidades anunciadas por item |
+| `minPrice` | piso de preço do canal |
+| `publishOnlyAvailable` | desligado, publica também item sem saldo |
+
+O painel calcula o markup que empata com a comissão de cada canal
+(`suggestedMarkup`: 14% de comissão → 16,3% de markup) e mostra o resultado
+antes de gravar. As mesmas regras existem nos três lugares, com teste que
+compara: `admin/assets/channels.js` (prévia), `supabase/functions/_shared/feeds.ts`
+(publicação) e as funções SQL `channel_policy`, `channel_price`,
+`channel_stock`, `channel_listing_status` e `channel_listing_problems`.
+
+RPCs da migration `202609180005_sales_channels.sql` (todas papel `admin`):
+
+- `save_sales_channel(p_payload)` — grava identificadores públicos e política;
+  recusar habilitar sem os campos obrigatórios do canal
+  (`channel_required_fields`);
+- `publish_catalog_to_channel(p_channel_id, p_options)` — publica (ou simula
+  com `dry_run`) e devolve itens, publicáveis, pendências, preço médio e valor
+  publicável;
+- `channel_catalog(p_site_url)` — o catálogo agrupado por referência (saldo
+  disponível somado entre lojas), que também alimenta o feed quando o canal
+  ainda não foi publicado;
+- `channel_summary()` — contadores por canal para o cartão do painel.
+
+Edge Functions:
+
+- `google-merchant-feed` — `GET …?token=…[&format=xml|csv]` é a URL de coleta
+  primária do Merchant Center; `POST` (sessão admin) faz o push imediato pela
+  Content API v2.1. Sem credencial configurada, valida o feed e devolve o
+  resumo sem enviar nada;
+- `marketing-events` — `{test:true, channel}` (botão de teste do painel),
+  `{flush:true}` (agendador) ou `{events:[…]}` (servidor a servidor);
+- `channel-publish` — fila de publicação, sem corpo ou `{channel, dryRun}`.
+
+Segredos por canal estão listados em `.env.example` e aparecem no modal de
+configuração de cada canal (o painel mostra **quais** segredos existem, nunca
+o valor).
+
+## Banner de categoria (site)
+
+A migration `202609180003_category_banners.sql` acrescenta a posição
+`category-hero` e a coluna `site_banners.category`:
+
+- `save_site_banner(p_payload)` aceita `category` e exige a categoria quando a
+  posição é `category-hero`;
+- `set_site_banner_active(id, active)` desativa os demais banners **da mesma
+  posição e categoria** (índice único parcial garante um ativo por slot);
+- `live_category_banners()` lista as artes no ar (posição `category-hero`,
+  ativas e dentro da janela de datas) para `anon` e `authenticated`;
+- a política "anon read live banner" continua valendo: a chave anônima só vê
+  banner ativo no período.
+
+No site, `produtos.html` mostra a arte quando o visitante filtra a categoria e
+`produto.html` quando o produto pertence a ela. É opcional: sem banner ativo, o
+contêiner nasce com `hidden` e o layout não muda. No modo demonstração as artes
+ficam em `c18:demo-category-banners` (uma por categoria).
+
 ## Segurança
 
 - Nunca colocar `service_role`, client secrets, CVV ou número completo de cartão
@@ -235,5 +389,13 @@ No servidor, a migration `202609180002_discount_coupons.sql` cria a tabela
 - RLS habilitado em todas as tabelas operacionais;
 - Funções sensíveis validam função do usuário;
 - Integrações usam outbox com idempotência e retentativa;
+- Segredos de canal (token da CAPI, JSON da conta de serviço Google, chaves de
+  marketplace) existem somente em Supabase Secrets: o painel grava
+  identificadores públicos e a Edge Function assina as chamadas;
+- A URL do feed do Google Merchant é protegida por token
+  (`GOOGLE_MERCHANT_FEED_TOKEN`) e devolve apenas itens publicáveis;
+- Escrita de audiência é validada e limitada por sessão; leitura só agregada e
+  só para `admin`/`viewer`;
 - Produção precisa de política de backup, retenção de logs e atendimento à
-  LGPD antes do lançamento.
+  LGPD antes do lançamento (retenção de `analytics_events`: 13 meses,
+  `purge_analytics_events`).

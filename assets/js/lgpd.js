@@ -9,6 +9,13 @@
  *   as preferências do checkout (código do vendedor, cupom e cartão
  *   presente) e apaga o que já estava gravado. O carrinho continua salvo —
  *   é essencial para a compra, como o item no carrinho de uma loja física.
+ *
+ * A mesma escolha comanda a medição de audiência (assets/js/analytics.js):
+ * ao responder, este módulo dispara o evento "c18:lgpd-change" no document.
+ * Com "Aceitar", o site passa a contar páginas visitadas, cliques (mapa de
+ * calor), rolagem e origem do tráfego — sempre sem terceiros, sem cookie e
+ * sem dado pessoal. Com "Só o essencial", nada é medido e o que porventura
+ * estava guardado é apagado.
  */
 (function (global) {
   "use strict";
@@ -20,7 +27,12 @@
      "Só o essencial". Carrinho (c18:carrinho) e configurações de
      demonstração do painel (c18:demo-banner / c18:demo-palette) ficam:
      são necessários para o funcionamento e não são dados pessoais. */
-  const OPTIONAL_KEYS = ["c18:checkout"];
+  const OPTIONAL_KEYS = [
+    "c18:checkout",
+    "c18:analytics-session",
+    "c18:analytics-visitor",
+    "c18:demo-analytics",
+  ];
 
   function storageRef(storage) {
     return (
@@ -87,6 +99,13 @@
     });
   }
 
+  /* Avisa o resto do site (audiência e preferências) sobre a escolha. */
+  function notify(status, doc) {
+    if (!doc || typeof doc.dispatchEvent !== "function") return;
+    if (typeof global.CustomEvent !== "function") return;
+    doc.dispatchEvent(new global.CustomEvent("c18:lgpd-change", { detail: { status } }));
+  }
+
   /* ------------------------------------------------------- banner */
   function renderBanner(options) {
     const opts = options || {};
@@ -102,19 +121,24 @@
       <div class="lgpd__inner">
         <p>Nós guardamos só o essencial: <strong>seu carrinho e suas
         preferências ficam no seu navegador</strong> e não são compartilhados
-        com ninguém — sem cookies de rastreamento. Saiba mais na
+        com ninguém — sem cookies de rastreamento. Com
+        <strong>Aceitar</strong>, o site também mede a audiência (páginas
+        visitadas, cliques por região e origem da visita) usando um
+        <strong>número de sessão aleatório</strong>: sem IP, e-mail ou
+        telefone. Saiba mais na
         <a href="${opts.policyHref || "privacidade.html"}">política de privacidade</a>.</p>
         <div class="lgpd__actions">
           <button type="button" class="btn" data-lgpd-accept>Aceitar</button>
           <button type="button" class="btn btn--ghost" data-lgpd-essential>
-            Só o essencial
+            Só o essencial (sem medição)
           </button>
         </div>
       </div>`;
 
     const close = (status) => {
-      setConsent(status, opts.storage);
-      if (status === STATUS.ESSENTIAL) dropOptionalData(opts.storage);
+      const choice = setConsent(status, opts.storage);
+      if (choice === STATUS.ESSENTIAL) dropOptionalData(opts.storage);
+      notify(choice, opts.document || doc);
       if (wrap.remove) wrap.remove();
       else if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
     };
@@ -143,6 +167,7 @@
     getConsent,
     hasFullConsent,
     init,
+    notify,
     renderBanner,
     setConsent,
   };

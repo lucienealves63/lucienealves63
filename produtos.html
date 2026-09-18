@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="icon" type="image/png" href="assets/img/logos/logo-quadro.png">
 <script src="assets/js/ssl.js"></script>
+<script src="assets/js/site-config.js"></script>
 </head>
 <body>
 
@@ -121,6 +122,22 @@
       WhatsApp da loja mais perto de você.</p>
       <p id="search-title" class="results-info" hidden style="margin-top:14px"></p>
     </div>
+
+    <!-- Banner de categoria (OPCIONAL): só aparece quando o painel tem um
+         banner ativo para a categoria em exibição — admin/ → Banners & Paleta.
+         Sem banner cadastrado, o layout continua exatamente como antes. -->
+    <aside class="cat-banner" id="category-banner" hidden aria-label="Destaque da categoria">
+      <img class="cat-banner__media" id="category-banner-img" alt="" hidden>
+      <div class="cat-banner__content">
+        <span class="eyebrow" id="category-banner-kicker" hidden></span>
+        <h2 class="cat-banner__title" id="category-banner-title" hidden></h2>
+        <p class="cat-banner__text" id="category-banner-text" hidden></p>
+        <div class="cat-banner__actions">
+          <a class="btn" id="category-banner-cta" href="#" hidden></a>
+          <a class="btn btn--ghost" id="category-banner-cta-2" href="#" hidden></a>
+        </div>
+      </div>
+    </aside>
 
     <div class="toolbar">
       <div class="filters">
@@ -261,5 +278,6 @@
 <script src="assets/js/gift-card.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/lgpd.js"></script>
+<script src="assets/js/analytics.js"></script>
 </body>
 </html>
