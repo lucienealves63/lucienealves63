@@ -18,6 +18,17 @@
     line: "#dedede",
   };
   const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+  /* Números de estatística do hero (index.html → #hero-stat-N-value/-label).
+     Os limites abaixo são os mesmos do site e da migration SQL. */
+  const HERO_STAT_SLOTS = 4;
+  const HERO_STAT_VALUE_MAX = 12;
+  const HERO_STAT_LABEL_MAX = 40;
+  const DEFAULT_HERO_STATS = [
+    { value: "36", label: "anos de rua" },
+    { value: "6", label: "lojas físicas" },
+    { value: "25k", label: "seguidores" },
+    { value: "1989", label: "a origem" },
+  ];
   // variáveis usadas só na prévia da paleta (não afetam o tema do painel)
   const PALETTE_PREVIEW_VARS = {
     primary: "--pv-primary",
@@ -161,6 +172,7 @@
       cta_url: "produtos.html",
       cta_secondary_label: "Achar uma loja",
       cta_secondary_url: "lojas.html",
+      stats: DEFAULT_HERO_STATS,
       source: "static",
       ai_prompt: "",
       active: true,
@@ -1007,6 +1019,7 @@
         cta_url: banner.cta_url || "",
         cta_secondary_label: banner.cta_secondary_label || "",
         cta_secondary_url: banner.cta_secondary_url || "",
+        stats: Array.isArray(banner.stats) ? banner.stats : [],
         source: banner.source,
         ai_prompt: banner.ai_prompt || "",
         active: Boolean(banner.active),
@@ -1176,6 +1189,7 @@
       const sourceLabel = { upload: "Upload", ai: "Gerado por IA", static: "Padrão da marca" }[banner.source] || banner.source;
       const positionLabel = banner.position === "home-hero" ? "Home — hero" : "Faixa promocional";
       const until = banner.ends_at ? ` · até ${new Date(banner.ends_at).toLocaleDateString("pt-BR")}` : "";
+      const statsLine = heroStatsSummary(banner.stats);
       return `<article class="banner-card${banner.active ? " is-active" : ""}">
         <div class="banner-card__media">
           <img src="${esc(bannerDisplayImage(banner))}" alt="" loading="lazy" onerror="this.parentElement.classList.add('is-missing');this.remove()">
@@ -1184,6 +1198,7 @@
         <div class="banner-card__body">
           <div class="banner-card__top"><strong>${esc(banner.name)}</strong>${status}</div>
           <p>${esc(sourceLabel)} · ${esc(positionLabel)}${until}</p>
+          ${statsLine ? `<p class="banner-card__stats">${esc(statsLine)}</p>` : ""}
           <div class="banner-card__actions">
             <button class="btn ${banner.active ? "btn--secondary" : "btn--primary"}" data-banner-toggle="${esc(banner.id)}">${banner.active ? "Desativar" : "Ativar"}</button>
             <button class="btn btn--secondary" data-banner-edit="${esc(banner.id)}">Editar</button>
@@ -1200,6 +1215,41 @@
     if (Number.isNaN(date.getTime())) return "";
     const pad = (value) => String(value).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  // Lê os pares número/legenda do formulário; os vazios do fim são descartados
+  // (no site, um campo em branco mantém o texto padrão da marca).
+  function readHeroStats() {
+    const fieldValue = (selector, maxLength) => {
+      const field = $(selector);
+      return field ? field.value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
+    };
+    const stats = Array.from({ length: HERO_STAT_SLOTS }, (_, index) => ({
+      value: fieldValue(`#banner-stat-${index + 1}-value`, HERO_STAT_VALUE_MAX),
+      label: fieldValue(`#banner-stat-${index + 1}-label`, HERO_STAT_LABEL_MAX),
+    }));
+    while (stats.length && !stats[stats.length - 1].value && !stats[stats.length - 1].label) stats.pop();
+    return stats;
+  }
+
+  function fillHeroStats(stats) {
+    const list = Array.isArray(stats) ? stats : [];
+    for (let index = 0; index < HERO_STAT_SLOTS; index += 1) {
+      const stat = list[index] && typeof list[index] === "object" ? list[index] : {};
+      const valueField = $(`#banner-stat-${index + 1}-value`);
+      const labelField = $(`#banner-stat-${index + 1}-label`);
+      if (valueField) valueField.value = typeof stat.value === "string" ? stat.value : "";
+      if (labelField) labelField.value = typeof stat.label === "string" ? stat.label : "";
+    }
+  }
+
+  function heroStatsSummary(stats) {
+    if (!Array.isArray(stats)) return "";
+    return stats
+      .slice(0, HERO_STAT_SLOTS)
+      .map((stat) => (stat && typeof stat === "object" ? [stat.value, stat.label].filter(Boolean).join(" ") : ""))
+      .filter(Boolean)
+      .join(" · ");
   }
 
   function showBannerPreview(src) {
@@ -1239,6 +1289,7 @@
       $("#banner-cta-url").value = banner.cta_url || "";
       $("#banner-cta2").value = banner.cta_secondary_label || "";
       $("#banner-cta2-url").value = banner.cta_secondary_url || "";
+      fillHeroStats(banner.stats);
       $("#banner-prompt").value = banner.ai_prompt || "";
       $("#banner-starts").value = toDatetimeLocal(banner.starts_at);
       $("#banner-ends").value = toDatetimeLocal(banner.ends_at);
@@ -1248,6 +1299,8 @@
     } else {
       $("#banner-modal-title").textContent = "Novo banner";
       $("#banner-active-check").checked = true;
+      // Começa com os números que estão no ar para o banner novo não "perder" a faixa.
+      fillHeroStats(DEFAULT_HERO_STATS);
     }
     showBannerPreview(banner ? bannerDisplayImage(banner) : "");
     openModal("#banner-modal");
@@ -1431,6 +1484,7 @@
       cta_url: $("#banner-cta-url").value.trim(),
       cta_secondary_label: $("#banner-cta2").value.trim(),
       cta_secondary_url: $("#banner-cta2-url").value.trim(),
+      stats: readHeroStats(),
       source: bannerImageSource || "upload",
       ai_prompt: bannerImageSource === "ai" ? $("#banner-prompt").value.trim() : "",
       priority: 100,

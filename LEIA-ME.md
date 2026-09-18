@@ -340,6 +340,9 @@ ser extraída diretamente dos arquivos.
       `aria-expanded` nos acordeões e `prefers-reduced-motion`
 - [x] Banners da home gerenciados no painel (upload, geração por IA por
       prompt, agendamento e ativar/desativar) — `admin/` → Banners & Paleta
+- [x] Banner do hero 100% editável pela equipe: além de título, texto e
+      botões, os **números de estatística** da faixa abaixo dos CTAs
+      (até 4 pares número/legenda, ex.: “36 anos de rua”)
 - [x] Paleta de cores do site ajustável pelo painel (8 cores aplicadas em
       tempo real via CSS variables, com restauração do padrão P&B)
 - [x] Cartão presente (R$ 50–500) com página própria e campo no carrinho —
@@ -369,7 +372,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test                 # 28 testes (descobre tudo em tests/)
+node --test tests/*.test.js   # 64 testes
 # ou, por arquivo:
 node --test tests/gift-card.test.js tests/coupons.test.js \
            tests/checkout.test.js tests/site-config.test.js \
@@ -378,5 +381,5 @@ node --test tests/gift-card.test.js tests/coupons.test.js \
 
 Os testes cobrem o contrato do checkout (vendedor, cupom, cartão
 presente e parcelamento), os cupons por escopo, a página de cartão
-presente, o `site-config` nos modos static/demo e o importador da
-planilha Alterdata.
+presente, o `site-config` nos modos static/demo (banner, paleta e os
+números de estatística do hero) e o importador da planilha Alterdata.

@@ -29,6 +29,13 @@ window.C18_SITE = window.C18_SITE || {
   const PALETTE_DEMO_KEY = "c18:demo-palette";
   const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
+  // Números de estatística do hero: cada banner traz até 4 pares
+  // número/legenda, aplicados por posição em #hero-stat-N-value/-label
+  // (index.html → .hero__meta). Regras espelhadas no painel e na migration.
+  const HERO_STAT_SLOTS = 4;
+  const HERO_STAT_VALUE_MAX = 12;
+  const HERO_STAT_LABEL_MAX = 40;
+
   // Mapa cor salva no painel → variável CSS da loja (assets/css/style.css)
   const PALETTE_VARS = {
     primary: "--brand",
@@ -54,6 +61,26 @@ window.C18_SITE = window.C18_SITE || {
     Object.entries(PALETTE_VARS).forEach(([key, cssVar]) => setIfHex(scope, cssVar, colors[key]));
   }
 
+  // Textos sempre via textContent — nada de HTML vindo do banco.
+  function setText(id, value, maxLength) {
+    const el = document.getElementById(id);
+    if (!el || typeof value !== "string") return;
+    let text = value.trim();
+    if (maxLength) text = text.replace(/\s+/g, " ").slice(0, maxLength);
+    if (!text) return;
+    el.textContent = text;
+  }
+
+  function applyHeroStats(stats) {
+    if (!Array.isArray(stats)) return;
+    stats.slice(0, HERO_STAT_SLOTS).forEach((stat, index) => {
+      if (!stat || typeof stat !== "object" || Array.isArray(stat)) return;
+      const slot = index + 1;
+      setText(`hero-stat-${slot}-value`, stat.value, HERO_STAT_VALUE_MAX);
+      setText(`hero-stat-${slot}-label`, stat.label, HERO_STAT_LABEL_MAX);
+    });
+  }
+
   function applyBanner(banner) {
     if (!banner) return;
 
@@ -69,11 +96,6 @@ window.C18_SITE = window.C18_SITE || {
     }
 
     // Textos (textContent — nenhum HTML injetado a partir do banco)
-    const setText = (id, value) => {
-      const el = document.getElementById(id);
-      if (el && typeof value === "string" && value.trim()) el.textContent = value.trim();
-    };
-
     const setHref = (id, value) => {
       const el = document.getElementById(id);
       if (!el || typeof value !== "string" || !value.trim()) return;
@@ -97,6 +119,9 @@ window.C18_SITE = window.C18_SITE || {
     setHref("hero-cta", banner.cta_url);
     setText("hero-cta-2", banner.cta_secondary_label);
     setHref("hero-cta-2", banner.cta_secondary_url);
+
+    // Números de estatística da faixa abaixo dos botões
+    applyHeroStats(banner.stats);
 
     // OG image acompanha a arte ativa (útil em compartilhamentos)
     if (banner.image_path) {
