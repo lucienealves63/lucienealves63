@@ -134,10 +134,15 @@ Solicitar à Alterdata:
 A página **Banners & Paleta** do dashboard controla a identidade da loja
 sem deploy:
 
-- **Banners da home** (`site_banners`): arte do hero com título, texto e
-  dois CTAs. Cada banner tem origem (`upload`, `ai` ou `static`),
-  agendamento (`starts_at`/`ends_at`) e prioridade. Só **um banner por
-  posição** fica ativo; ao ativar, os demais da posição desativam.
+- **Banners da home** (`site_banners`): arte do hero com título, texto,
+  dois CTAs e a **faixa de números de estatística** — até 4 pares
+  número/legenda (`stats`, ex.: `{"value":"36","label":"anos de rua"}`),
+  aplicados por posição em `#hero-stat-1..4-value/-label`. Campo em branco
+  mantém o texto padrão da marca; número com mais de 12 e legenda com mais
+  de 40 caracteres são recusados pelo painel e pela função. Cada banner tem
+  origem (`upload`, `ai` ou `static`), agendamento (`starts_at`/`ends_at`)
+  e prioridade. Só **um banner por posição** fica ativo; ao ativar, os
+  demais da posição desativam.
 - **Geração por IA** (função `gerar-banner`): o operador descreve o banner
   (prompt), escolhe estilo e proporção e a imagem é gerada no servidor e
   salva no bucket público `banners`. A chave da IA fica em Supabase Secrets;

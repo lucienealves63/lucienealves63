@@ -188,6 +188,80 @@ test("modo static: link javascript: no CTA é bloqueado", () => {
   assert.equal(dom.getElementById("hero-cta").href, "");
 });
 
+test("modo static: aplica os números de estatística do hero (demo)", () => {
+  const banner = {
+    id: "b3", name: "Faixa nova", position: "home-hero", image_path: "assets/img/hero.jpg",
+    source: "upload", active: true,
+    stats: [
+      { value: "37", label: "anos de rua" },
+      { value: "7", label: "lojas físicas" },
+      { value: "30k", label: "seguidores" },
+      { value: "1990", label: "a origem" },
+    ],
+  };
+  const { dom } = loadSiteConfig({ storage: makeLocalStorage(), banner });
+
+  assert.equal(dom.getElementById("hero-stat-1-value").textContent, "37");
+  assert.equal(dom.getElementById("hero-stat-1-label").textContent, "anos de rua");
+  assert.equal(dom.getElementById("hero-stat-2-value").textContent, "7");
+  assert.equal(dom.getElementById("hero-stat-2-label").textContent, "lojas físicas");
+  assert.equal(dom.getElementById("hero-stat-3-value").textContent, "30k");
+  assert.equal(dom.getElementById("hero-stat-3-label").textContent, "seguidores");
+  assert.equal(dom.getElementById("hero-stat-4-value").textContent, "1990");
+  assert.equal(dom.getElementById("hero-stat-4-label").textContent, "a origem");
+});
+
+test("modo static: número ou legenda em branco mantém o padrão da home", () => {
+  const banner = {
+    id: "b4", name: "Faixa parcial", position: "home-hero", image_path: "assets/img/hero.jpg",
+    source: "upload", active: true,
+    stats: [{ value: "40", label: "" }, { value: "", label: "unidades" }],
+  };
+  const { dom } = loadSiteConfig({ storage: makeLocalStorage(), banner });
+
+  // preenchido entra; em branco o site não toca no texto padrão
+  assert.equal(dom.getElementById("hero-stat-1-value").textContent, "40");
+  assert.equal(dom.getElementById("hero-stat-1-label").textContent, "");
+  assert.equal(dom.getElementById("hero-stat-2-value").textContent, "");
+  assert.equal(dom.getElementById("hero-stat-2-label").textContent, "unidades");
+  assert.equal(dom.getElementById("hero-stat-3-value").textContent, "");
+  assert.equal(dom.getElementById("hero-stat-4-label").textContent, "");
+});
+
+test("modo static: números fora do contrato são ignorados", () => {
+  const base = {
+    id: "b5", name: "Faixa inválida", position: "home-hero", image_path: "assets/img/hero.jpg",
+    source: "upload", active: true,
+  };
+
+  // não é lista: nada é aplicado
+  let { dom } = loadSiteConfig({ storage: makeLocalStorage(), banner: { ...base, stats: "36 anos" } });
+  assert.equal(dom.getElementById("hero-stat-1-value").textContent, "");
+
+  // item que não é objeto é ignorado por posição; textos longos são cortados
+  ({ dom } = loadSiteConfig({
+    storage: makeLocalStorage(),
+    banner: {
+      ...base,
+      stats: [
+        { value: "41", label: "anos de rua" },
+        42,
+        { value: "9".repeat(30), label: "l".repeat(60) },
+        { value: "5", label: "lojas" },
+        { value: "extra", label: "além do 4º" },
+        { value: "extra2", label: "além do 4º" },
+      ],
+    },
+  }));
+  assert.equal(dom.getElementById("hero-stat-1-value").textContent, "41");
+  assert.equal(dom.getElementById("hero-stat-2-value").textContent, "");
+  assert.equal(dom.getElementById("hero-stat-3-value").textContent, "9".repeat(12));
+  assert.equal(dom.getElementById("hero-stat-3-label").textContent, "l".repeat(40));
+  assert.equal(dom.getElementById("hero-stat-4-value").textContent, "5");
+  // a faixa do hero tem 4 posições: o excedente é descartado
+  assert.equal(dom.getElementById("hero-stat-5-value").textContent, "");
+});
+
 test("contrato demo: chaves e cores batem entre admin/ e o site", () => {
   const adminJs = fs.readFileSync(path.join(__dirname, "..", "admin", "assets", "admin.js"), "utf8");
   const siteJs = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "site-config.js"), "utf8");
@@ -205,4 +279,48 @@ test("contrato demo: chaves e cores batem entre admin/ e o site", () => {
     assert.ok(siteJs.includes(`${key}: "--`), `site-config mapeia ${key}`);
     assert.ok(migration.includes(`'${key}'`), `migration valida ${key}`);
   }
+});
+
+test("contrato dos números do hero: home, painel, site e migration batem", () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, "..", ...parts), "utf8");
+  const homeHtml = read("index.html");
+  const adminHtml = read("admin", "index.html");
+  const adminJs = read("admin", "assets", "admin.js");
+  const siteJs = read("assets", "js", "site-config.js");
+  const statsMigration = read("supabase", "migrations", "202609200001_hero_stats.sql");
+
+  for (const slot of [1, 2, 3, 4]) {
+    // a home expõe o par número/legenda com id posicional
+    const homeValue = homeHtml.match(new RegExp(`id="hero-stat-${slot}-value">([^<]*)<`));
+    const homeLabel = homeHtml.match(new RegExp(`id="hero-stat-${slot}-label">([^<]*)<`));
+    assert.ok(homeValue, `home tem #hero-stat-${slot}-value`);
+    assert.ok(homeLabel, `home tem #hero-stat-${slot}-label`);
+    // o painel edita exatamente as mesmas posições, com os limites do site
+    assert.ok(adminHtml.includes(`id="banner-stat-${slot}-value" maxlength="12"`), `painel edita o número ${slot}`);
+    assert.ok(adminHtml.includes(`id="banner-stat-${slot}-label" maxlength="40"`), `painel edita a legenda ${slot}`);
+    // o site aplica por posição (mesmo contrato de ids)
+    assert.ok(siteJs.includes(`hero-stat-\${slot}-value`), "site-config aplica o número");
+    assert.ok(siteJs.includes(`hero-stat-\${slot}-label`), "site-config aplica a legenda");
+    // o banner novo do painel já vem com o que está no ar na home
+    assert.ok(
+      adminJs.includes(`{ value: "${homeValue[1]}", label: "${homeLabel[1]}" }`),
+      `DEFAULT_HERO_STATS acompanha a home na posição ${slot}`
+    );
+  }
+
+  // mesmos limites no site, no painel e no banco
+  for (const source of [siteJs, adminJs, statsMigration]) {
+    assert.ok(source.includes("HERO_STAT") || source.includes("no máximo 4 números"), "constantes compartilhadas");
+  }
+  assert.ok(siteJs.includes("const HERO_STAT_SLOTS = 4"), "site limita a 4 posições");
+  assert.ok(adminJs.includes("const HERO_STAT_SLOTS = 4"), "painel limita a 4 posições");
+  assert.ok(adminJs.includes("const HERO_STAT_VALUE_MAX = 12"), "painel valida o número");
+  assert.ok(adminJs.includes("const HERO_STAT_LABEL_MAX = 40"), "painel valida a legenda");
+  assert.ok(statsMigration.includes("stats jsonb not null default '[]'::jsonb"), "migration cria a coluna stats");
+  assert.ok(statsMigration.includes("jsonb_array_length(v_stats) > 4"), "migration limita a 4 itens");
+  assert.ok(statsMigration.includes("char_length(v_item_value) > 12"), "migration valida o número");
+  assert.ok(statsMigration.includes("char_length(v_item_label) > 40"), "migration valida a legenda");
+  // o painel manda a faixa no payload e o site consome
+  assert.ok(adminJs.includes("stats: readHeroStats()"), "payload do painel inclui stats");
+  assert.ok(siteJs.includes("applyHeroStats(banner.stats)"), "site aplica stats do banner");
 });
