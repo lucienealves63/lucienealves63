@@ -78,6 +78,8 @@
     couponDescription: "",
     giftCardCode: "",
     storeId: "",
+    cep: "",
+    frete: null, /* opção escolhida: { id, transportadora, servico, preco, prazoTexto, dias, gratis } */
 
     load() {
       try {
@@ -86,11 +88,15 @@
         this.couponCode = CheckoutTools.normalizeCouponCode(saved.couponCode);
         this.giftCardCode = CheckoutTools.normalizeGiftCardCode(saved.giftCardCode);
         this.storeId = String(saved.storeId || "");
+        this.cep = Frete.normalizeCep(saved.cep);
+        this.frete = Frete.normalizarOpcoes([saved.frete])[0] || null;
       } catch (_) {
         this.sellerCode = "";
         this.couponCode = "";
         this.giftCardCode = "";
         this.storeId = "";
+        this.cep = "";
+        this.frete = null;
       }
     },
 
@@ -122,10 +128,12 @@
       const coupon = $("#coupon-code");
       const giftCard = $("#gift-card-code");
       const store = $("#store-select");
+      const cep = $("#frete-cep");
       if (seller) this.sellerCode = CheckoutTools.normalizeSellerCode(seller.value);
       if (coupon) this.couponCode = CheckoutTools.normalizeCouponCode(coupon.value);
       if (giftCard) this.giftCardCode = CheckoutTools.normalizeGiftCardCode(giftCard.value);
       if (store) this.storeId = String(store.value || "");
+      if (cep) this.cep = Frete.normalizeCep(cep.value);
       this.save();
     },
 
@@ -134,6 +142,9 @@
       this.couponCode = "";
       this.couponDescription = "";
       this.giftCardCode = "";
+      this.cep = "";
+      this.frete = null;
+      Frete.state.quotes = null;
       this.save();
     },
   };
@@ -193,6 +204,55 @@
 
   function couponDescriptionForMessage() {
     return Checkout.couponDescription || couponDescription(Checkout.couponCode);
+  }
+
+  /* Bloco de opções de frete dentro do rodapé do carrinho. */
+  function renderFreteResultado() {
+    if (!global.C18Frete) return "";
+    const { quotes, loading } = Frete.state;
+    const cepValido = C18Frete.isCepValida(Checkout.cep);
+
+    if (!cepValido) {
+      return `<p class="checkout-help">Calcule o frete pelo CEP — PAC, SEDEX, Mercado Envios,
+        Uber e 99 no mesmo dia (Rio e Baixada) ou retire em uma das 6 lojas.</p>`;
+    }
+    if (loading && !quotes) {
+      return `<p class="checkout-help">Calculando frete para ${escapeHTML(
+        C18Frete.formatCep(Checkout.cep)
+      )}…</p>`;
+    }
+    if (!quotes || !quotes.length) {
+      return `<p class="checkout-help">Não achamos opções para este CEP. Confirme com a loja no WhatsApp.</p>`;
+    }
+
+    const selecionado = Checkout.frete ? Checkout.frete.id : "";
+    return `
+      <div class="frete-options" role="radiogroup" aria-label="Opções de entrega para ${escapeHTML(
+        C18Frete.formatCep(Checkout.cep)
+      )}">
+        ${quotes
+          .map(
+            (op) => `
+        <label class="frete-option${op.id === selecionado ? " is-selected" : ""}">
+          <input type="radio" name="frete-opcao" value="${escapeHTML(op.id)}" ${
+              op.id === selecionado ? "checked" : ""
+            }>
+          <span class="frete-option__label">
+            <strong>${escapeHTML(Frete.etiqueta(op))}</strong>
+            <small>${escapeHTML(op.prazoTexto)} · ${
+              op.source === "api" ? "cotação da transportadora" : "estimativa"
+            }</small>
+          </span>
+          <b class="frete-option__preco${op.gratis ? " is-gratis" : ""}">${escapeHTML(
+              Frete.precoTexto(op)
+            )}</b>
+        </label>`
+          )
+          .join("")}
+      </div>
+      <p class="checkout-help">Valores para ${escapeHTML(
+        C18Frete.formatCep(Checkout.cep)
+      )} — a loja confirma tudo pelo WhatsApp.</p>`;
   }
 
   const Cart = {
@@ -327,9 +387,20 @@
       const foot = $("#cart-foot");
       if (foot) {
         const sub = this.subtotal();
+        const freteSel = global.C18Frete ? Frete.selecionada() : null;
+        const total = global.C18Frete ? C18Frete.totalComFrete(sub, freteSel) : sub;
         const plan = CheckoutTools.installmentPlan
-          ? CheckoutTools.installmentPlan(sub)
+          ? CheckoutTools.installmentPlan(total)
           : null;
+        const freteResumo = !global.C18Frete
+          ? "calculado na conversa"
+          : Frete.state.loading
+          ? "calculando…"
+          : freteSel
+          ? C18Frete.precoTexto(freteSel)
+          : Frete.state.quotes
+          ? "escolha uma opção"
+          : "calcule pelo CEP";
         const couponDesc = Checkout.couponCode
           ? Checkout.couponDescription || couponDescription(Checkout.couponCode)
           : "";
@@ -338,10 +409,12 @@
             <div class="drawer__line"><span>Subtotal</span><span>${money(
               sub
             )}</span></div>
-            <div class="drawer__line"><span>Frete</span><span>calculado na conversa</span></div>
-            <div class="drawer__total"><span>Total estimado</span><span>${money(
-              sub
+            <div class="drawer__line"><span>Frete</span><span>${escapeHTML(
+              freteResumo
             )}</span></div>
+            <div class="drawer__total"><span>${
+              freteSel ? "Total com frete" : "Total estimado"
+            }</span><span>${money(total)}</span></div>
             ${plan
               ? `<div class="drawer__line"><span>Parcelamento</span><span>${
                   plan.count >= 2
@@ -349,9 +422,11 @@
                     : "à vista no Pix ou cartão"
                 }</span></div>`
               : ""}
-            <p class="drawer__note">O frete, o desconto e a forma de pagamento são confirmados
-            diretamente com a loja pelo WhatsApp. Cartão em até 3x sem juros —
-            parcela mínima de R$ 49,90.</p>
+            <p class="drawer__note">O frete selecionado e o desconto são confirmados
+            diretamente com a loja pelo WhatsApp. Frete grátis (PAC) em compras
+            acima de ${money(
+              C18Frete.FRETE_GRATIS_PADRAO
+            )}. Cartão em até 3x sem juros — parcela mínima de R$ 49,90.</p>
             <div class="checkout-fields" aria-label="Informações do checkout">
               <label class="checkout-field" for="seller-code">
                 <span>Código do vendedor <small>opcional</small></span>
@@ -385,6 +460,16 @@
                   ? `<p class="coupon-feedback"><strong>${escapeHTML(Checkout.giftCardCode)}</strong> terá o saldo validado pela loja.<button type="button" data-remove-gift-card>Remover</button></p>`
                   : `<p class="checkout-help">Tem um cartão presente? Informe o código (C18-XXXX-XXXX).</p>`}
               </div>
+              <div class="checkout-field" aria-label="Frete e entrega">
+                <label for="frete-cep">Frete e entrega <small>Correios · Mercado Envios · Uber · 99 · retirar na loja</small></label>
+                <div class="coupon-control">
+                  <input id="frete-cep" type="text" inputmode="numeric" maxlength="9"
+                         autocomplete="postal-code" placeholder="00000-000"
+                         value="${escapeHTML(C18Frete.formatCep(Checkout.cep))}">
+                  <button type="button" id="frete-calc">Calcular</button>
+                </div>
+                ${renderFreteResultado()}
+              </div>
             </div>
             <div class="drawer__store">
               <label for="store-select">Retirar / falar com</label>
@@ -410,6 +495,67 @@
           : "";
       }
     },
+  };
+
+  /* --------------------------------------------------------- frete/entregas
+     Coordena a cotação (tabela padrão na hora + refinamento ao vivo pela
+     Edge Function) e guarda o resultado enquanto o carrinho está aberto. */
+  const Frete = {
+    state: { quotes: null, loading: false },
+
+    normalizeCep: (value) => (global.C18Frete ? C18Frete.normalizeCep(value) : ""),
+    normalizarOpcoes: (value) => (global.C18Frete ? C18Frete.normalizarOpcoes(value) : []),
+
+    payload() {
+      return { items: Cart.items, subtotal: Cart.subtotal() };
+    },
+
+    /* Cota na hora com a tabela padrão; se houver endpoint configurado,
+       atualiza em segundo plano com a cotação ao vivo das transportadoras. */
+    async recalcular() {
+      const cep = Frete.normalizeCep(Checkout.cep);
+      if (!C18Frete || !C18Frete.isCepValida(cep)) {
+        this.state = { quotes: null, loading: false };
+        return;
+      }
+      this.state.loading = true;
+      this.state.quotes = C18Frete.cotar(cep, this.payload()).options;
+      Cart.renderDrawer();
+
+      const aoVivo = await C18Frete.cotarAoVivo(cep, this.payload());
+      this.state.loading = false;
+      if (aoVivo && Frete.normalizeCep(aoVivo.cep) === cep) {
+        this.state.quotes = aoVivo.options;
+      }
+      Cart.renderDrawer();
+    },
+
+    selecionar(id) {
+      const opcao = (this.state.quotes || []).find((op) => op.id === id);
+      if (!opcao) return;
+      Checkout.frete = {
+        id: opcao.id,
+        transportadora: opcao.transportadora,
+        servico: opcao.servico,
+        preco: opcao.preco,
+        prazoTexto: opcao.prazoTexto,
+        dias: opcao.dias,
+        gratis: opcao.gratis,
+      };
+      Checkout.save();
+      Cart.renderDrawer();
+      Toast.show(`Entrega: ${C18Frete.etiqueta(opcao)} — ${C18Frete.precoTexto(opcao)}`);
+    },
+
+    /* Opção escolhida com preço atualizado pelo carrinho atual. */
+    selecionada() {
+      if (!Checkout.frete) return null;
+      const atual = (this.state.quotes || []).find((op) => op.id === Checkout.frete.id);
+      return atual || Checkout.frete;
+    },
+
+    etiqueta: (opcao) => C18Frete.etiqueta(opcao),
+    precoTexto: (opcao) => C18Frete.precoTexto(opcao),
   };
 
   /* ------------------------------------------------------------ toast */
@@ -471,8 +617,14 @@
     });
     lines.push("");
     lines.push(`*Total dos itens:* ${money(Cart.subtotal())}`);
+    const freteSel = Frete.selecionada();
+    const totalComFrete = C18Frete.totalComFrete(Cart.subtotal(), freteSel);
+    if (freteSel) {
+      lines.push(...C18Frete.mensagemFrete(freteSel, Checkout.cep));
+      lines.push(`*Total com frete:* ${money(totalComFrete)}`);
+    }
     const plan = CheckoutTools.installmentPlan
-      ? CheckoutTools.installmentPlan(Cart.subtotal())
+      ? CheckoutTools.installmentPlan(totalComFrete)
       : null;
     if (plan) {
       lines.push(
@@ -490,9 +642,14 @@
     }));
     if (Checkout.couponCode) lines.push("*Observação:* total sujeito à validação do cupom pela loja.");
     lines.push("");
-    lines.push("Podem confirmar disponibilidade em estoque, desconto e frete?");
+    lines.push(
+      freteSel
+        ? "Podem confirmar disponibilidade em estoque e o desconto?"
+        : "Podem confirmar disponibilidade em estoque, desconto e frete?"
+    );
     lines.push("");
-    lines.push("CEP para entrega: ______");
+    const cepTexto = C18Frete.formatCep(Checkout.cep);
+    lines.push(cepTexto ? `CEP para entrega: ${cepTexto}` : "CEP para entrega: ______");
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
 
@@ -910,6 +1067,16 @@
               loja por WhatsApp, e você também pode retirar em qualquer uma das
               nossas 6 lojas físicas na Baixada Fluminense. Trocas em até 30
               dias, com a peça sem uso e a etiqueta intacta.</p>
+              <div class="frete-pdp">
+                <label for="frete-pdp-cep">Simule o frete da sua entrega</label>
+                <div class="coupon-control">
+                  <input id="frete-pdp-cep" type="text" inputmode="numeric" maxlength="9"
+                         autocomplete="postal-code" placeholder="00000-000"
+                         value="${escapeHTML(C18Frete.formatCep(Checkout.cep))}">
+                  <button type="button" id="frete-pdp-calc">Calcular</button>
+                </div>
+                <div id="frete-pdp-result" aria-live="polite"></div>
+              </div>
             </div></div>
           </div>
         </div>
@@ -1282,6 +1449,19 @@
         Checkout.couponCode = CheckoutTools.normalizeCouponCode(e.target.value);
         e.target.value = Checkout.couponCode;
         Checkout.save();
+      }
+      if (e.target.id === "frete-cep") {
+        e.target.value = C18Frete.formatCep(e.target.value);
+        Checkout.cep = C18Frete.normalizeCep(e.target.value);
+        Checkout.save();
+      }
+    });
+
+    /* Enter no CEP calcula o frete */
+    document.addEventListener("keydown", (e) => {
+      if (e.target && e.target.id === "frete-cep" && e.key === "Enter") {
+        e.preventDefault();
+        $("#frete-calc")?.click();
       }
     });
 

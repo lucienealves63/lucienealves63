@@ -30,6 +30,7 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/lgpd.js        Banner de consentimento (LGPD)
 │   ├── js/gift-card.js   Cartão presente (valores + mensagem)
 │   ├── js/coupons.js     Cupons: validação, escopos e descrição
+│   ├── js/frete.js       ⭐ Frete: Correios, Mercado Envios, Uber, 99 e retirada
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -40,6 +41,9 @@ Paleta: **preto · branco · cinza**.
 │
 ├── admin/                Dashboard de operações (Banners & Paleta, Cupons)
 │   └── ver docs/DASHBOARD-OPERACOES.md
+├── docs/
+│   ├── DASHBOARD-OPERACOES.md
+│   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
 └── supabase/             Migrations, RPCs e Edge Functions
 ```
 
@@ -189,6 +193,17 @@ no carrinho, ele entra no campo *Cartão presente* e a loja confere o saldo
 no momento do pagamento. Com o Supabase ligado, a emissão, a consulta e o
 resgate do saldo ficam nas RPCs de
 `supabase/migrations/202609180001_gift_cards.sql`.
+
+### Frete e entregas
+
+O cliente digita o **CEP no carrinho** (ou na página do produto) e escolhe
+entre **Correios PAC/SEDEX, Mercado Envios, Uber Direct e 99 Entregas**
+(mesmo dia para Rio e Baixada) ou **retirar na loja** — frete grátis no
+PAC acima de R$ 299. Sem credenciais, o cálculo usa a tabela padrão de
+estimativa (`assets/js/frete.js`); com o Supabase ligado, a Edge Function
+`cotar-frete` consulta as APIs reais das transportadoras quando os
+segredos de cada uma estão configurados. O passo a passo de implantação
+está em `docs/FRETE-ENTREGAS.md`.
 
 ### Privacidade (LGPD) e HTTPS
 
