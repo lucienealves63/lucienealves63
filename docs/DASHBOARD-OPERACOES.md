@@ -172,14 +172,33 @@ Implantação específica:
 
 1. Criar projeto Supabase na região adequada;
 2. Executar `supabase/migrations/202609170001_operations.sql`;
-3. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
-4. Cadastrar URL e anon key em `admin/assets/config.js`;
-5. Cadastrar os segredos de `.env.example` via Supabase Secrets
+3. Executar `supabase/migrations/202609170002_banners_paletas.sql`
+   (banners e paleta) e `supabase/migrations/202609180001_gift_cards.sql`
+   (cartão presente: emitir, consultar e resgatar saldo por RPC);
+4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
+5. Cadastrar URL e anon key em `admin/assets/config.js`;
+6. Cadastrar os segredos de `.env.example` via Supabase Secrets
    (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
-6. Publicar as Edge Functions (incluindo `gerar-banner`);
-7. Testar importação com cópia anonimizada da planilha;
-8. Homologar Alterdata, Rede e ClearSale separadamente;
-9. Só então habilitar dados e credenciais de produção.
+7. Publicar as Edge Functions (incluindo `gerar-banner`);
+8. Testar importação com cópia anonimizada da planilha;
+9. Homologar Alterdata, Rede e ClearSale separadamente;
+10. Só então habilitar dados e credenciais de produção.
+
+## Cartão presente
+
+A página pública `cartao-presente.html` vende as faixas de R$ 50 a R$ 300
+pelo WhatsApp da marca. No atendimento, a operação usa as RPCs da
+migration `202609180001_gift_cards.sql`:
+
+- `issue_gift_card(amount_cents, payload)` — emite o código
+  `C18-XXXX-XXXX` (papéis `admin` e `inventory`);
+- `check_gift_card(code)` — consulta saldo, status e validade sem resgatar
+  (`admin`, `inventory`, `checker`, `shipping`);
+- `redeem_gift_card(code, amount_cents?)` — resgata total ou parte do
+  saldo e marca `redeemed` quando zera (`admin`, `inventory`, `checker`).
+
+No site, o código entra no campo *Cartão presente* do carrinho e segue na
+mensagem do pedido — o saldo nunca é validado no navegador, igual ao cupom.
 
 ## Segurança
 

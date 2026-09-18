@@ -3,15 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lojas físicas — Censura 18</title>
-<meta name="description" content="Seis lojas físicas da Censura 18 na Baixada Fluminense: Nova Iguaçu (3 endereços), Duque de Caxias, Nilópolis e Queimados. Endereços, telefones e WhatsApp de cada loja.">
+<title>Cartão presente — Censura 18</title>
+<meta name="description" content="Cartão presente da Censura 18 de R$ 50 a R$ 300. Vale nas 6 lojas físicas e no site, com validade de 12 meses. Presenteie com streetwear desde 1989.">
 <meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Cartão presente — Censura 18">
+<meta property="og:description" content="Presenteie com streetwear: cartão de R$ 50 a R$ 300, válido nas lojas e no site.">
+<meta property="og:image" content="assets/img/hero.jpg">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="icon" type="image/png" href="assets/img/logos/logo-quadro.png">
 <script src="assets/js/ssl.js"></script>
+<script src="assets/js/site-config.js"></script>
 </head>
 <body>
 
@@ -19,13 +25,13 @@
 
 <div class="announce" aria-hidden="true">
   <div class="announce__track">
-    <span class="announce__item">6 lojas físicas na Baixada Fluminense</span>
-    <span class="announce__item">Frete grátis acima de R$ 299</span>
-    <span class="announce__item">Atendimento por WhatsApp em todas as lojas</span>
+    <span class="announce__item">Cartão presente de R$ 50 a R$ 300</span>
+    <span class="announce__item">Válido nas 6 lojas e no site</span>
+    <span class="announce__item">Validade de 12 meses</span>
     <span class="announce__item">Since 1989</span>
-    <span class="announce__item">6 lojas físicas na Baixada Fluminense</span>
-    <span class="announce__item">Frete grátis acima de R$ 299</span>
-    <span class="announce__item">Atendimento por WhatsApp em todas as lojas</span>
+    <span class="announce__item">Cartão presente de R$ 50 a R$ 300</span>
+    <span class="announce__item">Válido nas 6 lojas e no site</span>
+    <span class="announce__item">Validade de 12 meses</span>
     <span class="announce__item">Since 1989</span>
   </div>
 </div>
@@ -39,7 +45,7 @@
     <nav class="nav" aria-label="Navegação principal">
       <a class="nav__link" href="index.html">Home</a>
       <a class="nav__link" href="produtos.html">Produtos</a>
-      <a class="nav__link" href="cartao-presente.html">Cartão presente</a>
+      <a class="nav__link" href="cartao-presente.html" aria-current="page">Cartão presente</a>
       <a class="nav__link" href="sobre.html">A marca</a>
       <a class="nav__link" href="lojas.html">Lojas</a>
       <a class="nav__link" href="contato.html">Contato</a>
@@ -76,7 +82,7 @@
   <nav class="mobile-nav__list" aria-label="Navegação mobile">
     <a class="mobile-nav__link" href="index.html">Home</a>
     <a class="mobile-nav__link" href="produtos.html">Produtos</a>
-    <a class="mobile-nav__link" href="cartao-presente.html">Cartão presente</a>
+    <a class="mobile-nav__link" href="cartao-presente.html" aria-current="page">Cartão presente</a>
     <a class="mobile-nav__link" href="sobre.html">A marca</a>
     <a class="mobile-nav__link" href="lojas.html">Lojas</a>
     <a class="mobile-nav__link" href="contato.html">Contato</a>
@@ -91,52 +97,130 @@
 <main id="main">
   <div class="container">
     <nav class="breadcrumb" aria-label="Você está aqui">
-      <a href="index.html">Home</a> <span>/</span> <span>Lojas</span>
+      <a href="index.html">Home</a> <span>/</span> <span>Cartão presente</span>
     </nav>
 
     <div class="page-head">
-      <span class="eyebrow">Onde nos achar</span>
-      <h1>Seis endereços, uma só pegada</h1>
-      <p>Comprou aqui no site, pode retirar em qualquer loja — ou mandar uma
-      mensagem direto no WhatsApp da unidade mais perto de você pra conferir
-      disponibilidade de estoque.</p>
+      <span class="eyebrow">Presenteia na certa</span>
+      <h1>Cartão presente</h1>
+      <p>Camiseta, moleton ou boné — quem recebe escolhe. O cartão vale
+      nas <strong>6 lojas físicas</strong> e no site, com validade de
+      <strong>12 meses</strong>.</p>
     </div>
 
-    <div class="stores" id="stores-grid">
-      <!-- preenchido por assets/js/app.js -->
-    </div>
+    <div class="gc-grid" style="padding-bottom:72px">
 
-    <section class="section">
+      <div>
+        <h2 style="font-size:32px;margin-bottom:22px">Monte o seu</h2>
+        <form class="form" id="gc-form">
+          <div class="field">
+            <label id="gc-amount-label">Escolha o valor</label>
+            <div class="gc-amounts" id="gc-amounts" role="group" aria-labelledby="gc-amount-label"></div>
+            <noscript>
+              <p class="text-muted" style="font-size:14px">
+                Valores disponíveis: R$ 50, R$ 100, R$ 150, R$ 200 e R$ 300.
+                Ative o JavaScript para montar a mensagem automaticamente ou
+                fale direto pelo WhatsApp.
+              </p>
+            </noscript>
+          </div>
+
+          <div class="form__row">
+            <div class="field">
+              <label for="gc-recipient">Para quem <small>opcional</small></label>
+              <input type="text" id="gc-recipient" maxlength="60" placeholder="Nome de quem recebe">
+            </div>
+            <div class="field">
+              <label for="gc-sender">De quem <small>opcional</small></label>
+              <input type="text" id="gc-sender" maxlength="60" placeholder="Seu nome">
+            </div>
+          </div>
+
+          <p class="gc-feedback" id="gc-feedback" role="status"></p>
+
+          <button class="btn btn--block" type="submit">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.25-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Z"/></svg>
+            Pedir no WhatsApp
+          </button>
+          <p class="text-muted" style="font-size:13px;text-align:center">
+            A loja confirma o pagamento e combina a entrega — digital ou
+            impressa, você escolhe.
+          </p>
+        </form>
+      </div>
+
+      <aside class="gc-use">
+        <h2 style="font-size:22px;margin-bottom:14px">Já tenho um cartão</h2>
+        <p>Todo cartão tem um código no formato
+        <strong>C18-XXXX-XXXX</strong>. É só abrir o carrinho no site,
+        digitar o código no campo <em>Cartão presente</em> e finalizar no
+        WhatsApp — a loja confere o saldo antes do pagamento.</p>
+        <p class="text-muted" style="font-size:14px">Dúvida sobre o saldo ou
+        a validade? Manda o código no WhatsApp que a gente verifica na hora.</p>
+        <a class="btn btn--ghost" href="produtos.html">Escolher peças</a>
+      </aside>
+
+    </div>
+  </div>
+
+  <section class="section section--gray">
+    <div class="container">
       <div class="section__head">
         <div>
-          <span class="eyebrow">Como funciona</span>
-          <h2 class="section__title">Comprar pelo site</h2>
+          <span class="eyebrow">Boas perguntas</span>
+          <h2 class="section__title">Perguntas frequentes</h2>
         </div>
       </div>
-      <div class="perks__grid" style="border-block:1px solid var(--line)">
-        <div class="perk" style="flex-direction:column;align-items:flex-start;gap:6px">
-          <span class="eyebrow" style="margin:0">01</span>
-          <h4>Monte o carrinho</h4>
-          <p>Escolha tamanho, cor e quantidade sem pressa.</p>
+
+      <div class="faq" style="max-width:860px">
+        <div class="acc">
+          <button class="acc__btn">Quais valores eu posso escolher?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="acc__panel"><div><p>R$ 50, R$ 100, R$ 150, R$ 200 e
+          R$ 300. Se quiser outro valor, fala com a gente no WhatsApp — dá
+          para combinar.</p></div></div>
         </div>
-        <div class="perk" style="flex-direction:column;align-items:flex-start;gap:6px">
-          <span class="eyebrow" style="margin:0">02</span>
-          <h4>Escolha a loja</h4>
-          <p>Selecione a unidade onde quer retirar ou conversar.</p>
+
+        <div class="acc">
+          <button class="acc__btn">Onde o cartão é aceito?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="acc__panel"><div><p>Em qualquer uma das 6 lojas
+          físicas da Baixada Fluminense e nas compras feitas pelo site. É
+          só apresentar o código no atendimento.</p></div></div>
         </div>
-        <div class="perk" style="flex-direction:column;align-items:flex-start;gap:6px">
-          <span class="eyebrow" style="margin:0">03</span>
-          <h4>Finalize no WhatsApp</h4>
-          <p>A gente confirma estoque, frete e pagamento ali mesmo.</p>
+
+        <div class="acc">
+          <button class="acc__btn">Como uso o saldo no site?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="acc__panel"><div><p>Monte o carrinho, digite o código
+          do cartão no campo <em>Cartão presente</em> e finalize no
+          WhatsApp. A loja valida o saldo e aplica no total antes do
+          pagamento — o site não debita nada sozinho.</p></div></div>
         </div>
-        <div class="perk" style="flex-direction:column;align-items:flex-start;gap:6px;border-right:0">
-          <span class="eyebrow" style="margin:0">04</span>
-          <h4>Receba ou retire</h4>
-          <p>Entrega para todo o Brasil ou retirada na hora.</p>
+
+        <div class="acc">
+          <button class="acc__btn">Qual é a validade?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="acc__panel"><div><p>12 meses a partir da compra. O
+          saldo não é trocável por dinheiro, mas pode ser usado em quantas
+          compras quiser até acabar.</p></div></div>
+        </div>
+
+        <div class="acc">
+          <button class="acc__btn">Perdi o código. E agora?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="acc__panel"><div><p>Fala com a gente no WhatsApp com o
+          nome de quem comprou e a data. Localizamos a compra e emitimos o
+          código de novo.</p></div></div>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
@@ -179,7 +263,6 @@
           <li><a href="lojas.html">Nossas lojas</a></li>
           <li><a href="contato.html">Contato</a></li>
           <li><a href="contato.html">Trocas e devoluções</a></li>
-          <li><a href="contato.html">Perguntas frequentes</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
         </ul>
       </div>
@@ -230,5 +313,56 @@
 <script src="assets/js/gift-card.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/lgpd.js"></script>
+<script>
+/* Página do cartão presente: valores, nomes e mensagem do WhatsApp */
+(function () {
+  var amounts = document.getElementById("gc-amounts");
+  var form = document.getElementById("gc-form");
+  if (!amounts || !form || !window.C18GiftCard) return;
+
+  var gc = window.C18GiftCard;
+  var selected = 0;
+  var feedback = document.getElementById("gc-feedback");
+
+  amounts.innerHTML = gc.AMOUNTS.map(function (value) {
+    return (
+      '<button type="button" class="gc-amount" data-amount="' + value + '">' +
+      gc.formatAmountBRL(value) +
+      "</button>"
+    );
+  }).join("");
+
+  function choose(btn) {
+    selected = Number(btn.dataset.amount);
+    amounts.querySelectorAll(".gc-amount").forEach(function (b) {
+      b.classList.toggle("is-active", b === btn);
+    });
+    feedback.textContent = "";
+  }
+
+  amounts.addEventListener("click", function (e) {
+    var btn = e.target.closest(".gc-amount");
+    if (btn) choose(btn);
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = gc.buildWhatsMessage({
+      amount: selected,
+      recipient: document.getElementById("gc-recipient").value,
+      sender: document.getElementById("gc-sender").value,
+    });
+    if (!msg) {
+      feedback.textContent = "Escolha um valor para o cartão.";
+      return;
+    }
+    window.open(
+      "https://wa.me/" + BRAND.whatsapp + "?text=" + encodeURIComponent(msg),
+      "_blank",
+      "noopener"
+    );
+  });
+})();
+</script>
 </body>
 </html>
