@@ -75,6 +75,7 @@
   const Checkout = {
     sellerCode: "",
     couponCode: "",
+    couponDescription: "",
     giftCardCode: "",
     storeId: "",
 
@@ -131,10 +132,68 @@
     clear() {
       this.sellerCode = "";
       this.couponCode = "";
+      this.couponDescription = "";
       this.giftCardCode = "";
       this.save();
     },
   };
+
+  /* ------------------------------------------- cupons do painel */
+  /* No modo demonstração o painel (admin/) grava os cupons ativos em
+     c18:demo-coupons e o carrinho os descreve ao cliente. Com o Supabase
+     ligado (window.C18_SITE), a consulta usa a RPC check_discount_coupon
+     com a chave anônima — o navegador nunca recebe a lista inteira. */
+  const COUPONS_DEMO_KEY = "c18:demo-coupons";
+
+  function loadCouponCatalog() {
+    try {
+      const list = JSON.parse(localStorage.getItem(COUPONS_DEMO_KEY) || "[]");
+      return Array.isArray(list) ? list : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function couponDescription(code) {
+    if (!window.C18Coupons || !code) return "";
+    const found = window.C18Coupons.findCoupon(code, loadCouponCatalog());
+    return found ? window.C18Coupons.describeCoupon(found) : "";
+  }
+
+  async function lookupCouponDescription(code) {
+    if (!code) return "";
+    const site = window.C18_SITE || {};
+    if (site.mode === "supabase" && site.supabaseUrl && site.supabaseAnonKey) {
+      try {
+        const response = await fetch(
+          `${site.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/check_discount_coupon`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: site.supabaseAnonKey,
+              Authorization: `Bearer ${site.supabaseAnonKey}`,
+            },
+            body: JSON.stringify({ p_code: code }),
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.found && window.C18Coupons) {
+            return window.C18Coupons.describeCoupon(data);
+          }
+        }
+      } catch (_) {
+        /* offline: o cupom segue identificado, sem descrição */
+      }
+      return "";
+    }
+    return couponDescription(code);
+  }
+
+  function couponDescriptionForMessage() {
+    return Checkout.couponDescription || couponDescription(Checkout.couponCode);
+  }
 
   const Cart = {
     items: [],
@@ -268,6 +327,12 @@
       const foot = $("#cart-foot");
       if (foot) {
         const sub = this.subtotal();
+        const plan = CheckoutTools.installmentPlan
+          ? CheckoutTools.installmentPlan(sub)
+          : null;
+        const couponDesc = Checkout.couponCode
+          ? Checkout.couponDescription || couponDescription(Checkout.couponCode)
+          : "";
         foot.innerHTML = this.items.length
           ? `
             <div class="drawer__line"><span>Subtotal</span><span>${money(
@@ -277,8 +342,16 @@
             <div class="drawer__total"><span>Total estimado</span><span>${money(
               sub
             )}</span></div>
+            ${plan
+              ? `<div class="drawer__line"><span>Parcelamento</span><span>${
+                  plan.count >= 2
+                    ? `até ${plan.count}x de ${money(plan.each)} sem juros`
+                    : "à vista no Pix ou cartão"
+                }</span></div>`
+              : ""}
             <p class="drawer__note">O frete, o desconto e a forma de pagamento são confirmados
-            diretamente com a loja pelo WhatsApp.</p>
+            diretamente com a loja pelo WhatsApp. Cartão em até 3x sem juros —
+            parcela mínima de R$ 49,90.</p>
             <div class="checkout-fields" aria-label="Informações do checkout">
               <label class="checkout-field" for="seller-code">
                 <span>Código do vendedor <small>opcional</small></span>
@@ -295,7 +368,9 @@
                   <button type="button" id="coupon-add">${Checkout.couponCode ? "Atualizar" : "Adicionar"}</button>
                 </div>
                 ${Checkout.couponCode
-                  ? `<p class="coupon-feedback"><strong>${escapeHTML(Checkout.couponCode)}</strong> será validado pela loja.<button type="button" data-remove-coupon>Remover</button></p>`
+                  ? `<p class="coupon-feedback"><strong>${escapeHTML(
+                      Checkout.couponCode
+                    )}</strong>${couponDesc ? ` — ${escapeHTML(couponDesc)}` : ""} será validado pela loja.<button type="button" data-remove-coupon>Remover</button></p>`
                   : `<p class="checkout-help">O desconto será confirmado antes do pagamento.</p>`}
               </div>
               <div class="checkout-field">
@@ -396,8 +471,23 @@
     });
     lines.push("");
     lines.push(`*Total dos itens:* ${money(Cart.subtotal())}`);
+    const plan = CheckoutTools.installmentPlan
+      ? CheckoutTools.installmentPlan(Cart.subtotal())
+      : null;
+    if (plan) {
+      lines.push(
+        `*Parcelamento:* ${
+          plan.count >= 2
+            ? `até ${plan.count}x de ${money(plan.each)} sem juros`
+            : "à vista no Pix ou cartão"
+        } — parcela mínima de R$ 49,90`
+      );
+    }
     lines.push("");
-    lines.push(...CheckoutTools.checkoutMessageLines(Checkout));
+    lines.push(...CheckoutTools.checkoutMessageLines({
+      ...Checkout,
+      couponDescription: couponDescriptionForMessage(),
+    }));
     if (Checkout.couponCode) lines.push("*Observação:* total sujeito à validação do cupom pela loja.");
     lines.push("");
     lines.push("Podem confirmar disponibilidade em estoque, desconto e frete?");
@@ -1087,7 +1177,7 @@
     });
 
     /* delegacia de eventos: carrinho + adição rápida */
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", async (e) => {
       const close = e.target.closest("[data-close-cart]");
       if (close && close.tagName === "A") {
         /* deixa a navegação acontecer, só fecha a gaveta */
@@ -1115,13 +1205,20 @@
           $("#coupon-code")?.focus();
           return;
         }
+        const description = await lookupCouponDescription(Checkout.couponCode);
+        Checkout.couponDescription = description;
         Cart.renderDrawer();
-        Toast.show(`Cupom ${Checkout.couponCode} informado`);
+        Toast.show(
+          description
+            ? `Cupom ${Checkout.couponCode}: ${description}`
+            : `Cupom ${Checkout.couponCode} informado`
+        );
         return;
       }
 
       if (e.target.closest("[data-remove-coupon]")) {
         Checkout.couponCode = "";
+        Checkout.couponDescription = "";
         Checkout.save();
         Cart.renderDrawer();
         Toast.show("Cupom removido");

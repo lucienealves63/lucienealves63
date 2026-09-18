@@ -24,19 +24,61 @@
     return normalizeCode(value, 16);
   }
 
+  /* Parcelamento: até 3x sem juros, parcela mínima de R$ 49,90.
+     O cálculo usa centavos inteiros para não errar por arredondamento
+     de ponto flutuante (149,70 / 49,90 = exatamente 3). */
+  const MAX_INSTALLMENTS = 3;
+  const MIN_INSTALLMENT = 49.9;
+
+  function maxInstallments(total, rules) {
+    const maxValue = Math.max(1, Math.floor(Number(rules?.max ?? MAX_INSTALLMENTS)));
+    const minCents = Math.round(Number(rules?.min ?? MIN_INSTALLMENT) * 100);
+    const totalCents = Math.round(Number(total) * 100);
+    if (!Number.isFinite(totalCents) || totalCents <= 0 || !Number.isFinite(minCents) || minCents <= 0) {
+      return 0;
+    }
+    return Math.min(maxValue, Math.max(1, Math.floor(totalCents / minCents)));
+  }
+
+  function installmentPlan(total, rules) {
+    const count = maxInstallments(total, rules);
+    if (!count) return null;
+    const totalCents = Math.round(Number(total) * 100);
+    return { count, each: Math.round(totalCents / count) / 100 };
+  }
+
+  function installmentText(total, rules) {
+    const plan = installmentPlan(total, rules);
+    if (!plan) return "";
+    const min = Number(rules?.min ?? MIN_INSTALLMENT);
+    const minText = `R$ ${min.toFixed(2).replace(".", ",")}`;
+    if (plan.count < 2) return `à vista no Pix ou cartão (parcela mínima de ${minText})`;
+    return `até ${plan.count}x de R$ ${plan.each.toFixed(2).replace(".", ",")} sem juros (parcela mínima de ${minText})`;
+  }
+
   function checkoutMessageLines(values) {
     const sellerCode = normalizeSellerCode(values?.sellerCode);
     const couponCode = normalizeCouponCode(values?.couponCode);
     const giftCardCode = normalizeGiftCardCode(values?.giftCardCode);
+    const couponDescription = String(values?.couponDescription || "").trim();
     const lines = [];
     if (sellerCode) lines.push(`*Código do vendedor:* ${sellerCode}`);
-    if (couponCode) lines.push(`*Cupom informado:* ${couponCode} (validar desconto)`);
+    if (couponCode) {
+      lines.push(
+        `*Cupom informado:* ${couponCode}${couponDescription ? ` — ${couponDescription}` : ""} (validar desconto)`
+      );
+    }
     if (giftCardCode) lines.push(`*Cartão presente:* ${giftCardCode} (validar saldo)`);
     return lines;
   }
 
   global.C18Checkout = {
+    MAX_INSTALLMENTS,
+    MIN_INSTALLMENT,
     checkoutMessageLines,
+    installmentPlan,
+    installmentText,
+    maxInstallments,
     normalizeCouponCode,
     normalizeGiftCardCode,
     normalizeSellerCode,

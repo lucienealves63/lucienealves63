@@ -12,9 +12,10 @@ test("normaliza e valida o código do cartão presente", () => {
 });
 
 test("só aceita os valores anunciados no site", () => {
-  assert.deepEqual(giftCard.AMOUNTS, [50, 100, 150, 200, 300]);
+  assert.deepEqual(giftCard.AMOUNTS, [50, 100, 150, 200, 300, 500]);
   assert.equal(giftCard.isSupportedAmount(100), true);
   assert.equal(giftCard.isSupportedAmount("150"), true);
+  assert.equal(giftCard.isSupportedAmount(500), true);
   assert.equal(giftCard.isSupportedAmount(99.9), false);
   assert.equal(giftCard.isSupportedAmount(-50), false);
   assert.equal(giftCard.isSupportedAmount(null), false);
