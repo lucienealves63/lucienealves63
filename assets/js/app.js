@@ -489,6 +489,9 @@
               </svg>
               Finalizar no WhatsApp
             </button>
+            <a class="btn btn--block" id="checkout-online" href="checkout.html" style="margin-top:8px">
+              Pagar online — Pix ou cartão em até 6x
+            </a>
             <button class="btn btn--ghost btn--block" id="cart-clear" style="margin-top:8px">
               Esvaziar carrinho
             </button>`

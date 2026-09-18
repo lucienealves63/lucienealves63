@@ -399,6 +399,16 @@ const FEATURED_IDS = [
   "c18-tee-longline",
 ];
 
+/* --- Pagamento do checkout online ----------------------------------------
+   PIX CHAVE: troque pela chave Pix real da loja (CNPJ, e-mail, telefone ou
+   aleatória). Ela gera o código copia-e-cola na página do checkout. */
+const PAGAMENTO = {
+  pixChave: "00.000.000/0001-00", /* ⚠️ CNPJ placeholder — troque pela chave real */
+  pixNome: "Censura 18 Comercio de Roupas",
+  pixCidade: "Nova Iguacu",
+  cartaoMaxParcelas: 6, /* sem juros — mesma regra do parcelamento do site */
+};
+
 /* --- Textos da marca (usados em várias páginas) ------------------------- */
 const BRAND = {
   name: "Censura 18",

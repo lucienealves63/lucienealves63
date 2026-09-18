@@ -16,6 +16,7 @@ Paleta: **preto · branco · cinza**.
 ├── produtos.html         Catálogo com filtros e ordenação
 ├── produto.html          Detalhe da peça (?id=... na URL)
 ├── conta.html            Minha conta: cadastro do cliente (com LGPD)
+├── checkout.html         Checkout online: Pix copia-e-cola ou cartão 6x
 ├── cartao-presente.html  Cartão presente: valores, nomes e WhatsApp
 ├── lojas.html            As 6 lojas físicas + WhatsApp de cada uma
 ├── sobre.html            História da marca e linha do tempo
@@ -33,6 +34,7 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/coupons.js     Cupons: validação, escopos e descrição
 │   ├── js/frete.js       ⭐ Frete: Correios, Mercado Envios, Uber, 99 e retirada
 │   ├── js/cliente.js     Cadastro do cliente: validação, LGPD e WhatsApp
+│   ├── js/pedido.js      Pedido do checkout: validação + Pix copia-e-cola (EMV)
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -206,6 +208,18 @@ equipe consulta pela aba **Clientes** do painel). Sem Supabase, a conta
 de demonstração fica só no navegador. Quem tem conta tem o **CEP do
 frete preenchido automaticamente** e o pedido chega no WhatsApp já
 identificado. A migração é `supabase/migrations/202609190001_customers.sql`.
+
+### Checkout online (Pix e cartão)
+
+Em `checkout.html` o cliente revisa itens, entrega e dados do cadastro e
+fecha o pedido com **Pix** (copia-e-cola gerado no navegador, padrão EMV
+do Banco Central — chave da loja em `data.js`) ou **cartão em até 6x sem
+juros** (link seguro da e.Rede com 3-D Secure enviado pelo WhatsApp —
+nenhum dado de cartão passa pelo site). O pedido nasce em
+`public.orders` com `payment_status pending` e aparece na hora no painel;
+o servidor reconfera o subtotal item a item. Fluxo completo e ativação em
+`docs/CHECKOUT-PAGAMENTOS.md` (migration
+`supabase/migrations/202609190002_checkout_pagamentos.sql`).
 
 ### Frete e entregas
 

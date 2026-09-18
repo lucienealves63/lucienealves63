@@ -308,6 +308,13 @@
           identificação pessoal.</p>
         </form>
       </section>
+
+      <section class="conta-card" aria-labelledby="titulo-pedidos">
+        <h2 id="titulo-pedidos">Meus pedidos</h2>
+        <p class="conta-card__sub">Pedidos fechados no site, com o pagamento em
+        acompanhamento na loja.</p>
+        <div id="meus-pedidos" class="meus-pedidos"></div>
+      </section>
     </div>
   </div>
 </main>
@@ -709,6 +716,64 @@
     });
   }
 
+  const ETIQUETA_PAGAMENTO = {
+    pending: "aguardando pagamento",
+    authorized: "pagamento autorizado",
+    captured: "pago ✓",
+    denied: "pagamento recusado",
+    cancelled: "cancelado",
+    refunded: "reembolsado",
+  };
+
+  const ETIQUETA_ETAPA = {
+    payment: "pagamento",
+    fraud: "análise antifraude",
+    picking: "em separação",
+    checking: "conferência",
+    ready: "pronto para envio",
+    shipped: "enviado",
+    delivered: "entregue",
+    cancelled: "cancelado",
+  };
+
+  function renderPedidos(lista) {
+    const div = el("meus-pedidos");
+    if (!div) return;
+    div.innerHTML = lista
+      .map(
+        (pedido) => `
+      <div class="meu-pedido">
+        <div>
+          <strong>Pedido ${pedido.numero}</strong>
+          <small>${new Date(pedido.criado_em).toLocaleDateString("pt-BR")} · ${
+            pedido.itens.map((i) => `${i.qty}x ${i.name}`).join(", ")
+          }</small>
+        </div>
+        <div class="meu-pedido__status">
+          <b>${Number(pedido.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</b>
+          <small>${ETIQUETA_PAGAMENTO[pedido.pagamento] || pedido.pagamento || "—"} · ${
+            ETIQUETA_ETAPA[pedido.etapa] || pedido.etapa || "—"
+          }</small>
+        </div>
+      </div>`
+      )
+      .join("") || `<p class="conta-help">Você ainda não fez pedidos pelo site — eles aparecem aqui.</p>`;
+  }
+
+  async function carregarPedidos() {
+    if (!supabaseMode) {
+      renderPedidos([]);
+      return;
+    }
+    try {
+      const { data, error } = await (await dbClient()).rpc("meus_pedidos");
+      if (error) throw error;
+      renderPedidos(data || []);
+    } catch (_) {
+      renderPedidos([]);
+    }
+  }
+
   async function boot() {
     el("conta-demo-note").hidden = supabaseMode;
     mascaras();
@@ -744,6 +809,7 @@
           demo: false,
         })
       );
+      carregarPedidos();
     } catch (_) {
       mostrarAutenticacao();
     }

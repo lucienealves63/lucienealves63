@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finalizar compra — Censura 18</title>
+<meta name="description" content="Finalize sua compra na Censura 18 com Pix (confirmação na hora) ou cartão em até 6x sem juros. Frete calculado pelo CEP, entrega para todo o Brasil.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" type="image/png" href="assets/img/logos/logo-quadro.png">
+<script src="assets/js/ssl.js"></script>
+<script src="assets/js/site-config.js"></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Ir para o conteúdo</a>
+
+<div class="announce" aria-hidden="true">
+  <div class="announce__track">
+    <span class="announce__item">Compra segura</span>
+    <span class="announce__item">Pix confirmado na hora</span>
+    <span class="announce__item">Cartão em até 6x sem juros</span>
+    <span class="announce__item">Frete grátis no PAC acima de R$ 299</span>
+    <span class="announce__item">Compra segura</span>
+    <span class="announce__item">Pix confirmado na hora</span>
+    <span class="announce__item">Cartão em até 6x sem juros</span>
+    <span class="announce__item">Frete grátis no PAC acima de R$ 299</span>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header__inner">
+    <a class="brand" href="index.html" aria-label="Censura 18 — página inicial">
+      <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img" onerror="this.classList.add('is-missing')">
+      <span class="brand__fallback" aria-hidden="true"><span class="bf-word">CENSURA</span><span class="bf-num">18</span></span>
+    </a>
+    <nav class="nav" aria-label="Navegação principal">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="produtos.html">Produtos</a>
+      <a class="nav__link" href="cartao-presente.html">Cartão presente</a>
+      <a class="nav__link" href="sobre.html">A marca</a>
+      <a class="nav__link" href="lojas.html">Lojas</a>
+      <a class="nav__link" href="contato.html">Contato</a>
+      <a class="nav__link" href="conta.html">Minha conta</a>
+    </nav>
+    <div class="header__actions">
+      <button class="icon-btn" data-open-cart aria-label="Abrir carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span class="icon-btn__count" data-cart-count>0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Você está aqui">
+      <a href="index.html">Home</a> <span>/</span> <a href="produtos.html">Produtos</a> <span>/</span> <span>Finalizar compra</span>
+    </nav>
+
+    <div class="page-head">
+      <span class="eyebrow">Checkout seguro</span>
+      <h1>Finalizar compra</h1>
+      <p>Confira o pedido, escolha o pagamento e pronto — a equipe da loja
+      acompanha tudo pelo painel.</p>
+    </div>
+
+    <p class="conta-demo-note" id="checkout-demo-note" hidden>
+      <strong>Modo demonstração:</strong> sem o Supabase configurado, o pedido
+      é simulado neste navegador — nada é enviado para a internet.
+    </p>
+
+    <!-- ============================ carrinho vazio ============================ -->
+    <div id="view-vazio" hidden style="padding-bottom:72px">
+      <div class="conta-card" style="text-align:center">
+        <h2>Seu carrinho está vazio</h2>
+        <p class="conta-card__sub">Escolha suas peças no catálogo e volte aqui para fechar o pedido.</p>
+        <a class="btn" href="produtos.html">Ver o catálogo</a>
+      </div>
+    </div>
+
+    <!-- ============================== sem conta ============================== -->
+    <div id="view-login" hidden style="padding-bottom:72px">
+      <div class="conta-card" style="max-width:640px">
+        <h2>Falta pouco!</h2>
+        <p class="conta-card__sub">Para pagar online, entre na sua conta (ou crie
+        uma em 1 minuto) — seus dados de entrega já ficam salvos e a loja
+        reconhece seu pedido na hora.</p>
+        <div class="conta-actions">
+          <a class="btn" href="conta.html">Entrar ou criar conta</a>
+          <button class="btn btn--ghost" id="btn-whats-login" type="button">Prefiro fechar no WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================== checkout =============================== -->
+    <div class="checkout-grid" id="view-checkout" hidden style="padding-bottom:72px">
+
+      <section class="conta-card" aria-labelledby="titulo-itens">
+        <h2 id="titulo-itens">Seu pedido</h2>
+        <div id="itens-lista" class="checkout-itens"></div>
+        <div class="checkout-totais">
+          <div><span>Subtotal</span><b id="total-subtotal"></b></div>
+          <div><span>Frete <small id="frete-prazo"></small></span><b id="total-frete"></b></div>
+          <div class="checkout-totais__linha"><span>Total</span><b id="total-geral"></b></div>
+          <p class="conta-help" id="parcelamento"></p>
+        </div>
+
+        <h2 style="margin-top:26px">Entrega</h2>
+        <div id="entrega-bloco"></div>
+      </section>
+
+      <section class="conta-card" aria-labelledby="titulo-pagamento">
+        <h2 id="titulo-pagamento">Pagamento</h2>
+
+        <div class="pay-options" role="radiogroup" aria-label="Forma de pagamento">
+          <label class="pay-option">
+            <input type="radio" name="metodo" value="pix" checked>
+            <span class="pay-option__label">
+              <strong>Pix</strong>
+              <small>Aprovação na hora — código copia e cola gerado aqui</small>
+            </span>
+          </label>
+          <label class="pay-option">
+            <input type="radio" name="metodo" value="cartao">
+            <span class="pay-option__label">
+              <strong>Cartão de crédito <small>até 6x sem juros</small></strong>
+              <small>A loja envia um link seguro (e.Rede com 3-D Secure) no seu
+              WhatsApp — nenhum dado de cartão é digitado neste site</small>
+            </span>
+          </label>
+        </div>
+
+        <h2 style="margin-top:26px">Seus dados</h2>
+        <div id="dados-cliente" class="checkout-dados"></div>
+        <p class="conta-help" id="dados-nota"></p>
+
+        <label class="conta-consent" style="margin-top:16px">
+          <input type="checkbox" id="checkout-consentimento">
+          <span>Confirmo o pedido e autorizo a Censura 18 a usar meus dados do
+          cadastro para esta compra — <a href="privacidade.html" target="_blank" rel="noopener">política
+          de privacidade</a>.</span>
+        </label>
+
+        <p class="conta-feedback" id="feedback-checkout" role="alert" hidden></p>
+        <button class="btn btn--block" id="btn-confirmar" type="button">Confirmar pedido</button>
+        <button class="btn btn--ghost btn--block" id="btn-whats-alt" type="button" style="margin-top:8px">Fechar pelo WhatsApp em vez de pagar online</button>
+      </section>
+    </div>
+
+    <!-- =============================== sucesso =============================== -->
+    <div id="view-sucesso" hidden style="padding-bottom:72px">
+      <div class="conta-card conta-grid--uma" style="max-width:720px">
+        <span class="eyebrow">Pedido recebido 🖤</span>
+        <h2 id="sucesso-numero" style="font-size:30px"></h2>
+        <p class="conta-card__sub" id="sucesso-resumo"></p>
+
+        <div id="sucesso-pix" hidden>
+          <h3 class="pix-titulo">Pague com Pix para sair da loja hoje</h3>
+          <ol class="pix-passos">
+            <li>Abra o app do seu banco e escolha <strong>Pix → Pix copia e cola</strong></li>
+            <li>Cole o código abaixo (ou copie por aqui) e confirme o valor de <strong id="pix-valor"></strong></li>
+            <li>Envie o comprovante para a loja no WhatsApp — a equipe confirma no painel e separa seu pedido</li>
+          </ol>
+          <label class="pix-label" for="pix-codigo">Pix copia e cola</label>
+          <div class="coupon-control">
+            <input id="pix-codigo" type="text" readonly aria-readonly="true">
+            <button type="button" id="pix-copiar">Copiar código</button>
+          </div>
+          <p class="conta-help">Chave Pix da loja: <strong id="pix-chave"></strong> · a confirmação é feita pela equipe — seu pedido entra na fila de separação assim que o pagamento é reconhecido.</p>
+        </div>
+
+        <div id="sucesso-cartao" hidden>
+          <h3 class="pix-titulo">Cartão em até 6x sem juros</h3>
+          <p class="conta-card__sub">A loja vai te enviar <strong>agora</strong> um link de
+          pagamento seguro da e.Rede (com verificação 3-D Secure) no seu
+          WhatsApp. Seu pedido já está na fila e sai para separação assim que
+          o pagamento é aprovado. Nenhum dado de cartão passou por este site —
+          é assim que mantemos sua compra segura.</p>
+        </div>
+
+        <div class="conta-actions" style="margin-top:18px">
+          <a class="btn" id="btn-sucesso-whats" href="#" target="_blank" rel="noopener">
+            Falar com a loja no WhatsApp
+          </a>
+          <a class="btn btn--ghost" href="conta.html">Ver em Minha conta</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/checkout.js"></script>
+<script src="assets/js/frete.js"></script>
+<script src="assets/js/cliente.js"></script>
+<script src="assets/js/pedido.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/lgpd.js"></script>
+<script>
+/* ==========================================================================
+   checkout.html — fechamento do pedido com Pix ou cartão
+   Pix: copia-e-cola gerado no navegador (EMV/BCB) com a chave de data.js.
+   Cartão: pedido fica 'pending' e a loja envia o link seguro da e.Rede.
+   Modo supabase: RPC criar_meu_pedido grava em public.orders (painel vê).
+   Modo demo: pedido simulado no navegador, com aviso claro.
+   ========================================================================== */
+(function () {
+  "use strict";
+
+  const $ = (sel) => document.querySelector(sel);
+  const el = (id) => document.getElementById(id);
+  const cfg = window.C18_SITE || {};
+  const supabaseMode = cfg.mode === "supabase" && cfg.supabaseUrl && cfg.supabaseAnonKey;
+  const P = window.C18Pedido;
+  const C = window.C18Cliente;
+  const CheckoutTools = window.C18Checkout || {};
+  const CART_KEY = "c18:carrinho";
+  const CHECKOUT_KEY = "c18:checkout";
+
+  const estado = {
+    resumo: null,
+    cliente: null,
+    metodo: "pix",
+    numero: "",
+    pedidoCriado: null,
+  };
+
+  function feedback(texto, erro) {
+    const p = el("feedback-checkout");
+    p.textContent = texto;
+    p.hidden = !texto;
+    p.classList.toggle("is-erro", Boolean(erro));
+  }
+
+  function ocupado(on) {
+    const btn = el("btn-confirmar");
+    btn.disabled = on;
+    btn.classList.toggle("is-busy", on);
+    btn.textContent = on ? "Criando seu pedido…" : "Confirmar pedido";
+  }
+
+  function loadSupabaseLib() {
+    if (window.supabase) return Promise.resolve(window.supabase);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      s.onload = () => (window.supabase ? resolve(window.supabase) : reject(new Error("Supabase não carregou")));
+      s.onerror = () => reject(new Error("Falha ao carregar o cliente Supabase"));
+      document.head.appendChild(s);
+    });
+  }
+
+  let db = null;
+  function dbClient() {
+    if (!db) {
+      db = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+    return db;
+  }
+
+  /* ------------------------------------------------------------- dados */
+  function lerStorage() {
+    let cart = [];
+    let checkout = {};
+    try { cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch (_) {}
+    try { checkout = JSON.parse(localStorage.getItem(CHECKOUT_KEY) || "{}"); } catch (_) {}
+    return { cart, checkout };
+  }
+
+  function verVazio() {
+    el("view-checkout").hidden = true;
+    el("view-vazio").hidden = false;
+  }
+
+  /* ----------------------------------------------------------- entrega */
+  function freteSelecionado() {
+    return estado.resumo.frete;
+  }
+
+  function renderEntrega() {
+    const bloco = el("entrega-bloco");
+    const frete = freteSelecionado();
+    const cep = C18Frete.normalizeCep(estado.cliente?.cep);
+
+    if (frete) {
+      const label = [frete.transportadora, frete.servico].filter(Boolean).join(" — ");
+      bloco.innerHTML = `
+        <div class="frete-options">
+          <div class="frete-option frete-option--resumo is-selected">
+            <span class="frete-option__label">
+              <strong>${label}</strong>
+              <small>${frete.prazoTexto || ""}${cep ? ` · CEP ${C18Frete.formatCep(cep)}` : ""}</small>
+            </span>
+            <b class="frete-option__preco${frete.gratis ? " is-gratis" : ""}">${frete.gratis ? "Grátis" : P.dinheiro(frete.preco)}</b>
+          </div>
+        </div>
+        <p class="conta-help">Quer trocar a entrega? Escolha outra opção no carrinho antes de confirmar.</p>`;
+      return;
+    }
+
+    /* sem frete escolhido no carrinho: escolhe aqui pelo CEP do cadastro */
+    if (C18Frete.isCepValida(cep)) {
+      const opcoes = C18Frete.cotar(cep, { items: estado.resumo.items, subtotal: estado.resumo.subtotal }).options;
+      if (opcoes.length) {
+        bloco.innerHTML = `
+          <p class="conta-help">Escolha a entrega para <strong>${C18Frete.formatCep(cep)}</strong>:</p>
+          <div class="frete-options" role="radiogroup" aria-label="Opções de entrega">
+            ${opcoes.map((op) => `
+            <label class="frete-option">
+              <input type="radio" name="frete-checkout" value="${op.id}" ${op.id === "correios-pac" ? "checked" : ""}>
+              <span class="frete-option__label"><strong>${C18Frete.etiqueta(op)}</strong><small>${op.prazoTexto}</small></span>
+              <b class="frete-option__preco${op.gratis ? " is-gratis" : ""}">${C18Frete.precoTexto(op)}</b>
+            </label>`).join("")}
+          </div>`;
+        atualizarFreteLocal();
+        return;
+      }
+    }
+    bloco.innerHTML = `
+      <p class="conta-help">Nenhuma entrega selecionada. Volte ao carrinho e
+      calcule o frete pelo CEP (ou escolha retirar na loja).</p>
+      <a class="btn btn--ghost" href="produtos.html">Voltar ao carrinho</a>`;
+  }
+
+  function atualizarFreteLocal() {
+    const selecionada = document.querySelector('input[name="frete-checkout"]:checked');
+    if (!selecionada) return;
+    const cep = C18Frete.normalizeCep(estado.cliente?.cep);
+    const op = C18Frete
+      .cotar(cep, { items: estado.resumo.items, subtotal: estado.resumo.subtotal })
+      .options.find((o) => o.id === selecionada.value);
+    if (op) {
+      estado.resumo.frete = {
+        id: op.id, transportadora: op.transportadora, servico: op.servico,
+        preco: op.preco, prazoTexto: op.prazoTexto, gratis: op.gratis,
+      };
+      renderResumo();
+    }
+  }
+
+  /* ------------------------------------------------------------ resumo */
+  function renderResumo() {
+    const r = estado.resumo;
+    el("itens-lista").innerHTML = r.items
+      .map(
+        (i) => `
+      <div class="checkout-item">
+        <span>${i.qty}x <strong>${i.name}</strong> <small>tam. ${i.size} · ${i.color}</small></span>
+        <b>${P.dinheiro(i.qty * i.price)}</b>
+      </div>`
+      )
+      .join("");
+
+    const frete = r.frete;
+    el("total-subtotal").textContent = P.dinheiro(r.subtotal);
+    el("total-frete").textContent = frete ? (frete.gratis ? "Grátis" : P.dinheiro(frete.preco)) : "—";
+    el("frete-prazo").textContent = frete?.prazoTexto ? `· ${frete.prazoTexto}` : "";
+    el("total-geral").textContent = P.dinheiro(r.total);
+    el("parcelamento").textContent =
+      estado.metodo === "cartao" && CheckoutTools.installmentText
+        ? CheckoutTools.installmentText(r.total)
+        : "No Pix, o valor é único — sem juros.";
+  }
+
+  /* ------------------------------------------------------- seus dados */
+  function renderDados() {
+    const c = estado.cliente || {};
+    el("dados-cliente").innerHTML = `
+      <div class="checkout-item"><span><strong>${c.nome || "—"}</strong></span></div>
+      <div class="checkout-item"><span>${c.telefone ? C.formatTelefone(c.telefone) : "—"}</span></div>
+      ${
+        [c.rua, c.numero].some(Boolean)
+          ? `<div class="checkout-item"><span>${[c.rua, c.numero, c.complemento].filter(Boolean).join(", ")} — ${[c.bairro, c.cidade, c.uf].filter(Boolean).join("/")}</span></div>`
+          : ""
+      }
+      ${
+        c.cep
+          ? `<div class="checkout-item"><span>CEP ${C.formatCep(c.cep)}</span></div>`
+          : ""
+      }`;
+    el("dados-nota").textContent =
+      "Os itens e o frete usam estes dados do seu cadastro. Precisa mudar algo? Atualize em Minha conta antes de confirmar.";
+  }
+
+  /* ------------------------------------------------------------- fluxo */
+  function mostrar(id) {
+    ["view-vazio", "view-login", "view-checkout", "view-sucesso"].forEach((v) => {
+      el(v).hidden = v !== id;
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function numeroDemo() {
+    return `C18-DEMO-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  }
+
+  async function criarPedidoRemoto(payload) {
+    const { data, error } = await dbClient().rpc("criar_meu_pedido", { p_pedido: payload });
+    if (error) throw error;
+    return data;
+  }
+
+  function payloadPedido() {
+    const r = estado.resumo;
+    const { checkout } = lerStorage();
+    return {
+      items: r.items,
+      subtotal: r.subtotal,
+      frete: r.frete,
+      total: r.total,
+      metodo: estado.metodo,
+      seller_code: String(checkout.sellerCode || ""),
+      coupon_code: String(checkout.couponCode || ""),
+      store_id: "",
+    };
+  }
+
+  async function confirmar() {
+    if (estado.pedidoCriado) return;
+    const validacao = P.validarPedido({
+      items: estado.resumo.items,
+      subtotal: estado.resumo.subtotal,
+      frete: estado.resumo.frete,
+      total: estado.resumo.total,
+      metodo: estado.metodo,
+      cliente: estado.cliente || {},
+    });
+    if (!validacao.ok) {
+      feedback(Object.values(validacao.erros).join(" · "), true);
+      return;
+    }
+    if (!el("checkout-consentimento").checked) {
+      feedback("Confirme o pedido marcando a caixa de consentimento.", true);
+      return;
+    }
+
+    feedback("", false);
+    ocupado(true);
+    try {
+      const payload = payloadPedido();
+      let retorno;
+      if (supabaseMode) {
+        retorno = await criarPedidoRemoto(payload);
+      } else {
+        retorno = {
+          numero: numeroDemo(),
+          total: estado.resumo.total,
+          metodo: estado.metodo,
+        };
+      }
+      estado.pedidoCriado = retorno;
+      estado.numero = retorno.numero;
+      mostrarSucesso(retorno);
+    } catch (erro) {
+      const mensagem = /cadastro/i.test(erro?.message || "")
+        ? erro.message
+        : `Não deu para criar o pedido: ${erro?.message || "tente de novo"}`;
+      feedback(mensagem, true);
+    } finally {
+      ocupado(false);
+    }
+  }
+
+  function mostrarSucesso(retorno) {
+    el("sucesso-numero").textContent = `Pedido ${retorno.numero}`;
+    el("sucesso-resumo").textContent = `${estado.resumo.count} ${
+      estado.resumo.count === 1 ? "item" : "itens"
+    } · Total ${P.dinheiro(retorno.total || estado.resumo.total)}${
+      estado.resumo.frete ? ` · entrega por ${[estado.resumo.frete.transportadora, estado.resumo.frete.servico].filter(Boolean).join(" — ")}` : ""
+    }`;
+
+    const mensagem = P.mensagemPedido({
+      numero: retorno.numero,
+      cliente: estado.cliente,
+      items: estado.resumo.items,
+      subtotal: estado.resumo.subtotal,
+      frete: estado.resumo.frete,
+      metodo: estado.metodo,
+      total: retorno.total || estado.resumo.total,
+    });
+    const loja = STORES.find((s) => s.id === lerStorage().checkout.storeId) || STORES[0];
+    el("btn-sucesso-whats").href = `https://wa.me/${loja.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    if (estado.metodo === "pix") {
+      el("sucesso-cartao").hidden = true;
+      el("sucesso-pix").hidden = false;
+      el("pix-valor").textContent = P.dinheiro(retorno.total || estado.resumo.total);
+      el("pix-chave").textContent = PAGAMENTO.pixChave;
+      const txid = String(retorno.numero || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 25) || "PEDIDO";
+      const codigo = P.pixCopiaCola(PAGAMENTO, retorno.total || estado.resumo.total, txid);
+      el("pix-codigo").value = codigo;
+    } else {
+      el("sucesso-pix").hidden = true;
+      el("sucesso-cartao").hidden = false;
+    }
+
+    /* pedido criado: limpa o carrinho (dados já estão salvos no pedido) */
+    try {
+      localStorage.removeItem(CART_KEY);
+      document.querySelectorAll("[data-cart-count]").forEach((n) => (n.textContent = "0"));
+    } catch (_) {}
+
+    mostrar("view-sucesso");
+  }
+
+  /* --------------------------------------------------------------- boot */
+  function bind() {
+    document.addEventListener("change", (e) => {
+      if (e.target.name === "metodo") {
+        estado.metodo = e.target.value;
+        renderResumo();
+      }
+      if (e.target.name === "frete-checkout") atualizarFreteLocal();
+    });
+    el("btn-confirmar").addEventListener("click", confirmar);
+    el("pix-copiar").addEventListener("click", async () => {
+      const input = el("pix-codigo");
+      input.select();
+      try {
+        await navigator.clipboard.writeText(input.value);
+      } catch (_) {
+        document.execCommand("copy");
+      }
+      el("pix-copiar").textContent = "Copiado!";
+      setTimeout(() => (el("pix-copiar").textContent = "Copiar código"), 2200);
+    });
+    const fecharWhats = () => {
+      const mensagem = P.mensagemPedido({
+        numero: "",
+        cliente: estado.cliente,
+        items: estado.resumo.items,
+        subtotal: estado.resumo.subtotal,
+        frete: estado.resumo.frete,
+        metodo: "",
+        total: estado.resumo.total,
+      });
+      const loja = STORES.find((s) => s.id === lerStorage().checkout.storeId) || STORES[0];
+      window.open(`https://wa.me/${loja.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener");
+    };
+    el("btn-whats-alt").addEventListener("click", fecharWhats);
+    el("btn-whats-login").addEventListener("click", fecharWhats);
+  }
+
+  async function boot() {
+    el("checkout-demo-note").hidden = supabaseMode;
+    bind();
+
+    const { cart, checkout } = lerStorage();
+    estado.resumo = P.resumo(cart, checkout.frete || null);
+    if (!estado.resumo.items.length) {
+      verVazio();
+      return;
+    }
+
+    estado.cliente = C.currente();
+
+    if (!supabaseMode) {
+      const demo = (() => {
+        try { return JSON.parse(localStorage.getItem("c18:cliente-demo-conta") || "null"); } catch (_) { return null; }
+      })();
+      if (demo) estado.cliente = { ...demo };
+      renderDados();
+      renderEntrega();
+      renderResumo();
+      mostrar("view-checkout");
+      return;
+    }
+
+    try {
+      const client = dbClient();
+      const { data: sessao } = await client.auth.getSession();
+      const usuario = sessao?.session?.user;
+      if (!usuario) {
+        mostrar("view-login");
+        return;
+      }
+      const { data: row } = await client
+        .from("customers")
+        .select("*")
+        .eq("id", usuario.id)
+        .single();
+      estado.cliente = {
+        ...(row || {}),
+        email: usuario.email,
+        nome: row?.nome || C.currente()?.nome || "",
+        telefone: row?.telefone || C.currente()?.telefone || "",
+      };
+      C.definirAtual(estado.cliente);
+      renderDados();
+      renderEntrega();
+      renderResumo();
+      mostrar("view-checkout");
+    } catch (_) {
+      mostrar("view-login");
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
