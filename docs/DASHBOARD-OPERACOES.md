@@ -173,8 +173,10 @@ Implantação específica:
 1. Criar projeto Supabase na região adequada;
 2. Executar `supabase/migrations/202609170001_operations.sql`;
 3. Executar `supabase/migrations/202609170002_banners_paletas.sql`
-   (banners e paleta) e `supabase/migrations/202609180001_gift_cards.sql`
-   (cartão presente: emitir, consultar e resgatar saldo por RPC);
+   (banners e paleta), `supabase/migrations/202609180001_gift_cards.sql`
+   (cartão presente: emitir, consultar e resgatar saldo por RPC) e
+   `supabase/migrations/202609180002_discount_coupons.sql` (cupons de
+   desconto);
 4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 5. Cadastrar URL e anon key em `admin/assets/config.js`;
 6. Cadastrar os segredos de `.env.example` via Supabase Secrets
@@ -186,7 +188,7 @@ Implantação específica:
 
 ## Cartão presente
 
-A página pública `cartao-presente.html` vende as faixas de R$ 50 a R$ 300
+A página pública `cartao-presente.html` vende as faixas de R$ 50 a R$ 500
 pelo WhatsApp da marca. No atendimento, a operação usa as RPCs da
 migration `202609180001_gift_cards.sql`:
 
@@ -199,6 +201,32 @@ migration `202609180001_gift_cards.sql`:
 
 No site, o código entra no campo *Cartão presente* do carrinho e segue na
 mensagem do pedido — o saldo nunca é validado no navegador, igual ao cupom.
+
+## Cupons de desconto
+
+O painel (`admin/` → Cupons) cria e gerencia cupons com escopo **loja
+toda**, **referência**, **categoria** ou **coleção** — os conceitos da
+planilha Alterdata — em percentual (1–90%) ou valor fixo (até R$ 5.000),
+com janela de validade e ativar/desativar. A validação compartilhada está
+em `assets/js/coupons.js` (usada pelo painel e pelo site).
+
+Como o site consome: o carrinho (`assets/js/app.js`) descreve o desconto
+quando o cliente digita um cupom conhecido. No modo demonstração, a lista
+de cupons ativos vive em `c18:demo-coupons` no `localStorage` (mesmo
+navegador do painel). Com o Supabase ligado, o site consulta **um código
+por vez** pela RPC `check_discount_coupon` com a chave anônima — o
+navegador nunca recebe a lista inteira. O valor final segue sendo
+confirmado pela loja no fechamento do pedido.
+
+No servidor, a migration `202609180002_discount_coupons.sql` cria a tabela
+`discount_coupons` (RLS, escrita somente por RPC `security definer`) com:
+
+- `save_discount_coupon(payload)` — cria/atualiza (papel admin);
+- `set_discount_coupon_active(id, active)` — liga/desliga sem afetar os
+  demais (papel admin);
+- `delete_discount_coupon(id)` — exclusão (papel admin);
+- `check_discount_coupon(code)` — consulta pública de um código ativo e
+  dentro da janela de datas (anon + authenticated).
 
 ## Segurança
 

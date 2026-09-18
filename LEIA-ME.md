@@ -29,6 +29,7 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/ssl.js         HTTPS sempre (redirect + upgrade de links)
 │   ├── js/lgpd.js        Banner de consentimento (LGPD)
 │   ├── js/gift-card.js   Cartão presente (valores + mensagem)
+│   ├── js/coupons.js     Cupons: validação, escopos e descrição
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -37,7 +38,7 @@ Paleta: **preto · branco · cinza**.
 │
 ├── LEIA-ME.md            Este arquivo
 │
-├── admin/                Dashboard de operações (inclui Banners & Paleta)
+├── admin/                Dashboard de operações (Banners & Paleta, Cupons)
 │   └── ver docs/DASHBOARD-OPERACOES.md
 └── supabase/             Migrations, RPCs e Edge Functions
 ```
@@ -156,12 +157,50 @@ hoje pelo Instagram:
 
 1. Cliente escolhe tamanho, cor e quantidade
 2. Carrinho fica salvo no `localStorage` (não se perde ao recarregar)
-3. No checkout, pode informar o **código do vendedor** e um **cupom de desconto**
+3. No checkout, pode informar o **código do vendedor**, um **cupom de
+   desconto** e o código de um **cartão presente**
 4. Escolhe a loja num `<select>`
 5. O site monta uma mensagem completa e abre o WhatsApp daquela unidade
 
-O cupom informado não altera o preço no navegador: ele segue identificado na
-mensagem para validação segura pela loja antes do pagamento.
+O cupom e o cartão presente informados não alteram o preço no navegador:
+eles seguem identificados na mensagem para validação segura pela loja
+antes do pagamento. No parcelamento, **até 3x sem juros com parcela
+mínima de R$ 49,90** — o carrinho já mostra quantas parcelas cabem no
+total dos itens.
+
+### Cupons de desconto
+
+Criados no painel (`admin/` → Cupons) com quatro escopos: **loja toda**,
+**por referência**, **por categoria** ou **por coleção** (os conceitos da
+planilha Alterdata), em percentual (1–90%) ou valor fixo (até R$ 5.000),
+com janela de validade. No modo demonstração, o carrinho lê os cupons
+ativos do `localStorage` (`c18:demo-coupons`) e descreve o desconto ao
+cliente; com o Supabase ligado, a consulta é um código por vez pela RPC
+`check_discount_coupon` — nunca uma listagem anônima. A lógica
+compartilhada está em `assets/js/coupons.js` e as RPCs em
+`supabase/migrations/202609180002_discount_coupons.sql`.
+
+### Cartão presente
+
+Vendido em 6 faixas (`R$ 50` a `R$ 500`, em `assets/js/gift-card.js`) pela
+página `cartao-presente.html`, com nomes de quem presenteia e de quem
+recebe na mensagem do WhatsApp. O código tem o formato `C18-XXXX-XXXX`:
+no carrinho, ele entra no campo *Cartão presente* e a loja confere o saldo
+no momento do pagamento. Com o Supabase ligado, a emissão, a consulta e o
+resgate do saldo ficam nas RPCs de
+`supabase/migrations/202609180001_gift_cards.sql`.
+
+### Privacidade (LGPD) e HTTPS
+
+O site não usa cookies de rastreamento e não envia dados a terceiros:
+carrinho e preferências ficam no `localStorage` do próprio navegador. O
+banner de `assets/js/lgpd.js` registra a escolha do visitante — com
+**"Só o essencial"**, o site para de gravar cupom, código de vendedor e
+cartão presente e apaga o que já estava salvo. A política completa está
+em `privacidade.html`, e o formulário de contato só envia com
+consentimento explícito. Por segurança, `assets/js/ssl.js` (no `<head>`
+de todas as páginas) redireciona `http://` → `https://` — útil até o
+"Enforce HTTPS" ser ligado num domínio próprio.
 
 Exemplo de mensagem gerada:
 
@@ -261,6 +300,16 @@ ser extraída diretamente dos arquivos.
       prompt, agendamento e ativar/desativar) — `admin/` → Banners & Paleta
 - [x] Paleta de cores do site ajustável pelo painel (8 cores aplicadas em
       tempo real via CSS variables, com restauração do padrão P&B)
+- [x] Cartão presente (R$ 50–500) com página própria e campo no carrinho —
+      código `C18-XXXX-XXXX` validado pela loja no pagamento
+- [x] Cupons de desconto gerenciados no painel: loja toda, referência,
+      categoria ou coleção, percentual ou valor fixo
+- [x] Parcelamento em até 3x sem juros com parcela mínima de R$ 49,90
+- [x] LGPD: banner de consentimento, política de privacidade
+      (`privacidade.html`) e consentimento explícito no formulário de contato
+- [x] HTTPS sempre: redirecionamento `http://` → `https://` e upgrade
+      automático de links inseguros em todas as páginas
+- [x] Suíte de testes com o Node puro: `node --test tests/`
 
 ## 🔜 Próximos passos sugeridos
 
@@ -278,12 +327,14 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test                 # 22 testes (descobre tudo em tests/)
+node --test                 # 28 testes (descobre tudo em tests/)
 # ou, por arquivo:
-node --test tests/gift-card.test.js tests/checkout.test.js \
-           tests/site-config.test.js tests/importer.test.js
+node --test tests/gift-card.test.js tests/coupons.test.js \
+           tests/checkout.test.js tests/site-config.test.js \
+           tests/importer.test.js
 ```
 
 Os testes cobrem o contrato do checkout (vendedor, cupom, cartão
-presente), a página de cartão presente, o `site-config` nos modos
-static/demo e o importador da planilha Alterdata.
+presente e parcelamento), os cupons por escopo, a página de cartão
+presente, o `site-config` nos modos static/demo e o importador da
+planilha Alterdata.

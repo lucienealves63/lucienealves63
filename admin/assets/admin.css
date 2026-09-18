@@ -506,12 +506,26 @@ tbody tr:hover { background: #fcfcfc; }
 .banner-active-check input { margin-top: 2px; accent-color: #000; }
 .banner-active-check span { color: var(--gray-600); font-size: 11px; }
 
+/* Cupons de desconto */
+.coupons-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.coupon-card { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--gray-200); border-radius: var(--radius); background: #fff; padding: 15px 16px 16px; transition: .2s; }
+.coupon-card:hover { border-color: var(--gray-500); }
+.coupon-card.is-active { border-color: var(--black); box-shadow: 0 0 0 1px var(--black); }
+.coupon-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.coupon-card__code { font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coupon-card__desc { color: var(--gray-600); font-size: 12px; }
+.coupon-card__meta { color: var(--gray-500); font-size: 10px; }
+.coupon-card__actions { margin-top: auto; padding-top: 8px; display: flex; align-items: center; gap: 7px; }
+.coupon-card__actions .btn { min-height: 36px; padding: 0 12px; font-size: 10px; }
+.coupon-card__actions .icon-only { width: 36px; height: 36px; }
+
 /* Responsive */
 @media (max-width: 1150px) {
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .receipt-grid, .integration-cards { grid-template-columns: repeat(2, 1fr); }
   .import-body { grid-template-columns: 250px 1fr; }
   .banners-grid { grid-template-columns: repeat(2, 1fr); }
+  .coupons-grid { grid-template-columns: repeat(2, 1fr); }
   .palette-body { grid-template-columns: 1fr; }
   .palette-preview { max-width: 480px; }
   .metrics--compact { grid-template-columns: repeat(2, 1fr); }
@@ -554,6 +568,7 @@ tbody tr:hover { background: #fcfcfc; }
   .toolbar select { flex: 1; min-width: 130px; }
   .receipt-grid, .integration-cards { grid-template-columns: 1fr; }
   .banners-grid { grid-template-columns: 1fr; }
+  .coupons-grid { grid-template-columns: 1fr; }
   .banner-card__media { aspect-ratio: 16/9; }
   .banner-modal-grid { grid-template-columns: 1fr; }
   .banner-ai-row { grid-template-columns: 1fr; }

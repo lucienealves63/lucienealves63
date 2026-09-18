@@ -13,7 +13,7 @@
   "use strict";
 
   /* Faixas vendidas no site — o seletor da página nasce daqui. */
-  const AMOUNTS = [50, 100, 150, 200, 300];
+  const AMOUNTS = [50, 100, 150, 200, 300, 500];
 
   const CODE_PATTERN = /^C18-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 

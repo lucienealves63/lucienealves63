@@ -57,6 +57,7 @@
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M17.7 6.3l-2.5 2.5M8.8 15.2l-2.5 2.5"/><circle cx="12" cy="12" r="2.6"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.6-1-2.5c0-1.4 1-2 2.5-2H18a4 4 0 0 0 4-4c0-4.4-4-7.5-10-7.5Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></symbol>
+    <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
   </svg>
 
   <aside class="sidebar" id="sidebar">
@@ -86,6 +87,9 @@
       </button>
       <button class="side-nav__item" data-nav="banners" data-permission="banners">
         <svg><use href="#i-image"/></svg><span>Banners &amp; Paleta</span>
+      </button>
+      <button class="side-nav__item" data-nav="coupons" data-permission="coupons">
+        <svg><use href="#i-percent"/></svg><span>Cupons</span>
       </button>
 
       <p class="side-nav__label side-nav__label--spaced">Sistema</p>
@@ -255,6 +259,14 @@
         </article>
       </section>
 
+      <section class="page" data-page="coupons">
+        <div class="page-head">
+          <div><p class="page-kicker">PROMOÇÕES</p><h2>Cupons de desconto</h2><p>Crie cupons para a loja toda ou por referência, categoria ou coleção. O cliente informa o código no carrinho e a loja confirma o desconto no fechamento do pedido.</p></div>
+          <div class="page-actions"><button class="btn btn--secondary" id="coupons-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button><button class="btn btn--primary" id="new-coupon"><svg><use href="#i-plus"/></svg>Novo cupom</button></div>
+        </div>
+        <div class="coupons-grid" id="coupons-grid"></div>
+      </section>
+
       <section class="page" data-page="integrations">
         <div class="page-head">
           <div><p class="page-kicker">CONEXÕES</p><h2>Integrações</h2><p>Saúde, credenciais e histórico de sincronização.</p></div>
@@ -403,6 +415,29 @@
     </section>
   </div>
 
+  <div class="modal" id="coupon-modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal></div>
+    <section class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="coupon-modal-title">
+      <header class="modal__head"><div><span class="modal__kicker">PROMOÇÕES</span><h2 id="coupon-modal-title">Novo cupom</h2></div><button class="icon-only" data-close-modal aria-label="Fechar"><svg><use href="#i-close"/></svg></button></header>
+      <form id="coupon-form">
+        <div class="modal__body form-grid">
+          <label class="form-field form-field--wide"><span>Código do cupom <b>*</b></span><input id="coupon-code" required maxlength="32" placeholder="Ex.: PRIMEIRAC18" autocomplete="off"><small>O cliente digita este código no carrinho — letras, números, ponto, hífen, barra e underline.</small></label>
+          <label class="form-field"><span>Tipo de desconto <b>*</b></span><select id="coupon-kind"><option value="percent">Percentual (%)</option><option value="amount">Valor fixo (R$)</option></select></label>
+          <label class="form-field"><span>Valor <b>*</b></span><input id="coupon-value" inputmode="decimal" required placeholder="Ex.: 10 ou 20,00"><small>Percentual de 1 a 90, ou valor em reais até R$ 5.000.</small></label>
+          <label class="form-field"><span>Aplica a <b>*</b></span><select id="coupon-scope"><option value="all">Loja toda</option><option value="reference">Referência</option><option value="category">Categoria</option><option value="collection">Coleção</option></select></label>
+          <label class="form-field" id="coupon-target-field" hidden><span>Alvo do desconto <b>*</b></span><input id="coupon-target" maxlength="60" list="coupon-target-options" placeholder="Ex.: VERÃO 09"><small>Digite a referência, categoria ou coleção — a lista sugere o que existe no estoque.</small></label>
+          <datalist id="coupon-target-options"></datalist>
+          <div class="form-row-2">
+            <label class="form-field"><span>Válido a partir de</span><input type="datetime-local" id="coupon-starts"></label>
+            <label class="form-field"><span>Expira em</span><input type="datetime-local" id="coupon-ends"></label>
+          </div>
+          <label class="banner-active-check form-field--wide"><input type="checkbox" id="coupon-active-check" checked><span>Ativar imediatamente (o carrinho do site passa a reconhecer o código)</span></label>
+        </div>
+        <footer class="modal__foot"><p id="coupon-foot-note">O desconto é confirmado pela loja no fechamento do pedido, como no site hoje.</p><div><button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button><button type="submit" class="btn btn--primary" id="coupon-save">Salvar cupom</button></div></footer>
+      </form>
+    </section>
+  </div>
+
   <div class="drawer" id="order-drawer" aria-hidden="true">
     <div class="drawer__backdrop" data-close-drawer></div>
     <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -416,6 +451,7 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/coupons.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/importer.js"></script>
   <script src="assets/admin.js"></script>

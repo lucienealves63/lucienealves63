@@ -6,6 +6,7 @@
   const STORE_KEY = "c18-operations-demo-v2";
   const BANNER_DEMO_KEY = "c18:demo-banner";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
+  const COUPONS_DEMO_KEY = "c18:demo-coupons";
   const DEFAULT_PALETTE = {
     primary: "#000000",
     primaryContrast: "#ffffff",
@@ -170,6 +171,13 @@
     },
   ];
 
+  /* Cupons de demonstração: o PRIMEIRAC18 (R$ 20 na loja toda) é o mesmo
+     cupom que aparece no pedido C18-1048 dos dados de exemplo. */
+  const seedCoupons = [
+    { id: "coupon-primeirac18", code: "PRIMEIRAC18", kind: "amount", value: 20, scope: "all", target: "", active: true, starts_at: null, ends_at: null, updatedAt: new Date().toISOString() },
+    { id: "coupon-verao09", code: "VERAO09", kind: "percent", value: 15, scope: "collection", target: "VERÃO 09", active: false, starts_at: null, ends_at: null, updatedAt: new Date().toISOString() },
+  ];
+
   function freshState() {
     return {
       inventory: seedInventory,
@@ -179,6 +187,7 @@
       integrations: seedIntegrations,
       importBatches: [],
       banners: seedBanners,
+      coupons: seedCoupons,
       palette: null,
     };
   }
@@ -195,6 +204,7 @@
 
   let state = loadState();
   if (!Array.isArray(state.banners)) state.banners = seedBanners;
+  if (!Array.isArray(state.coupons)) state.coupons = seedCoupons;
   if (state.palette === undefined) state.palette = null;
   let currentPage = "overview";
   let currentOrderFilter = "all";
@@ -217,6 +227,7 @@
     fraud: ["admin"],
     integrations: ["admin"],
     banners: ["admin"],
+    coupons: ["admin"],
   };
 
   function can(permission) {
@@ -425,6 +436,7 @@
     $$('[data-permission="inventory"]').forEach((element) => { element.hidden = !can("inventory"); });
     $$('[data-permission="integrations"]').forEach((element) => { element.hidden = !can("integrations"); });
     $$('[data-permission="banners"]').forEach((element) => { element.hidden = !can("banners"); });
+    $$('[data-permission="coupons"]').forEach((element) => { element.hidden = !can("coupons"); });
   }
 
   function renderAll() {
@@ -440,6 +452,7 @@
     renderShipping();
     renderIntegrations();
     renderBanners();
+    renderCoupons();
     renderPalette();
   }
 
@@ -447,7 +460,7 @@
     currentPage = page;
     $$("[data-page]").forEach((item) => item.classList.toggle("is-active", item.dataset.page === page));
     $$(".side-nav__item[data-nav]").forEach((item) => item.classList.toggle("is-active", item.dataset.nav === page));
-    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta" }[page];
+    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons" }[page];
     $("#page-title").textContent = label || "Operações";
     $("#sidebar").classList.remove("is-open");
     $("#sidebar-overlay").classList.remove("is-open");
@@ -840,7 +853,7 @@
 
   async function loadSupabaseData() {
     const client = window.C18_SUPABASE;
-    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult] = await Promise.all([
+    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult, couponResult] = await Promise.all([
       client.from("stores").select("id, code, name").eq("active", true).order("name"),
       fetchAllRows("inventory_catalog_view", "*", "product_name"),
       client.from("orders").select("*, order_items(*), order_events(*), shipments(*)").order("created_at", { ascending: false }).limit(500),
@@ -849,6 +862,7 @@
       client.from("inventory_movements").select("id, store_id, kind, quantity_delta, note, created_at, product_variants(sku, products(name))").order("created_at", { ascending: false }).limit(100),
       client.from("site_banners").select("*").order("priority", { ascending: true }).order("created_at", { ascending: false }).limit(200),
       client.from("site_palettes").select("*").order("created_at", { ascending: false }).limit(100),
+      client.from("discount_coupons").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
 
     if (storeResult.error) throw storeResult.error;
@@ -970,6 +984,22 @@
 
     if (!paletteResult.error) {
       state.palette = (paletteResult.data || []).find((palette) => palette.active) || null;
+    }
+
+    if (!couponResult.error) {
+      state.coupons = (couponResult.data || []).map((coupon) => ({
+        id: coupon.id,
+        dbId: coupon.id,
+        code: coupon.code,
+        kind: coupon.kind,
+        value: Number(coupon.value),
+        scope: coupon.scope,
+        target: coupon.target || "",
+        active: Boolean(coupon.active),
+        starts_at: coupon.starts_at,
+        ends_at: coupon.ends_at,
+        updatedAt: coupon.updated_at,
+      }));
     }
 
     if (!integrationResult.error) {
@@ -1466,6 +1496,204 @@
     }
   }
 
+  /* ======================================= Cupons de desconto ========= */
+  let couponEditingId = null;
+
+  function renderCoupons() {
+    const grid = $("#coupons-grid");
+    if (!grid) return;
+    if (!state.coupons.length) {
+      grid.innerHTML = '<p class="empty-options">Nenhum cupom ainda. Clique em “Novo cupom” para criar o primeiro.</p>';
+      return;
+    }
+    const now = new Date();
+    const tools = window.C18Coupons;
+    grid.innerHTML = state.coupons.map((coupon) => {
+      const activeNow = tools ? tools.isActive(coupon, now) : coupon.active;
+      const scheduled = !activeNow && coupon.starts_at && new Date(coupon.starts_at) > now;
+      const expired = !activeNow && coupon.ends_at && new Date(coupon.ends_at) < now;
+      const status = activeNow ? badge("No ar", "success") : scheduled ? badge("Agendado", "info") : expired ? badge("Expirado", "neutral") : badge("Inativo", "neutral");
+      const description = tools ? tools.describeCoupon(coupon) : "";
+      const scopeLabel = (tools && tools.SCOPE_LABELS[coupon.scope]) || "Loja toda";
+      const dates = [];
+      if (coupon.starts_at) dates.push("de " + new Date(coupon.starts_at).toLocaleDateString("pt-BR"));
+      if (coupon.ends_at) dates.push("até " + new Date(coupon.ends_at).toLocaleDateString("pt-BR"));
+      return `<article class="coupon-card${activeNow ? " is-active" : ""}">
+        <div class="coupon-card__top"><strong class="coupon-card__code">${esc(coupon.code)}</strong>${status}</div>
+        <p class="coupon-card__desc">${esc(description || "Desconto")}</p>
+        <p class="coupon-card__meta">Aplica a: ${esc(scopeLabel)}${coupon.target ? " · " + esc(coupon.target) : ""} · ${esc(dates.join(" ") || "sem prazo")}</p>
+        <div class="coupon-card__actions">
+          <button class="btn ${coupon.active ? "btn--secondary" : "btn--primary"}" data-coupon-toggle="${esc(coupon.id)}">${coupon.active ? "Desativar" : "Ativar"}</button>
+          <button class="btn btn--secondary" data-coupon-edit="${esc(coupon.id)}">Editar</button>
+          <button class="icon-only" data-coupon-delete="${esc(coupon.id)}" aria-label="Excluir cupom" title="Excluir"><svg><use href="#i-trash"/></svg></button>
+        </div>
+      </article>`;
+    }).join("");
+  }
+
+  /* Mostra/esconde o campo de alvo e sugere, via datalist, os valores que
+     existem no estoque (referência, categoria ou coleção). */
+  function updateCouponScopeFields() {
+    const scopeSelect = $("#coupon-scope");
+    const scope = scopeSelect ? scopeSelect.value : "all";
+    const field = $("#coupon-target-field");
+    const needsTarget = scope === "reference" || scope === "category" || scope === "collection";
+    if (field) field.hidden = !needsTarget;
+    const label = field ? field.querySelector("span") : null;
+    if (label) {
+      const labels = { reference: "Referência", category: "Categoria", collection: "Coleção" };
+      label.innerHTML = needsTarget ? labels[scope] + " alvo <b>*</b>" : "Alvo do desconto";
+    }
+    const datalist = $("#coupon-target-options");
+    if (!datalist) return;
+    const values = needsTarget
+      ? Array.from(new Set(state.inventory
+          .map((item) => String((scope === "reference" ? (item.reference || item.code) : item[scope]) || "").trim())
+          .filter(Boolean))).sort()
+      : [];
+    datalist.innerHTML = values.map((value) => `<option value="${esc(value)}"></option>`).join("");
+  }
+
+  function openCouponModal(id = null) {
+    couponEditingId = id;
+    const form = $("#coupon-form");
+    form.reset();
+    const coupon = id ? state.coupons.find((item) => item.id === id) : null;
+    if (coupon) {
+      $("#coupon-code").value = coupon.code || "";
+      $("#coupon-kind").value = coupon.kind === "amount" ? "amount" : "percent";
+      $("#coupon-value").value = String(coupon.value ?? "").replace(".", ",");
+      $("#coupon-scope").value = coupon.scope || "all";
+      $("#coupon-target").value = coupon.target || "";
+      $("#coupon-starts").value = toDatetimeLocal(coupon.starts_at);
+      $("#coupon-ends").value = toDatetimeLocal(coupon.ends_at);
+      $("#coupon-active-check").checked = Boolean(coupon.active);
+      $("#coupon-modal-title").textContent = "Editar — " + coupon.code;
+    } else {
+      $("#coupon-modal-title").textContent = "Novo cupom";
+      $("#coupon-active-check").checked = true;
+    }
+    updateCouponScopeFields();
+    const footNote = $("#coupon-foot-note");
+    if (footNote) footNote.textContent = "O desconto é confirmado pela loja no fechamento do pedido, como no site hoje.";
+    openModal("#coupon-modal");
+  }
+
+  async function saveCoupon(event) {
+    event.preventDefault();
+    if (!requirePermission("coupons")) return;
+    const tools = window.C18Coupons;
+    if (!tools) { toast("Módulo de cupons indisponível.", "alert"); return; }
+    const startsRaw = $("#coupon-starts").value;
+    const endsRaw = $("#coupon-ends").value;
+    const payload = {
+      id: couponEditingId || "",
+      code: $("#coupon-code").value,
+      kind: $("#coupon-kind").value === "amount" ? "amount" : "percent",
+      value: $("#coupon-value").value,
+      scope: $("#coupon-scope").value,
+      target: $("#coupon-target").value,
+      starts_at: startsRaw ? new Date(startsRaw).toISOString() : "",
+      ends_at: endsRaw ? new Date(endsRaw).toISOString() : "",
+      active: $("#coupon-active-check").checked,
+    };
+    const result = tools.createCoupon(payload, { existing: state.coupons });
+    const footNote = $("#coupon-foot-note");
+    if (!result.ok) {
+      if (footNote) footNote.textContent = result.errors.join(" ");
+      toast(result.errors[0] || "Confira os dados do cupom.", "alert");
+      return;
+    }
+    const coupon = result.coupon;
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const button = $("#coupon-save");
+      button.disabled = true;
+      const { error } = await window.C18_SUPABASE.rpc("save_discount_coupon", { p_payload: coupon });
+      button.disabled = false;
+      if (error) {
+        if (footNote) footNote.textContent = error.message || "Não foi possível salvar o cupom.";
+        toast(error.message || "Não foi possível salvar o cupom.", "alert");
+        return;
+      }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderCoupons();
+      closeModals();
+      toast(coupon.active ? "Cupom salvo e ativo." : "Cupom salvo como inativo.");
+      return;
+    }
+
+    const record = { ...coupon, id: coupon.id || "coupon-" + Date.now(), updatedAt: new Date().toISOString() };
+    /* mesma semântica da RPC: salvar ativa quando marcado, mas nunca
+       desativa — para desativar existe o botão próprio do cartão. */
+    const previous = couponEditingId ? state.coupons.find((item) => item.id === couponEditingId) : null;
+    if (previous && previous.active) record.active = true;
+    const index = state.coupons.findIndex((item) => item.id === record.id);
+    if (index >= 0) state.coupons[index] = record; else state.coupons.push(record);
+    saveState();
+    syncDemoCoupons();
+    renderCoupons();
+    closeModals();
+    toast(record.active ? "Cupom salvo e ativo." : "Cupom salvo como inativo.");
+  }
+
+  async function toggleCouponActive(id) {
+    if (!requirePermission("coupons")) return;
+    const coupon = state.coupons.find((item) => item.id === id);
+    if (!coupon) return;
+    const nextActive = !coupon.active;
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("set_discount_coupon_active", { p_id: coupon.dbId || id, p_active: nextActive });
+      if (error) { toast(error.message || "Não foi possível alternar o cupom.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderCoupons();
+    } else {
+      coupon.active = nextActive;
+      saveState();
+      syncDemoCoupons();
+      renderCoupons();
+    }
+    toast(nextActive ? "Cupom " + coupon.code + " ativado." : "Cupom " + coupon.code + " desativado.");
+  }
+
+  async function deleteCoupon(id) {
+    if (!requirePermission("coupons")) return;
+    const coupon = state.coupons.find((item) => item.id === id);
+    if (!coupon) return;
+    if (!window.confirm("Excluir o cupom \"" + coupon.code + "\"?")) return;
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("delete_discount_coupon", { p_id: coupon.dbId || id });
+      if (error) { toast(error.message || "Não foi possível excluir o cupom.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderCoupons();
+      toast("Cupom excluído.");
+      return;
+    }
+
+    state.coupons = state.coupons.filter((item) => item.id !== id);
+    saveState();
+    syncDemoCoupons();
+    renderCoupons();
+    toast("Cupom excluído.");
+  }
+
+  // No modo demonstração, o carrinho do site (assets/js/app.js) lê a lista
+  // de cupons ativos desta chave para descrever o desconto ao cliente.
+  function syncDemoCoupons() {
+    if (CONFIG.mode !== "demo") return;
+    const now = new Date();
+    const list = state.coupons
+      .filter((item) => item.active && (!item.starts_at || new Date(item.starts_at) <= now) && (!item.ends_at || new Date(item.ends_at) >= now))
+      .map((item) => ({ code: item.code, kind: item.kind, value: item.value, scope: item.scope, target: item.target || "", active: true }));
+    try {
+      localStorage.setItem(COUPONS_DEMO_KEY, JSON.stringify(list));
+    } catch (_) {
+      /* storage cheio: o site segue sem descrição de cupom */
+    }
+  }
+
   function applyPalettePreview(colors) {
     const scope = $("#palette-preview");
     if (!scope) return;
@@ -1561,6 +1789,13 @@
       if (bannerEdit) { if (requirePermission("banners")) openBannerModal(bannerEdit.dataset.bannerEdit); return; }
       const bannerDelete = event.target.closest("[data-banner-delete]");
       if (bannerDelete) { deleteBanner(bannerDelete.dataset.bannerDelete); return; }
+      if (event.target.closest("#new-coupon")) { if (requirePermission("coupons")) openCouponModal(); return; }
+      const couponToggle = event.target.closest("[data-coupon-toggle]");
+      if (couponToggle) { toggleCouponActive(couponToggle.dataset.couponToggle); return; }
+      const couponEdit = event.target.closest("[data-coupon-edit]");
+      if (couponEdit) { if (requirePermission("coupons")) openCouponModal(couponEdit.dataset.couponEdit); return; }
+      const couponDelete = event.target.closest("[data-coupon-delete]");
+      if (couponDelete) { deleteCoupon(couponDelete.dataset.couponDelete); return; }
       if (event.target.closest('[data-action="import"]')) { if (requirePermission("inventory")) { resetImport(); openModal("#import-modal"); } return; }
       if (event.target.closest('[data-action="manual"]')) { if (requirePermission("inventory")) openManual(); return; }
       if (event.target.closest("[data-close-modal]")) { closeModals(); return; }
@@ -1631,6 +1866,7 @@
       }
       if (event.target.matches("#inventory-store, #inventory-stock")) renderInventory();
       if (event.target.matches("#import-store")) updateImportPreview();
+      if (event.target.matches("#coupon-scope")) updateCouponScopeFields();
     });
 
     $("#inventory-search").addEventListener("input", renderInventory);
@@ -1658,6 +1894,9 @@
       if (event.key === "Enter") { event.preventDefault(); navigate("inventory"); $("#inventory-search").value = event.target.value; renderInventory(); }
     });
     $("#banners-refresh").addEventListener("click", () => { renderBanners(); toast("Banners e paleta atualizados."); });
+    $("#coupons-refresh").addEventListener("click", () => { renderCoupons(); toast("Cupons atualizados."); });
+    $("#coupon-form").addEventListener("submit", saveCoupon);
+    $("#coupon-code").addEventListener("input", (event) => { event.target.value = event.target.value.toUpperCase(); });
     $("#banner-file").addEventListener("change", (event) => { handleBannerFile(event.target.files[0]); event.target.value = ""; });
     const bannerDropzone = $("#banner-dropzone");
     ["dragenter", "dragover"].forEach((name) => bannerDropzone.addEventListener(name, (event) => { event.preventDefault(); bannerDropzone.classList.add("is-dragging"); }));
@@ -1686,6 +1925,7 @@
     timeZone: "America/Sao_Paulo",
   }).format(new Date()).toUpperCase()}`;
   bindEvents();
+  if (CONFIG.mode === "demo") syncDemoCoupons();
   renderAll();
   navigate("overview");
   initSupabaseAuth();
