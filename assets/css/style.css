@@ -1805,6 +1805,166 @@ h4 {
   margin-top: 2px;
 }
 
+/* ------------------------------------------------- conta do cliente */
+.conta-demo-note {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.conta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.conta-grid--uma {
+  grid-template-columns: minmax(0, 720px);
+}
+
+.conta-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  padding: 26px 24px;
+}
+
+.conta-card h2 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.conta-card__sub {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.conta-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.conta-card__top .conta-card__sub {
+  margin-bottom: 0;
+}
+
+.conta-endereco {
+  border-block: 1px dashed var(--line-strong);
+  padding: 12px 0;
+  margin: 4px 0 14px;
+}
+
+.conta-endereco summary {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.conta-endereco[open] summary {
+  margin-bottom: 12px;
+}
+
+.conta-endereco .field {
+  margin-top: 10px;
+}
+
+.conta-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gray-600);
+  margin-bottom: 14px;
+}
+
+.conta-consent input {
+  margin-top: 2px;
+  accent-color: var(--brand);
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.conta-consent a {
+  color: var(--text);
+  text-underline-offset: 2px;
+}
+
+.conta-feedback {
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+  color: #24613f;
+}
+
+.conta-feedback.is-erro {
+  color: #8c2f2f;
+}
+
+.conta-benefits {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.conta-benefits h3 {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.conta-benefits ul {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.conta-benefits li::before {
+  content: "→ ";
+}
+
+.conta-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.conta-help {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.btn.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.header .icon-btn.is-current {
+  color: var(--text);
+}
+
+@media (max-width: 860px) {
+  .conta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .drawer__store {
   margin-bottom: 14px;
 }

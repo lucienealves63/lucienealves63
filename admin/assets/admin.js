@@ -456,12 +456,47 @@
     renderPalette();
   }
 
+  /* ----------------------------------------------- clientes (cadastro web) */
+  function renderCustomers(rows) {
+    const tbody = $("#customers-table");
+    if (!tbody) return;
+    $("#customers-count").textContent = rows.length === 1
+      ? "1 cliente encontrado"
+      : `${rows.length} clientes`;
+    tbody.innerHTML = rows.map((cliente) => `<tr>
+      <td><span class="table-product"><strong>${esc(cliente.nome || "(sem nome)")}</strong><small>${esc(cliente.id?.slice(0, 8) || "")}</small></span></td>
+      <td><span class="table-product"><strong>${esc(cliente.email || "—")}</strong><small>${esc(cliente.telefone || "")}</small></span></td>
+      <td><span class="code">${esc(cliente.cep || "—")}</span></td>
+      <td>${esc([cliente.cidade, cliente.uf].filter(Boolean).join("/") || "—")}</td>
+      <td>${cliente.criado_em ? new Date(cliente.criado_em).toLocaleDateString("pt-BR") : "—"}</td>
+    </tr>`).join("") || `<tr><td colspan="5" class="empty-options">Nenhum cliente encontrado${CONFIG.mode === "supabase" ? "" : " — conecte o Supabase para ver os cadastros reais"}.</td></tr>`;
+  }
+
+  function buscarCustomers() {
+    buscarClientes($("#customer-search")?.value || "");
+  }
+
+  async function buscarClientes(termo) {
+    if (CONFIG.mode !== "supabase" || !window.C18_SUPABASE) {
+      renderCustomers([]);
+      return;
+    }
+    const { data, error } = await window.C18_SUPABASE.rpc("buscar_clientes", { p_termo: termo || "" });
+    if (error) {
+      renderCustomers([]);
+      toast(`Clientes: ${error.message}`, "alert");
+      return;
+    }
+    renderCustomers(data || []);
+  }
+
   function navigate(page) {
     currentPage = page;
     $$("[data-page]").forEach((item) => item.classList.toggle("is-active", item.dataset.page === page));
     $$(".side-nav__item[data-nav]").forEach((item) => item.classList.toggle("is-active", item.dataset.nav === page));
-    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons" }[page];
+    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons", customers: "Clientes" }[page];
     $("#page-title").textContent = label || "Operações";
+    if (page === "customers") buscarClientes($("#customer-search")?.value || "");
     $("#sidebar").classList.remove("is-open");
     $("#sidebar-overlay").classList.remove("is-open");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1790,6 +1825,7 @@
       const bannerDelete = event.target.closest("[data-banner-delete]");
       if (bannerDelete) { deleteBanner(bannerDelete.dataset.bannerDelete); return; }
       if (event.target.closest("#new-coupon")) { if (requirePermission("coupons")) openCouponModal(); return; }
+      if (event.target.closest("#customer-search-btn") || event.target.closest("#customers-refresh")) { buscarClientes($("#customer-search")?.value || ""); return; }
       const couponToggle = event.target.closest("[data-coupon-toggle]");
       if (couponToggle) { toggleCouponActive(couponToggle.dataset.couponToggle); return; }
       const couponEdit = event.target.closest("[data-coupon-edit]");
@@ -1891,6 +1927,7 @@
     $("#sidebar-overlay").addEventListener("click", () => { $("#sidebar").classList.remove("is-open"); $("#sidebar-overlay").classList.remove("is-open"); });
     $("[data-dismiss-notice]").addEventListener("click", (event) => event.target.closest(".demo-notice").remove());
     $("#global-search").addEventListener("keydown", (event) => {
+      if (event.target.id === "customer-search" && event.key === "Enter") { event.preventDefault(); buscarCustomers(); return; }
       if (event.key === "Enter") { event.preventDefault(); navigate("inventory"); $("#inventory-search").value = event.target.value; renderInventory(); }
     });
     $("#banners-refresh").addEventListener("click", () => { renderBanners(); toast("Banners e paleta atualizados."); });

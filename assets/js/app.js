@@ -640,6 +640,12 @@
       ...Checkout,
       couponDescription: couponDescriptionForMessage(),
     }));
+    if (
+      typeof window.C18Cliente === "object" &&
+      typeof window.C18Cliente.linhasWhatsApp === "function"
+    ) {
+      lines.push(...window.C18Cliente.linhasWhatsApp());
+    }
     if (Checkout.couponCode) lines.push("*Observação:* total sujeito à validação do cupom pela loja.");
     lines.push("");
     lines.push(
@@ -1506,6 +1512,29 @@
 
     Checkout.load();
     Cart.load();
+
+    /* Cliente cadastrado: pré-preenche o CEP do frete com o do cadastro. */
+    if (
+      typeof window.C18Cliente === "object" &&
+      typeof window.C18Cliente.currente === "function" &&
+      global.C18Frete
+    ) {
+      const clienteAtual = window.C18Cliente.currente();
+      const cepCliente = C18Frete.normalizeCep(clienteAtual?.cep);
+      if (C18Frete.isCepValida(cepCliente) && !Checkout.cep) {
+        Checkout.cep = cepCliente;
+        Checkout.save();
+      }
+      window.addEventListener("c18:cliente", (e) => {
+        const cepNovo = C18Frete.normalizeCep(e.detail?.cep);
+        if (C18Frete.isCepValida(cepNovo) && !Checkout.cep) {
+          Checkout.cep = cepNovo;
+          Checkout.save();
+        }
+        Cart.renderDrawer();
+      });
+    }
+
     Cart.render();
     initUI();
     initCatalog();

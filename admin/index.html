@@ -57,6 +57,7 @@
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M17.7 6.3l-2.5 2.5M8.8 15.2l-2.5 2.5"/><circle cx="12" cy="12" r="2.6"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.6-1-2.5c0-1.4 1-2 2.5-2H18a4 4 0 0 0 4-4c0-4.4-4-7.5-10-7.5Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></symbol>
     <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
   </svg>
 
@@ -90,6 +91,9 @@
       </button>
       <button class="side-nav__item" data-nav="coupons" data-permission="coupons">
         <svg><use href="#i-percent"/></svg><span>Cupons</span>
+      </button>
+      <button class="side-nav__item" data-nav="customers">
+        <svg><use href="#i-user"/></svg><span>Clientes</span>
       </button>
 
       <p class="side-nav__label side-nav__label--spaced">Sistema</p>
@@ -265,6 +269,24 @@
           <div class="page-actions"><button class="btn btn--secondary" id="coupons-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button><button class="btn btn--primary" id="new-coupon"><svg><use href="#i-plus"/></svg>Novo cupom</button></div>
         </div>
         <div class="coupons-grid" id="coupons-grid"></div>
+      </section>
+
+      <section class="page" data-page="customers">
+        <div class="page-head">
+          <div><p class="page-kicker">RELAÇÃO CLIENTE-LOJA</p><h2>Clientes</h2><p>Cadastros criados no site com consentimento LGPD. Busque por nome, e-mail ou WhatsApp para separar e expedir pedidos.</p></div>
+          <div class="page-actions"><button class="btn btn--secondary" id="customers-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button></div>
+        </div>
+        <article class="panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">BUSCAR</span><h3>Encontrar cliente</h3></div></div>
+          <div class="shipping-form" style="padding:16px">
+            <label class="form-field"><span>Nome, e-mail ou WhatsApp</span><input id="customer-search" placeholder="Ex.: Maria, maria@email.com ou 21987654321"></label>
+            <button class="btn btn--primary" id="customer-search-btn"><svg><use href="#i-search"/></svg>Buscar</button>
+          </div>
+        </article>
+        <article class="panel panel--wide">
+          <div class="panel__head"><div><span class="panel__eyebrow">RESULTADO</span><h3 id="customers-count">Cadastros</h3></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Contato</th><th>CEP</th><th>Cidade</th><th>Cadastro</th></tr></thead><tbody id="customers-table"></tbody></table></div>
+        </article>
       </section>
 
       <section class="page" data-page="integrations">

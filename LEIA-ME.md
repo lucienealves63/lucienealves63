@@ -15,6 +15,7 @@ Paleta: **preto · branco · cinza**.
 ├── index.html            Home: hero, categorias, destaques, newsletter
 ├── produtos.html         Catálogo com filtros e ordenação
 ├── produto.html          Detalhe da peça (?id=... na URL)
+├── conta.html            Minha conta: cadastro do cliente (com LGPD)
 ├── cartao-presente.html  Cartão presente: valores, nomes e WhatsApp
 ├── lojas.html            As 6 lojas físicas + WhatsApp de cada uma
 ├── sobre.html            História da marca e linha do tempo
@@ -31,6 +32,7 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/gift-card.js   Cartão presente (valores + mensagem)
 │   ├── js/coupons.js     Cupons: validação, escopos e descrição
 │   ├── js/frete.js       ⭐ Frete: Correios, Mercado Envios, Uber, 99 e retirada
+│   ├── js/cliente.js     Cadastro do cliente: validação, LGPD e WhatsApp
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -193,6 +195,17 @@ no carrinho, ele entra no campo *Cartão presente* e a loja confere o saldo
 no momento do pagamento. Com o Supabase ligado, a emissão, a consulta e o
 resgate do saldo ficam nas RPCs de
 `supabase/migrations/202609180001_gift_cards.sql`.
+
+### Cadastro de clientes
+
+Na página `conta.html` o cliente cria conta com **nome, e-mail, WhatsApp,
+senha e endereço** — com consentimento LGPD registrado (data e hora). Com
+o Supabase ligado, a conta usa Supabase Auth e o perfil fica em
+`public.customers` com RLS (cada cliente vê só os próprios dados; a
+equipe consulta pela aba **Clientes** do painel). Sem Supabase, a conta
+de demonstração fica só no navegador. Quem tem conta tem o **CEP do
+frete preenchido automaticamente** e o pedido chega no WhatsApp já
+identificado. A migração é `supabase/migrations/202609190001_customers.sql`.
 
 ### Frete e entregas
 
