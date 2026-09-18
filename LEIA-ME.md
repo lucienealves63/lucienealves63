@@ -449,9 +449,10 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 66 testes (Node puro, sem dependências)
+node --test tests/*.test.js   # 76 testes (Node puro, sem dependências)
 # ou, por arquivo:
-node --test tests/analytics.test.js tests/audience.test.js tests/channels.test.js
+node --test tests/analytics.test.js tests/audience.test.js \
+  tests/channels.test.js tests/admin-panel.test.js
 ```
 
 Os testes cobrem o contrato do checkout (vendedor, cupom, cartão presente e
@@ -467,5 +468,13 @@ entregas de crescimento:
   evolução diária, páginas, origens, regiões de calor, pontos quentes,
   rolagem, funil e a renderização ponta a ponta de todas as seções;
 - `tests/channels.test.js` — política de preço/estoque, agrupamento do
-  catálogo, colunas e pendências de cada canal, formatos CSV/TSV/XML **e a
-  identidade entre o painel (JS) e o servidor (TypeScript)**.
+  catálogo, colunas e pendências de cada canal, formatos CSV/TSV/XML, a
+  identidade entre o painel (JS) e o servidor (TypeScript) **e a coerência do
+  seed do banco com o cadastro do painel** (ids, nomes, formatos, markup e
+  campos obrigatórios);
+- `tests/admin-panel.test.js` — o painel inteiro carregado num DOM mínimo
+  (`tests/helpers/admin-dom.js`), na mesma ordem de scripts do
+  `admin/index.html`: páginas de Audiência e Canais desenhadas, troca de
+  período e de página do mapa de calor, feed que muda de colunas por canal,
+  modal de configuração sem expor segredo, publicação simulada, campo de
+  categoria do banner e a prova de que o `/admin` não mede a si mesmo.
