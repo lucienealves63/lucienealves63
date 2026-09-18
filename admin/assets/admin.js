@@ -456,12 +456,47 @@
     renderPalette();
   }
 
+  /* ----------------------------------------------- clientes (cadastro web) */
+  function renderCustomers(rows) {
+    const tbody = $("#customers-table");
+    if (!tbody) return;
+    $("#customers-count").textContent = rows.length === 1
+      ? "1 cliente encontrado"
+      : `${rows.length} clientes`;
+    tbody.innerHTML = rows.map((cliente) => `<tr>
+      <td><span class="table-product"><strong>${esc(cliente.nome || "(sem nome)")}</strong><small>${esc(cliente.id?.slice(0, 8) || "")}</small></span></td>
+      <td><span class="table-product"><strong>${esc(cliente.email || "—")}</strong><small>${esc(cliente.telefone || "")}</small></span></td>
+      <td><span class="code">${esc(cliente.cep || "—")}</span></td>
+      <td>${esc([cliente.cidade, cliente.uf].filter(Boolean).join("/") || "—")}</td>
+      <td>${cliente.criado_em ? new Date(cliente.criado_em).toLocaleDateString("pt-BR") : "—"}</td>
+    </tr>`).join("") || `<tr><td colspan="5" class="empty-options">Nenhum cliente encontrado${CONFIG.mode === "supabase" ? "" : " — conecte o Supabase para ver os cadastros reais"}.</td></tr>`;
+  }
+
+  function buscarCustomers() {
+    buscarClientes($("#customer-search")?.value || "");
+  }
+
+  async function buscarClientes(termo) {
+    if (CONFIG.mode !== "supabase" || !window.C18_SUPABASE) {
+      renderCustomers([]);
+      return;
+    }
+    const { data, error } = await window.C18_SUPABASE.rpc("buscar_clientes", { p_termo: termo || "" });
+    if (error) {
+      renderCustomers([]);
+      toast(`Clientes: ${error.message}`, "alert");
+      return;
+    }
+    renderCustomers(data || []);
+  }
+
   function navigate(page) {
     currentPage = page;
     $$("[data-page]").forEach((item) => item.classList.toggle("is-active", item.dataset.page === page));
     $$(".side-nav__item[data-nav]").forEach((item) => item.classList.toggle("is-active", item.dataset.nav === page));
-    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons" }[page];
+    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons", customers: "Clientes" }[page];
     $("#page-title").textContent = label || "Operações";
+    if (page === "customers") buscarClientes($("#customer-search")?.value || "");
     $("#sidebar").classList.remove("is-open");
     $("#sidebar-overlay").classList.remove("is-open");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -765,7 +800,7 @@
     if (!order) return;
     currentOrderId = id;
     $("#drawer-title").textContent = `#${order.id}`;
-    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios</option><option>Loggi</option><option>Retirada na loja</option><option>Transportadora</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
+    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios — PAC</option><option>Correios — SEDEX</option><option>Mercado Envios</option><option>Uber Direct (mesmo dia)</option><option>99 Entregas (mesmo dia)</option><option>Retirada na loja</option><option>Transportadora própria</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
     renderOrderActions(order);
     $("#order-drawer").classList.add("is-open");
     $("#order-drawer").setAttribute("aria-hidden", "false");
@@ -1790,6 +1825,7 @@
       const bannerDelete = event.target.closest("[data-banner-delete]");
       if (bannerDelete) { deleteBanner(bannerDelete.dataset.bannerDelete); return; }
       if (event.target.closest("#new-coupon")) { if (requirePermission("coupons")) openCouponModal(); return; }
+      if (event.target.closest("#customer-search-btn") || event.target.closest("#customers-refresh")) { buscarClientes($("#customer-search")?.value || ""); return; }
       const couponToggle = event.target.closest("[data-coupon-toggle]");
       if (couponToggle) { toggleCouponActive(couponToggle.dataset.couponToggle); return; }
       const couponEdit = event.target.closest("[data-coupon-edit]");
@@ -1891,6 +1927,7 @@
     $("#sidebar-overlay").addEventListener("click", () => { $("#sidebar").classList.remove("is-open"); $("#sidebar-overlay").classList.remove("is-open"); });
     $("[data-dismiss-notice]").addEventListener("click", (event) => event.target.closest(".demo-notice").remove());
     $("#global-search").addEventListener("keydown", (event) => {
+      if (event.target.id === "customer-search" && event.key === "Enter") { event.preventDefault(); buscarCustomers(); return; }
       if (event.key === "Enter") { event.preventDefault(); navigate("inventory"); $("#inventory-search").value = event.target.value; renderInventory(); }
     });
     $("#banners-refresh").addEventListener("click", () => { renderBanners(); toast("Banners e paleta atualizados."); });

@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minha conta — Censura 18</title>
+<meta name="description" content="Crie sua conta na Censura 18 para comprar mais rápido: seu CEP, endereço e WhatsApp ficam salvos e o frete é calculado na hora.">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Minha conta — Censura 18">
+<meta property="og:description" content="Cadastro do cliente Censura 18: compra rápida, frete calculado na hora e retirada nas 6 lojas.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" type="image/png" href="assets/img/logos/logo-quadro.png">
+<script src="assets/js/ssl.js"></script>
+<script src="assets/js/site-config.js"></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Ir para o conteúdo</a>
+
+<div class="announce" aria-hidden="true">
+  <div class="announce__track">
+    <span class="announce__item">Cadastro rápido</span>
+    <span class="announce__item">Frete grátis no PAC acima de R$ 299</span>
+    <span class="announce__item">Retire nas 6 lojas</span>
+    <span class="announce__item">Since 1989</span>
+    <span class="announce__item">Cadastro rápido</span>
+    <span class="announce__item">Frete grátis no PAC acima de R$ 299</span>
+    <span class="announce__item">Retire nas 6 lojas</span>
+    <span class="announce__item">Since 1989</span>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header__inner">
+    <a class="brand" href="index.html" aria-label="Censura 18 — página inicial">
+      <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img" onerror="this.classList.add('is-missing')">
+      <span class="brand__fallback" aria-hidden="true"><span class="bf-word">CENSURA</span><span class="bf-num">18</span></span>
+    </a>
+    <nav class="nav" aria-label="Navegação principal">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="produtos.html">Produtos</a>
+      <a class="nav__link" href="cartao-presente.html">Cartão presente</a>
+      <a class="nav__link" href="sobre.html">A marca</a>
+      <a class="nav__link" href="lojas.html">Lojas</a>
+      <a class="nav__link" href="contato.html">Contato</a>
+      <a class="nav__link" href="conta.html" aria-current="page">Minha conta</a>
+    </nav>
+    <div class="header__actions">
+      <form class="search" id="search-form" role="search">
+        <label for="search-input" class="visually-hidden">Buscar produtos</label>
+        <input class="search__input" id="search-input" type="search" placeholder="Buscar…" autocomplete="off">
+      </form>
+      <button class="icon-btn" data-toggle-search aria-label="Buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      </button>
+      <a class="icon-btn is-current" href="conta.html" aria-label="Minha conta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+      </a>
+      <button class="icon-btn" data-open-cart aria-label="Abrir carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span class="icon-btn__count" data-cart-count>0</span>
+      </button>
+      <button class="icon-btn burger" data-open-nav aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 6h18M3 12h18M3 18h18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- =============================== MENU MOBILE =============================== -->
+<div class="mobile-nav" id="mobile-nav" aria-hidden="true">
+  <div class="mobile-nav__top">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img"
+           onerror="this.classList.add('is-missing')">
+      <span class="brand__fallback">
+        <span class="bf-word">CENSURA</span><span class="bf-num">18</span>
+      </span>
+    </a>
+    <button class="icon-btn" data-close-nav aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="mobile-nav__list" aria-label="Navegação mobile">
+    <a class="mobile-nav__link" href="index.html">Home</a>
+    <a class="mobile-nav__link" href="produtos.html">Produtos</a>
+    <a class="mobile-nav__link" href="cartao-presente.html">Cartão presente</a>
+    <a class="mobile-nav__link" href="sobre.html">A marca</a>
+    <a class="mobile-nav__link" href="lojas.html">Lojas</a>
+    <a class="mobile-nav__link" href="contato.html">Contato</a>
+    <a class="mobile-nav__link" href="conta.html">Minha conta</a>
+  </nav>
+
+  <div class="mobile-nav__foot">
+    <button class="btn btn--ghost btn--block" data-open-cart>Ver carrinho</button>
+  </div>
+</div>
+
+<!-- =============================== CARRINHO =============================== -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="cart-drawer" aria-hidden="true" aria-label="Carrinho de compras">
+  <div class="drawer__head">
+    <h2>Carrinho</h2>
+    <button class="drawer__close" data-close-cart aria-label="Fechar carrinho">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="drawer__body" id="cart-body"></div>
+  <div class="drawer__foot" id="cart-foot"></div>
+</aside>
+
+<main id="main">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Você está aqui">
+      <a href="index.html">Home</a> <span>/</span> <span>Minha conta</span>
+    </nav>
+
+    <div class="page-head">
+      <span class="eyebrow">Compra rápida</span>
+      <h1>Minha conta</h1>
+      <p>Cadastre seus dados uma vez e feche pedido pelo WhatsApp com tudo
+      preenchido: <strong>CEP, endereço e WhatsApp</strong> já vão prontos —
+      e o frete é calculado na hora.</p>
+    </div>
+
+    <p class="conta-demo-note" id="conta-demo-note" hidden>
+      <strong>Modo demonstração:</strong> sem o Supabase configurado, sua conta
+      fica salva apenas neste navegador — nada é enviado para a internet.
+    </p>
+
+    <!-- =================== VISITANTE: criar conta / entrar =================== -->
+    <div class="conta-grid" id="view-auth" style="padding-bottom:72px">
+
+      <section class="conta-card" aria-labelledby="titulo-criar">
+        <h2 id="titulo-criar">Criar conta</h2>
+        <p class="conta-card__sub">Leva menos de um minuto. Só pedimos o
+        essencial para entregar seu pedido.</p>
+        <form class="form" id="form-criar" novalidate>
+          <div class="field">
+            <label for="criar-nome">Nome completo</label>
+            <input type="text" id="criar-nome" maxlength="80" autocomplete="name" placeholder="Maria Silva">
+          </div>
+          <div class="form__row">
+            <div class="field">
+              <label for="criar-email">E-mail</label>
+              <input type="email" id="criar-email" maxlength="120" autocomplete="email" placeholder="maria@email.com">
+            </div>
+            <div class="field">
+              <label for="criar-telefone">WhatsApp</label>
+              <input type="tel" id="criar-telefone" maxlength="15" autocomplete="tel" inputmode="numeric" placeholder="(21) 98765-4321">
+            </div>
+          </div>
+          <div class="field">
+            <label for="criar-senha">Senha <small>mínimo de 8 caracteres</small></label>
+            <input type="password" id="criar-senha" maxlength="64" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <details class="conta-endereco">
+            <summary>Endereço de entrega <small>opcional agora</small></summary>
+            <div class="form__row">
+              <div class="field">
+                <label for="criar-cep">CEP</label>
+                <input type="text" id="criar-cep" maxlength="9" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+              </div>
+              <div class="field">
+                <label for="criar-numero">Número</label>
+                <input type="text" id="criar-numero" maxlength="12" autocomplete="address-number">
+              </div>
+            </div>
+            <div class="field">
+              <label for="criar-rua">Rua</label>
+              <input type="text" id="criar-rua" maxlength="120" autocomplete="address-street">
+            </div>
+            <div class="form__row">
+              <div class="field">
+                <label for="criar-complemento">Complemento <small>opcional</small></label>
+                <input type="text" id="criar-complemento" maxlength="80">
+              </div>
+              <div class="field">
+                <label for="criar-bairro">Bairro</label>
+                <input type="text" id="criar-bairro" maxlength="80" autocomplete="address-level3">
+              </div>
+            </div>
+            <div class="form__row">
+              <div class="field">
+                <label for="criar-cidade">Cidade</label>
+                <input type="text" id="criar-cidade" maxlength="80" autocomplete="address-level2">
+              </div>
+              <div class="field">
+                <label for="criar-uf">UF</label>
+                <input type="text" id="criar-uf" maxlength="2" autocomplete="address-level1" placeholder="RJ">
+              </div>
+            </div>
+          </details>
+          <label class="conta-consent">
+            <input type="checkbox" id="criar-consentimento">
+            <span>Autorizo a Censura 18 a guardar meus dados para usar nas
+            compras — <a href="privacidade.html" target="_blank" rel="noopener">política
+            de privacidade</a>. Posso pedir a exclusão quando quiser.</span>
+          </label>
+          <p class="conta-feedback" id="feedback-criar" role="alert" hidden></p>
+          <button class="btn btn--block" type="submit" id="criar-submit">Criar minha conta</button>
+        </form>
+      </section>
+
+      <section class="conta-card" aria-labelledby="titulo-entrar">
+        <h2 id="titulo-entrar">Já sou cliente</h2>
+        <p class="conta-card__sub">Entre com o e-mail e a senha do cadastro.</p>
+        <form class="form" id="form-entrar" novalidate>
+          <div class="field">
+            <label for="entrar-email">E-mail</label>
+            <input type="email" id="entrar-email" maxlength="120" autocomplete="email" placeholder="maria@email.com">
+          </div>
+          <div class="field">
+            <label for="entrar-senha">Senha</label>
+            <input type="password" id="entrar-senha" maxlength="64" autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <p class="conta-feedback" id="feedback-entrar" role="alert" hidden></p>
+          <button class="btn btn--block" type="submit" id="entrar-submit">Entrar</button>
+        </form>
+        <div class="conta-benefits">
+          <h3>O que sua conta faz por você</h3>
+          <ul>
+            <li>CEP e endereço preenchidos no carrinho — frete na hora</li>
+            <li>Pedido chega pronto no WhatsApp da loja</li>
+            <li>Retirada nas 6 lojas sem repetir dados</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========================= LOGADO: meus dados ========================= -->
+    <div class="conta-grid conta-grid--uma" id="view-dados" hidden style="padding-bottom:72px">
+      <section class="conta-card">
+        <div class="conta-card__top">
+          <div>
+            <h2>Meus dados</h2>
+            <p class="conta-card__sub" id="dados-sessao">Logado como…</p>
+          </div>
+          <button class="btn btn--ghost" id="btn-sair" type="button">Sair</button>
+        </div>
+        <form class="form" id="form-dados" novalidate>
+          <div class="form__row">
+            <div class="field">
+              <label for="dados-nome">Nome completo</label>
+              <input type="text" id="dados-nome" maxlength="80" autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="dados-telefone">WhatsApp</label>
+              <input type="tel" id="dados-telefone" maxlength="15" inputmode="numeric" autocomplete="tel">
+            </div>
+          </div>
+          <div class="form__row">
+            <div class="field">
+              <label for="dados-cep">CEP</label>
+              <input type="text" id="dados-cep" maxlength="9" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+            </div>
+            <div class="field">
+              <label for="dados-numero">Número</label>
+              <input type="text" id="dados-numero" maxlength="12" autocomplete="address-number">
+            </div>
+          </div>
+          <div class="field">
+            <label for="dados-rua">Rua</label>
+            <input type="text" id="dados-rua" maxlength="120" autocomplete="address-street">
+          </div>
+          <div class="form__row">
+            <div class="field">
+              <label for="dados-complemento">Complemento <small>opcional</small></label>
+              <input type="text" id="dados-complemento" maxlength="80">
+            </div>
+            <div class="field">
+              <label for="dados-bairro">Bairro</label>
+              <input type="text" id="dados-bairro" maxlength="80" autocomplete="address-level3">
+            </div>
+          </div>
+          <div class="form__row">
+            <div class="field">
+              <label for="dados-cidade">Cidade</label>
+              <input type="text" id="dados-cidade" maxlength="80" autocomplete="address-level2">
+            </div>
+            <div class="field">
+              <label for="dados-uf">UF</label>
+              <input type="text" id="dados-uf" maxlength="4" autocomplete="address-level1" placeholder="RJ">
+            </div>
+          </div>
+          <p class="conta-feedback" id="feedback-dados" role="status" hidden></p>
+          <div class="conta-actions">
+            <button class="btn" type="submit" id="dados-submit">Salvar dados</button>
+            <button class="btn btn--ghost" type="button" id="btn-excluir">Apagar meus dados (LGPD)</button>
+          </div>
+          <p class="conta-help">A exclusão limpa nome, contato e endereço do
+          cadastro — seu e-mail de acesso e o histórico do pedido ficam sem
+          identificação pessoal.</p>
+        </form>
+      </section>
+
+      <section class="conta-card" aria-labelledby="titulo-pedidos">
+        <h2 id="titulo-pedidos">Meus pedidos</h2>
+        <p class="conta-card__sub">Pedidos fechados no site, com o pagamento em
+        acompanhamento na loja.</p>
+        <div id="meus-pedidos" class="meus-pedidos"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__about">
+        <span class="brand" style="color:#fff;--bf-fg:#000">
+          <img src="assets/img/logos/logo_c18.png" alt="Censura 18" class="brand__img brand__img--footer" onerror="this.classList.add('is-missing')">
+          <span class="brand__fallback"><span class="bf-word">CENSURA</span><span class="bf-num">18</span></span>
+        </span>
+        <p>Há 36 anos sendo referência no streetwear da Baixada Fluminense.
+        Moda urbana, surfwear e beachwear com atitude e qualidade de verdade.</p>
+        <div class="socials">
+          <a class="social" href="https://www.instagram.com/censura18/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a class="social" href="https://www.facebook.com/censura18/" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3a4 4 0 0 0-4 4v2H8v3h2v7h3v-7h2.5l.5-3H13v-2a1 1 0 0 1 1-1Z"/></svg>
+          </a>
+          <a class="social" href="https://wa.me/5521998653133" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.25-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div>
+        <h4>Loja</h4>
+        <ul>
+          <li><a href="produtos.html">Todos os produtos</a></li>
+          <li><a href="cartao-presente.html">Cartão presente</a></li>
+          <li><a href="produtos.html?cat=camisetas">Camisetas</a></li>
+          <li><a href="produtos.html?cat=moletons">Moletons</a></li>
+          <li><a href="produtos.html?cat=bermudas">Bermudas</a></li>
+          <li><a href="produtos.html?cat=acessorios">Acessórios</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Institucional</h4>
+        <ul>
+          <li><a href="sobre.html">A marca</a></li>
+          <li><a href="lojas.html">Nossas lojas</a></li>
+          <li><a href="contato.html">Contato</a></li>
+          <li><a href="contato.html">Trocas e devoluções</a></li>
+          <li><a href="privacidade.html">Política de privacidade</a></li>
+          <li><a href="conta.html">Minha conta</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Lojas físicas</h4>
+        <ul>
+          <li>Nova Iguaçu — Calçadão</li>
+          <li>Nova Iguaçu — Beco</li>
+          <li>Nova Iguaçu — Top Shopping</li>
+          <li>Duque de Caxias — Centro</li>
+          <li>Nilópolis — Mirandela</li>
+          <li>Queimados — Centro</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p>© <span data-ano>2026</span> Censura 18 — Todos os direitos reservados · CNPJ 00.000.000/0001-00</p>
+      <p>Frete grátis no PAC acima de R$ 299 · Trocas em até 30 dias</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/checkout.js"></script>
+<script src="assets/js/frete.js"></script>
+<script src="assets/js/coupons.js"></script>
+<script src="assets/js/gift-card.js"></script>
+<script src="assets/js/cliente.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/lgpd.js"></script>
+<script>
+/* ==========================================================================
+   conta.html — conta do cliente
+   Modo "supabase": Supabase Auth + RPCs da migration 202609190001.
+   Modo estático: perfil de demonstração no localStorage deste navegador.
+   ========================================================================== */
+(function () {
+  "use strict";
+
+  const C = window.C18Cliente;
+  const cfg = window.C18_SITE || {};
+  const $ = (sel) => document.querySelector(sel);
+  const el = (id) => document.getElementById(id);
+  const supabaseMode = cfg.mode === "supabase" && cfg.supabaseUrl && cfg.supabaseAnonKey;
+  const DEMO_KEY = "c18:cliente-demo-conta";
+
+  const feedback = (id, texto, erro) => {
+    const p = el(id);
+    if (!p) return;
+    p.textContent = texto;
+    p.hidden = !texto;
+    p.classList.toggle("is-erro", Boolean(erro));
+  };
+
+  const ocupado = (btn, on) => {
+    if (!btn) return;
+    btn.disabled = on;
+    btn.classList.toggle("is-busy", on);
+  };
+
+  function loadSupabaseLib() {
+    if (window.supabase) return Promise.resolve(window.supabase);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      s.onload = () => (window.supabase ? resolve(window.supabase) : reject(new Error("Supabase não carregou")));
+      s.onerror = () => reject(new Error("Falha ao carregar o cliente Supabase"));
+      document.head.appendChild(s);
+    });
+  }
+
+  let db = null; /* cliente supabase-js */
+  async function dbClient() {
+    if (!db) {
+      const lib = await loadSupabaseLib();
+      db = lib.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+        auth: { persistSession: true, autoRefreshToken: true },
+      });
+    }
+    return db;
+  }
+
+  /* --------------------------------------------------------- demo local */
+  function demoLer() {
+    try {
+      return JSON.parse(localStorage.getItem(DEMO_KEY) || "null");
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function demoSalvar(dados) {
+    localStorage.setItem(DEMO_KEY, JSON.stringify({ ...demoLer(), ...dados, demo: true }));
+  }
+
+  /* ------------------------------------------------------------ telas */
+  function mostrarAutenticacao() {
+    el("view-auth").hidden = false;
+    el("view-dados").hidden = true;
+  }
+
+  function preencherDados(perfil) {
+    el("dados-nome").value = perfil.nome || "";
+    el("dados-telefone").value = C.formatTelefone(perfil.telefone || "");
+    el("dados-cep").value = C.formatCep(perfil.cep || "");
+    el("dados-rua").value = perfil.rua || "";
+    el("dados-numero").value = perfil.numero || "";
+    el("dados-complemento").value = perfil.complemento || "";
+    el("dados-bairro").value = perfil.bairro || "";
+    el("dados-cidade").value = perfil.cidade || "";
+    el("dados-uf").value = perfil.uf || "";
+    el("dados-sessao").textContent = `Logado como ${perfil.email || perfil.nome || "cliente"}`;
+  }
+
+  function mostrarDados(perfil) {
+    preencherDados(perfil);
+    el("view-auth").hidden = true;
+    el("view-dados").hidden = false;
+  }
+
+  /* ------------------------------------------------------- criar conta */
+  async function criarConta(event) {
+    event.preventDefault();
+    const validacao = C.validarCadastro({
+      nome: el("criar-nome").value,
+      email: el("criar-email").value,
+      telefone: el("criar-telefone").value,
+      senha: el("criar-senha").value,
+      cep: el("criar-cep").value,
+      rua: el("criar-rua").value,
+      numero: el("criar-numero").value,
+      complemento: el("criar-complemento").value,
+      bairro: el("criar-bairro").value,
+      cidade: el("criar-cidade").value,
+      uf: el("criar-uf").value,
+      consentimento: el("criar-consentimento").checked,
+    });
+
+    if (!validacao.ok) {
+      feedback("feedback-criar", Object.values(validacao.erros).join(" · "), true);
+      return;
+    }
+
+    const dados = validacao.dados;
+    ocupado(el("criar-submit"), true);
+    feedback("feedback-criar", "", false);
+
+    try {
+      if (!supabaseMode) {
+        /* modo demonstração: fica só neste navegador */
+        demoSalvar({ ...dados, senha: undefined, email: dados.email, aceitou_lgpd: true });
+        const perfil = C.definirAtual({ ...dados, demo: true });
+        mostrarDados(perfil);
+        feedback("feedback-dados", "Conta de demonstração criada neste navegador.", false);
+        return;
+      }
+
+      const client = await dbClient();
+      const { data, error } = await client.auth.signUp({
+        email: dados.email,
+        password: dados.senha,
+        options: {
+          data: {
+            nome: dados.nome,
+            telefone: dados.telefone,
+            tipo: "cliente",
+            aceitou_lgpd: true,
+          },
+        },
+      });
+      if (error) throw error;
+
+      if (!data.session) {
+        feedback(
+          "feedback-criar",
+          "Conta criada! Confirme o e-mail que enviamos e depois faça o login.",
+          false
+        );
+        return;
+      }
+
+      await salvarCadastroRemoto(dados);
+      const { data: row } = await client
+        .from("customers")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+      mostrarDados(C.definirAtual({ ...dados, email: dados.email, ...(row || {}) }));
+      feedback("feedback-dados", "Bem-vindo à Censura 18! 🖤", false);
+    } catch (erro) {
+      const mensagem =
+        erro?.message === "User already registered"
+          ? "Este e-mail já tem conta — faça o login."
+          : `Não deu para criar a conta: ${erro?.message || "tente de novo"}`;
+      feedback("feedback-criar", mensagem, true);
+    } finally {
+      ocupado(el("criar-submit"), false);
+    }
+  }
+
+  async function salvarCadastroRemoto(dados) {
+    const client = await dbClient();
+    const { error } = await client.rpc("salvar_meu_cadastro", {
+      p_dados: {
+        nome: dados.nome,
+        telefone: dados.telefone,
+        cep: dados.cep,
+        rua: dados.rua,
+        numero: dados.numero,
+        complemento: dados.complemento,
+        bairro: dados.bairro,
+        cidade: dados.cidade,
+        uf: dados.uf,
+        aceitou_lgpd: true,
+      },
+    });
+    if (error) throw error;
+  }
+
+  /* ------------------------------------------------------------- entrar */
+  async function entrar(event) {
+    event.preventDefault();
+    const email = C.normalizeEmail(el("entrar-email").value);
+    const senha = el("entrar-senha").value;
+    if (!C.isEmailValida(email) || !senha) {
+      feedback("feedback-entrar", "Preencha e-mail e senha.", true);
+      return;
+    }
+
+    ocupado(el("entrar-submit"), true);
+    feedback("feedback-entrar", "", false);
+    try {
+      if (!supabaseMode) {
+        const conta = demoLer();
+        if (!conta || C.normalizeEmail(conta.email) !== email) {
+          throw new Error("Conta de demonstração não encontrada neste navegador.");
+        }
+        mostrarDados(C.definirAtual(conta));
+        return;
+      }
+
+      const client = await dbClient();
+      const { data, error } = await client.auth.signInWithPassword({ email, password: senha });
+      if (error) {
+        throw new Error(
+          error.message === "Invalid login credentials"
+            ? "E-mail ou senha incorretos."
+            : error.message
+        );
+      }
+      const { data: row } = await client
+        .from("customers")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+      mostrarDados(C.definirAtual({ ...(row || {}), email }));
+    } catch (erro) {
+      feedback("feedback-entrar", erro?.message || "Não foi possível entrar.", true);
+    } finally {
+      ocupado(el("entrar-submit"), false);
+    }
+  }
+
+  /* --------------------------------------------------------- meus dados */
+  async function salvarDados(event) {
+    event.preventDefault();
+    const endereco = C.validarEndereco({
+      cep: el("dados-cep").value,
+      rua: el("dados-rua").value,
+      numero: el("dados-numero").value,
+      complemento: el("dados-complemento").value,
+      bairro: el("dados-bairro").value,
+      cidade: el("dados-cidade").value,
+      uf: el("dados-uf").value,
+    });
+    if (!endereco.ok) {
+      feedback("feedback-dados", Object.values(endereco.erros).join(" · "), true);
+      return;
+    }
+    const nome = C.normalizeNome(el("dados-nome").value);
+    const telefone = C.normalizeTelefone(el("dados-telefone").value);
+    if (nome.length < 3 || !C.isTelefoneValida(telefone)) {
+      feedback("feedback-dados", "Confira nome completo e WhatsApp com DDD.", true);
+      return;
+    }
+
+    ocupado(el("dados-submit"), true);
+    try {
+      const atual = C.currente() || {};
+      const dados = { ...endereco.dados, nome, telefone, email: atual.email };
+      if (!supabaseMode) {
+        demoSalvar({ ...dados, aceitou_lgpd: true });
+      } else {
+        await salvarCadastroRemoto(dados);
+      }
+      C.definirAtual(dados);
+      feedback("feedback-dados", "Dados salvos! Já aparecem no seu pedido.", false);
+    } catch (erro) {
+      feedback("feedback-dados", `Não deu para salvar: ${erro?.message || "tente de novo"}`, true);
+    } finally {
+      ocupado(el("dados-submit"), false);
+    }
+  }
+
+  async function sair() {
+    if (supabaseMode) {
+      try {
+        (await dbClient()).auth.signOut();
+      } catch (_) {
+        /* segue */
+      }
+    }
+    localStorage.removeItem(DEMO_KEY);
+    C.sair();
+    mostrarAutenticacao();
+  }
+
+  async function apagarDados() {
+    if (!confirm("Apagar seus dados do cadastro? Esta ação não tem volta.")) return;
+    try {
+      if (supabaseMode) {
+        const client = await dbClient();
+        const { error } = await client.rpc("anonimizar_meu_cadastro");
+        if (error) throw error;
+      } else {
+        localStorage.removeItem(DEMO_KEY);
+      }
+      C.sair();
+      mostrarAutenticacao();
+      feedback("feedback-criar", "Seus dados foram apagados do cadastro.", false);
+    } catch (erro) {
+      feedback("feedback-dados", `Não deu para apagar: ${erro?.message || "tente de novo"}`, true);
+    }
+  }
+
+  /* --------------------------------------------------------------- boot */
+  function mascaras() {
+    el("criar-telefone").addEventListener("input", (e) => {
+      e.target.value = C.formatTelefone(e.target.value);
+    });
+    el("dados-telefone").addEventListener("input", (e) => {
+      e.target.value = C.formatTelefone(e.target.value);
+    });
+    ["criar-cep", "dados-cep"].forEach((id) =>
+      el(id).addEventListener("input", (e) => {
+        e.target.value = C.formatCep(e.target.value);
+      })
+    );
+    el("dados-uf").addEventListener("input", (e) => {
+      e.target.value = C.normalizeUf(e.target.value);
+    });
+    el("criar-uf").addEventListener("input", (e) => {
+      e.target.value = C.normalizeUf(e.target.value);
+    });
+  }
+
+  const ETIQUETA_PAGAMENTO = {
+    pending: "aguardando pagamento",
+    authorized: "pagamento autorizado",
+    captured: "pago ✓",
+    denied: "pagamento recusado",
+    cancelled: "cancelado",
+    refunded: "reembolsado",
+  };
+
+  const ETIQUETA_ETAPA = {
+    payment: "pagamento",
+    fraud: "análise antifraude",
+    picking: "em separação",
+    checking: "conferência",
+    ready: "pronto para envio",
+    shipped: "enviado",
+    delivered: "entregue",
+    cancelled: "cancelado",
+  };
+
+  function renderPedidos(lista) {
+    const div = el("meus-pedidos");
+    if (!div) return;
+    div.innerHTML = lista
+      .map(
+        (pedido) => `
+      <div class="meu-pedido">
+        <div>
+          <strong>Pedido ${pedido.numero}</strong>
+          <small>${new Date(pedido.criado_em).toLocaleDateString("pt-BR")} · ${
+            pedido.itens.map((i) => `${i.qty}x ${i.name}`).join(", ")
+          }</small>
+        </div>
+        <div class="meu-pedido__status">
+          <b>${Number(pedido.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</b>
+          <small>${ETIQUETA_PAGAMENTO[pedido.pagamento] || pedido.pagamento || "—"} · ${
+            ETIQUETA_ETAPA[pedido.etapa] || pedido.etapa || "—"
+          }</small>
+        </div>
+      </div>`
+      )
+      .join("") || `<p class="conta-help">Você ainda não fez pedidos pelo site — eles aparecem aqui.</p>`;
+  }
+
+  async function carregarPedidos() {
+    if (!supabaseMode) {
+      renderPedidos([]);
+      return;
+    }
+    try {
+      const { data, error } = await (await dbClient()).rpc("meus_pedidos");
+      if (error) throw error;
+      renderPedidos(data || []);
+    } catch (_) {
+      renderPedidos([]);
+    }
+  }
+
+  async function boot() {
+    el("conta-demo-note").hidden = supabaseMode;
+    mascaras();
+    el("form-criar").addEventListener("submit", criarConta);
+    el("form-entrar").addEventListener("submit", entrar);
+    el("form-dados").addEventListener("submit", salvarDados);
+    el("btn-sair").addEventListener("click", sair);
+    el("btn-excluir").addEventListener("click", apagarDados);
+
+    if (!supabaseMode) {
+      const demo = demoLer();
+      if (demo && demo.nome) mostrarDados(C.definirAtual(demo));
+      return;
+    }
+
+    try {
+      const client = await dbClient();
+      const { data } = await client.auth.getSession();
+      const usuario = data?.session?.user;
+      if (!usuario) {
+        mostrarAutenticacao();
+        return;
+      }
+      const { data: row } = await client
+        .from("customers")
+        .select("*")
+        .eq("id", usuario.id)
+        .single();
+      mostrarDados(
+        C.definirAtual({
+          ...(row || {}),
+          email: usuario.email,
+          demo: false,
+        })
+      );
+      carregarPedidos();
+    } catch (_) {
+      mostrarAutenticacao();
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>

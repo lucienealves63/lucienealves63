@@ -24,11 +24,11 @@
     return normalizeCode(value, 16);
   }
 
-  /* Parcelamento: até 3x sem juros, parcela mínima de R$ 49,90.
+  /* Parcelamento: até 6x sem juros, parcela mínima de R$ 49,00.
      O cálculo usa centavos inteiros para não errar por arredondamento
-     de ponto flutuante (149,70 / 49,90 = exatamente 3). */
-  const MAX_INSTALLMENTS = 3;
-  const MIN_INSTALLMENT = 49.9;
+     de ponto flutuante (294,00 / 49,00 = exatamente 6). */
+  const MAX_INSTALLMENTS = 6;
+  const MIN_INSTALLMENT = 49;
 
   function maxInstallments(total, rules) {
     const maxValue = Math.max(1, Math.floor(Number(rules?.max ?? MAX_INSTALLMENTS)));

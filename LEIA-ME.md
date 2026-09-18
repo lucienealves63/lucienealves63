@@ -15,6 +15,8 @@ Paleta: **preto · branco · cinza**.
 ├── index.html            Home: hero, categorias, destaques, newsletter
 ├── produtos.html         Catálogo com filtros e ordenação
 ├── produto.html          Detalhe da peça (?id=... na URL)
+├── conta.html            Minha conta: cadastro do cliente (com LGPD)
+├── checkout.html         Checkout online: Pix copia-e-cola ou cartão 6x
 ├── cartao-presente.html  Cartão presente: valores, nomes e WhatsApp
 ├── lojas.html            As 6 lojas físicas + WhatsApp de cada uma
 ├── sobre.html            História da marca e linha do tempo
@@ -30,6 +32,9 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/lgpd.js        Banner de consentimento (LGPD)
 │   ├── js/gift-card.js   Cartão presente (valores + mensagem)
 │   ├── js/coupons.js     Cupons: validação, escopos e descrição
+│   ├── js/frete.js       ⭐ Frete: Correios, Mercado Envios, Uber, 99 e retirada
+│   ├── js/cliente.js     Cadastro do cliente: validação, LGPD e WhatsApp
+│   ├── js/pedido.js      Pedido do checkout: validação + Pix copia-e-cola (EMV)
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -40,6 +45,9 @@ Paleta: **preto · branco · cinza**.
 │
 ├── admin/                Dashboard de operações (Banners & Paleta, Cupons)
 │   └── ver docs/DASHBOARD-OPERACOES.md
+├── docs/
+│   ├── DASHBOARD-OPERACOES.md
+│   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
 └── supabase/             Migrations, RPCs e Edge Functions
 ```
 
@@ -164,8 +172,8 @@ hoje pelo Instagram:
 
 O cupom e o cartão presente informados não alteram o preço no navegador:
 eles seguem identificados na mensagem para validação segura pela loja
-antes do pagamento. No parcelamento, **até 3x sem juros com parcela
-mínima de R$ 49,90** — o carrinho já mostra quantas parcelas cabem no
+antes do pagamento. No parcelamento, **até 6x sem juros com parcela
+mínima de R$ 49,00** — o carrinho já mostra quantas parcelas cabem no
 total dos itens.
 
 ### Cupons de desconto
@@ -189,6 +197,40 @@ no carrinho, ele entra no campo *Cartão presente* e a loja confere o saldo
 no momento do pagamento. Com o Supabase ligado, a emissão, a consulta e o
 resgate do saldo ficam nas RPCs de
 `supabase/migrations/202609180001_gift_cards.sql`.
+
+### Cadastro de clientes
+
+Na página `conta.html` o cliente cria conta com **nome, e-mail, WhatsApp,
+senha e endereço** — com consentimento LGPD registrado (data e hora). Com
+o Supabase ligado, a conta usa Supabase Auth e o perfil fica em
+`public.customers` com RLS (cada cliente vê só os próprios dados; a
+equipe consulta pela aba **Clientes** do painel). Sem Supabase, a conta
+de demonstração fica só no navegador. Quem tem conta tem o **CEP do
+frete preenchido automaticamente** e o pedido chega no WhatsApp já
+identificado. A migração é `supabase/migrations/202609190001_customers.sql`.
+
+### Checkout online (Pix e cartão)
+
+Em `checkout.html` o cliente revisa itens, entrega e dados do cadastro e
+fecha o pedido com **Pix** (copia-e-cola gerado no navegador, padrão EMV
+do Banco Central — chave da loja em `data.js`) ou **cartão em até 6x sem
+juros** (link seguro da e.Rede com 3-D Secure enviado pelo WhatsApp —
+nenhum dado de cartão passa pelo site). O pedido nasce em
+`public.orders` com `payment_status pending` e aparece na hora no painel;
+o servidor reconfera o subtotal item a item. Fluxo completo e ativação em
+`docs/CHECKOUT-PAGAMENTOS.md` (migration
+`supabase/migrations/202609190002_checkout_pagamentos.sql`).
+
+### Frete e entregas
+
+O cliente digita o **CEP no carrinho** (ou na página do produto) e escolhe
+entre **Correios PAC/SEDEX, Mercado Envios, Uber Direct e 99 Entregas**
+(mesmo dia para Rio e Baixada) ou **retirar na loja** — frete grátis no
+PAC acima de R$ 299. Sem credenciais, o cálculo usa a tabela padrão de
+estimativa (`assets/js/frete.js`); com o Supabase ligado, a Edge Function
+`cotar-frete` consulta as APIs reais das transportadoras quando os
+segredos de cada uma estão configurados. O passo a passo de implantação
+está em `docs/FRETE-ENTREGAS.md`.
 
 ### Privacidade (LGPD) e HTTPS
 
@@ -304,7 +346,7 @@ ser extraída diretamente dos arquivos.
       código `C18-XXXX-XXXX` validado pela loja no pagamento
 - [x] Cupons de desconto gerenciados no painel: loja toda, referência,
       categoria ou coleção, percentual ou valor fixo
-- [x] Parcelamento em até 3x sem juros com parcela mínima de R$ 49,90
+- [x] Parcelamento em até 6x sem juros com parcela mínima de R$ 49,00
 - [x] LGPD: banner de consentimento, política de privacidade
       (`privacidade.html`) e consentimento explícito no formulário de contato
 - [x] HTTPS sempre: redirecionamento `http://` → `https://` e upgrade
