@@ -426,7 +426,7 @@
             diretamente com a loja pelo WhatsApp. Frete grátis (PAC) em compras
             acima de ${money(
               C18Frete.FRETE_GRATIS_PADRAO
-            )}. Cartão em até 3x sem juros — parcela mínima de R$ 49,90.</p>
+            )}. Cartão em até 6x sem juros — parcela mínima de R$ 49,00.</p>
             <div class="checkout-fields" aria-label="Informações do checkout">
               <label class="checkout-field" for="seller-code">
                 <span>Código do vendedor <small>opcional</small></span>
@@ -632,7 +632,7 @@
           plan.count >= 2
             ? `até ${plan.count}x de ${money(plan.each)} sem juros`
             : "à vista no Pix ou cartão"
-        } — parcela mínima de R$ 49,90`
+        } — parcela mínima de R$ 49,00`
       );
     }
     lines.push("");
@@ -956,7 +956,14 @@
         <div class="pdp__price">
           <span class="now">${money(p.price)}</span>
           ${p.priceFrom ? `<span class="was">${money(p.priceFrom)}</span>` : ""}
-          <span class="pix">ou 3x de ${money(p.price / 3)} sem juros</span>
+          ${(() => {
+            const plano = CheckoutTools.installmentPlan
+              ? CheckoutTools.installmentPlan(p.price)
+              : null;
+            return plano && plano.count >= 2
+              ? `<span class="pix">ou ${plano.count}x de ${money(plano.each)} sem juros</span>`
+              : "";
+          })()}
         </div>
 
         <p class="pdp__desc">${escapeHTML(p.description)}</p>

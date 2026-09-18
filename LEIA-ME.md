@@ -170,8 +170,8 @@ hoje pelo Instagram:
 
 O cupom e o cartão presente informados não alteram o preço no navegador:
 eles seguem identificados na mensagem para validação segura pela loja
-antes do pagamento. No parcelamento, **até 3x sem juros com parcela
-mínima de R$ 49,90** — o carrinho já mostra quantas parcelas cabem no
+antes do pagamento. No parcelamento, **até 6x sem juros com parcela
+mínima de R$ 49,00** — o carrinho já mostra quantas parcelas cabem no
 total dos itens.
 
 ### Cupons de desconto
@@ -332,7 +332,7 @@ ser extraída diretamente dos arquivos.
       código `C18-XXXX-XXXX` validado pela loja no pagamento
 - [x] Cupons de desconto gerenciados no painel: loja toda, referência,
       categoria ou coleção, percentual ou valor fixo
-- [x] Parcelamento em até 3x sem juros com parcela mínima de R$ 49,90
+- [x] Parcelamento em até 6x sem juros com parcela mínima de R$ 49,00
 - [x] LGPD: banner de consentimento, política de privacidade
       (`privacidade.html`) e consentimento explícito no formulário de contato
 - [x] HTTPS sempre: redirecionamento `http://` → `https://` e upgrade
