@@ -15,15 +15,20 @@ Paleta: **preto · branco · cinza**.
 ├── index.html            Home: hero, categorias, destaques, newsletter
 ├── produtos.html         Catálogo com filtros e ordenação
 ├── produto.html          Detalhe da peça (?id=... na URL)
+├── cartao-presente.html  Cartão presente: valores, nomes e WhatsApp
 ├── lojas.html            As 6 lojas físicas + WhatsApp de cada uma
 ├── sobre.html            História da marca e linha do tempo
 ├── contato.html          Formulário (abre WhatsApp) + FAQ
+├── privacidade.html      Política de privacidade (LGPD)
 ├── 404.html              Página de erro
 │
 ├── assets/
 │   ├── css/style.css     Todo o visual (tokens, componentes, responsivo)
 │   ├── js/data.js        ⭐ Produtos, lojas e textos — edite aqui
 │   ├── js/app.js         Carrinho, filtros, PDP, WhatsApp
+│   ├── js/ssl.js         HTTPS sempre (redirect + upgrade de links)
+│   ├── js/lgpd.js        Banner de consentimento (LGPD)
+│   ├── js/gift-card.js   Cartão presente (valores + mensagem)
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -265,5 +270,20 @@ ser extraída diretamente dos arquivos.
       ligar o painel (incluindo banners/paleta e geração por IA) ao ambiente
       real — passo a passo em `docs/DASHBOARD-OPERACOES.md`
 - [ ] Revisar textos e preços com a equipe da Censura 18
-- [ ] Configurar o domínio próprio no GitHub Pages
+- [ ] Configurar o domínio próprio no GitHub Pages (e ligar "Enforce HTTPS")
 - [ ] Integrar um gateway de pagamento, se fizer sentido
+
+## ✅ Testes
+
+A suíte roda com o Node puro, sem dependências:
+
+```bash
+node --test                 # 22 testes (descobre tudo em tests/)
+# ou, por arquivo:
+node --test tests/gift-card.test.js tests/checkout.test.js \
+           tests/site-config.test.js tests/importer.test.js
+```
+
+Os testes cobrem o contrato do checkout (vendedor, cupom, cartão
+presente), a página de cartão presente, o `site-config` nos modos
+static/demo e o importador da planilha Alterdata.

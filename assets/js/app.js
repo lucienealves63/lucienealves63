@@ -68,12 +68,14 @@
   const CheckoutTools = window.C18Checkout || {
     normalizeSellerCode: (value) => String(value || "").trim().toUpperCase().slice(0, 24),
     normalizeCouponCode: (value) => String(value || "").trim().toUpperCase().slice(0, 32),
+    normalizeGiftCardCode: (value) => String(value || "").trim().toUpperCase().slice(0, 16),
     checkoutMessageLines: () => [],
   };
 
   const Checkout = {
     sellerCode: "",
     couponCode: "",
+    giftCardCode: "",
     storeId: "",
 
     load() {
@@ -81,19 +83,32 @@
         const saved = JSON.parse(localStorage.getItem(CHECKOUT_KEY) || "{}");
         this.sellerCode = CheckoutTools.normalizeSellerCode(saved.sellerCode);
         this.couponCode = CheckoutTools.normalizeCouponCode(saved.couponCode);
+        this.giftCardCode = CheckoutTools.normalizeGiftCardCode(saved.giftCardCode);
         this.storeId = String(saved.storeId || "");
       } catch (_) {
         this.sellerCode = "";
         this.couponCode = "";
+        this.giftCardCode = "";
         this.storeId = "";
       }
     },
 
     save() {
       try {
+        /* LGPD: com "Só o essencial", preferências do checkout não são
+           gravadas (e as antigas já foram apagadas pelo banner). */
+        if (
+          window.C18LGPD &&
+          typeof window.C18LGPD.canPersistPreferences === "function" &&
+          !window.C18LGPD.canPersistPreferences()
+        ) {
+          localStorage.removeItem(CHECKOUT_KEY);
+          return;
+        }
         localStorage.setItem(CHECKOUT_KEY, JSON.stringify({
           sellerCode: this.sellerCode,
           couponCode: this.couponCode,
+          giftCardCode: this.giftCardCode,
           storeId: this.storeId,
         }));
       } catch (_) {
@@ -104,9 +119,11 @@
     updateFromDrawer() {
       const seller = $("#seller-code");
       const coupon = $("#coupon-code");
+      const giftCard = $("#gift-card-code");
       const store = $("#store-select");
       if (seller) this.sellerCode = CheckoutTools.normalizeSellerCode(seller.value);
       if (coupon) this.couponCode = CheckoutTools.normalizeCouponCode(coupon.value);
+      if (giftCard) this.giftCardCode = CheckoutTools.normalizeGiftCardCode(giftCard.value);
       if (store) this.storeId = String(store.value || "");
       this.save();
     },
@@ -114,6 +131,7 @@
     clear() {
       this.sellerCode = "";
       this.couponCode = "";
+      this.giftCardCode = "";
       this.save();
     },
   };
@@ -279,6 +297,18 @@
                 ${Checkout.couponCode
                   ? `<p class="coupon-feedback"><strong>${escapeHTML(Checkout.couponCode)}</strong> será validado pela loja.<button type="button" data-remove-coupon>Remover</button></p>`
                   : `<p class="checkout-help">O desconto será confirmado antes do pagamento.</p>`}
+              </div>
+              <div class="checkout-field">
+                <label for="gift-card-code">Cartão presente <small>opcional</small></label>
+                <div class="coupon-control">
+                  <input id="gift-card-code" type="text" inputmode="text" maxlength="16"
+                         autocomplete="off" placeholder="Ex.: C18-A1B2-C3D4"
+                         value="${escapeHTML(Checkout.giftCardCode)}">
+                  <button type="button" id="gift-card-add">${Checkout.giftCardCode ? "Atualizar" : "Aplicar"}</button>
+                </div>
+                ${Checkout.giftCardCode
+                  ? `<p class="coupon-feedback"><strong>${escapeHTML(Checkout.giftCardCode)}</strong> terá o saldo validado pela loja.<button type="button" data-remove-gift-card>Remover</button></p>`
+                  : `<p class="checkout-help">Tem um cartão presente? Informe o código (C18-XXXX-XXXX).</p>`}
               </div>
             </div>
             <div class="drawer__store">
@@ -1095,6 +1125,34 @@
         Checkout.save();
         Cart.renderDrawer();
         Toast.show("Cupom removido");
+        return;
+      }
+
+      if (e.target.closest("#gift-card-add")) {
+        Checkout.updateFromDrawer();
+        if (!Checkout.giftCardCode) {
+          Toast.show("Digite o código do cartão presente");
+          $("#gift-card-code")?.focus();
+          return;
+        }
+        if (
+          window.C18GiftCard &&
+          !window.C18GiftCard.isValidGiftCardCode(Checkout.giftCardCode)
+        ) {
+          Toast.show("Confira o código — ele começa com C18-");
+          $("#gift-card-code")?.focus();
+          return;
+        }
+        Cart.renderDrawer();
+        Toast.show(`Cartão presente ${Checkout.giftCardCode} informado`);
+        return;
+      }
+
+      if (e.target.closest("[data-remove-gift-card]")) {
+        Checkout.giftCardCode = "";
+        Checkout.save();
+        Cart.renderDrawer();
+        Toast.show("Cartão presente removido");
         return;
       }
 

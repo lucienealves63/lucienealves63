@@ -19,18 +19,26 @@
     return normalizeCode(value, 32);
   }
 
+  /* Cartão presente: C18-XXXX-XXXX — validação de saldo fica com a loja. */
+  function normalizeGiftCardCode(value) {
+    return normalizeCode(value, 16);
+  }
+
   function checkoutMessageLines(values) {
     const sellerCode = normalizeSellerCode(values?.sellerCode);
     const couponCode = normalizeCouponCode(values?.couponCode);
+    const giftCardCode = normalizeGiftCardCode(values?.giftCardCode);
     const lines = [];
     if (sellerCode) lines.push(`*Código do vendedor:* ${sellerCode}`);
     if (couponCode) lines.push(`*Cupom informado:* ${couponCode} (validar desconto)`);
+    if (giftCardCode) lines.push(`*Cartão presente:* ${giftCardCode} (validar saldo)`);
     return lines;
   }
 
   global.C18Checkout = {
     checkoutMessageLines,
     normalizeCouponCode,
+    normalizeGiftCardCode,
     normalizeSellerCode,
   };
 
