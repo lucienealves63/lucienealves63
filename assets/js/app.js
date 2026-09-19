@@ -41,6 +41,25 @@
     return c ? c.label : id;
   };
 
+  /* ------------------------------------------------- audiência e banner
+     A medição (assets/js/analytics.js) só grava depois do aceite no aviso
+     de privacidade; se o módulo não estiver carregado, nada acontece.
+     O banner de categoria (assets/js/site-config.js) é opcional: sem um
+     banner ativo para a categoria, o catálogo segue sem arte nenhuma.   */
+  const trackAudience = (kind, data) => {
+    const analytics = window.C18Analytics;
+    if (analytics && typeof analytics.track === "function") {
+      try { analytics.track(kind, data); } catch (_) { /* medição é opcional */ }
+    }
+  };
+
+  const showCategoryBanner = (categoryId) => {
+    const banners = window.C18SiteBanners;
+    if (banners && typeof banners.setCategory === "function") {
+      try { banners.setCategory(categoryId); } catch (_) { /* sem banner: segue o layout padrão */ }
+    }
+  };
+
   /* Placeholder para quando a foto ainda não existe ---------------------- */
   const PLACEHOLDER = (label) =>
     "data:image/svg+xml;charset=utf-8," +
@@ -767,6 +786,7 @@
       sort: "relevancia",
       q: "",
     };
+    let lastCategory = "todos";
 
     const chips = $("#filter-chips");
     if (chips) {
@@ -837,6 +857,19 @@
 
       const h1 = $("#catalog-title");
       if (h1 && state.q) h1.textContent = "Busca";
+
+      /* banner opcional da categoria + medição da navegação no catálogo */
+      showCategoryBanner(state.cat);
+      if (state.cat !== "todos" && state.cat !== lastCategory) {
+        lastCategory = state.cat;
+        trackAudience("category_view", {
+          category: state.cat,
+          target: `Categoria: ${categoryLabel(state.cat)}`,
+          value: list.length,
+        });
+      } else if (state.cat === "todos") {
+        lastCategory = "todos";
+      }
     }
 
     chips?.addEventListener("click", (e) => {
@@ -884,6 +917,12 @@
       color: color,
       qty: 1,
     });
+    trackAudience("add_to_cart", {
+      product_id: p.id,
+      category: p.category,
+      value: p.price,
+      target: `Produto: ${p.name}`,
+    });
     Toast.show(`${p.name} · tam. ${size}, ${color} — no carrinho`);
   }
 
@@ -896,6 +935,15 @@
     const p = getProduct(id) || PRODUCTS[0];
 
     document.title = `${p.name} — Censura 18`;
+
+    /* audiência: produto visualizado; banner opcional da categoria da peça */
+    trackAudience("product_view", {
+      product_id: p.id,
+      category: p.category,
+      value: p.price,
+      target: `Produto: ${p.name}`,
+    });
+    showCategoryBanner(p.category);
 
     const off = offPercent(p.price, p.priceFrom);
 
@@ -1194,6 +1242,12 @@
         color: color,
         qty: qty,
       });
+      trackAudience("add_to_cart", {
+        product_id: p.id,
+        category: p.category,
+        value: p.price * qty,
+        target: `Produto: ${p.name}`,
+      });
       Toast.show(`${p.name} adicionada ao carrinho`);
       return true;
     }
@@ -1332,6 +1386,7 @@
     searchForm?.addEventListener("submit", (e) => {
       e.preventDefault();
       const q = $(".search__input").value.trim();
+      if (q) trackAudience("search", { target: `Busca: ${q}` });
       location.href = q ? `produtos.html?q=${encodeURIComponent(q)}` : "produtos.html";
     });
 
@@ -1490,6 +1545,15 @@
       const url = `https://wa.me/${store.whatsapp}?text=${encodeURIComponent(
         buildWhatsMessage(store)
       )}`;
+      /* audiência: o pedido fecha no WhatsApp, então essa é a conversão */
+      trackAudience("checkout_intent", {
+        value: Cart.subtotal(),
+        target: `Loja: ${store.city} (${store.district})`,
+      });
+      trackAudience("whatsapp", {
+        value: Cart.subtotal(),
+        target: "WhatsApp do checkout",
+      });
       window.open(url, "_blank", "noopener");
     });
 

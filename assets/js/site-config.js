@@ -1,9 +1,14 @@
 /* ==========================================================================
-   CENSURA 18 — configuração dinâmica da loja (banner + paleta)
+   CENSURA 18 — configuração dinâmica da loja (banners + paleta)
    --------------------------------------------------------------------------
    O painel de operações (admin/) salva banners e paletas no Supabase.
-   Este script aplica na home, com chave anônima e políticas RLS que só
-   expõem o banner ativo e a paleta ativa:
+   Este script aplica na home e no catálogo, com chave anônima e políticas
+   RLS que só expõem banners ativos e a paleta ativa:
+
+     • home-hero      → arte e textos do hero da home;
+     • category-hero  → banner OPCIONAL de cada categoria (o catálogo só
+       mostra quando existe um banner ativo para a categoria filtrada);
+     • paleta         → 8 cores aplicadas nas variáveis CSS da loja.
 
      mode: "supabase" → busca em site_banners / site_palettes (produção)
      mode: "static"   → lê do localStorage do próprio navegador. No modo
@@ -26,6 +31,7 @@ window.C18_SITE = window.C18_SITE || {
 
   const cfg = window.C18_SITE;
   const BANNER_DEMO_KEY = "c18:demo-banner";
+  const CATEGORY_BANNER_DEMO_KEY = "c18:demo-category-banners";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
   const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
@@ -35,6 +41,14 @@ window.C18_SITE = window.C18_SITE || {
   const HERO_STAT_SLOTS = 4;
   const HERO_STAT_VALUE_MAX = 12;
   const HERO_STAT_LABEL_MAX = 40;
+
+  /* Banners de categoria ativos, carregados no boot (vazio = o catálogo
+     fica exatamente como é hoje: sem banner nenhum). */
+  let categoryBanners = [];
+
+  /* Criado cedo para o app.js poder registrar a categoria mesmo que os
+     banners ainda estejam sendo buscados (setCategory é anexado abaixo). */
+  window.C18SiteBanners = window.C18SiteBanners || { current: "", lastApplied: null };
 
   // Mapa cor salva no painel → variável CSS da loja (assets/css/style.css)
   const PALETTE_VARS = {
@@ -130,6 +144,114 @@ window.C18_SITE = window.C18_SITE || {
     }
   }
 
+  /* ------------------------------------------------------------------
+     Banner de categoria (opcional)
+
+     O contêiner já existe em produtos.html e produto.html com o atributo
+     hidden. Quando não há banner ativo para a categoria, ele continua
+     escondido — nada muda no layout. Todo o conteúdo vindo do banco é
+     aplicado com textContent/href (nunca innerHTML), como no hero.
+     ------------------------------------------------------------------ */
+  function safeUrl(value) {
+    const url = String(value || "").trim();
+    if (!url) return "";
+    if (/^\s*(javascript|data|vbscript):/i.test(url)) return "";
+    return url;
+  }
+
+  function applyCategoryBanner(banner) {
+    const box = document.getElementById("category-banner");
+    if (!box) return false;
+    if (!banner || !isLiveNow(banner)) {
+      box.hidden = true;
+      box.removeAttribute("data-category");
+      return false;
+    }
+
+    const image = document.getElementById("category-banner-img");
+    const src = safeUrl(banner.image_path);
+    if (image) {
+      if (src) {
+        image.src = src;
+        image.hidden = false;
+        image.alt = banner.name || "";
+        box.classList.remove("is-missing");
+      } else {
+        image.hidden = true;
+        box.classList.add("is-missing");
+      }
+    }
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof value === "string" ? value.trim() : "";
+      el.textContent = text;
+      el.hidden = !text;
+    };
+
+    const setLink = (id, label, href) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof label === "string" ? label.trim() : "";
+      const url = safeUrl(href);
+      if (!text || !url) { el.hidden = true; return; }
+      el.textContent = text;
+      el.href = url;
+      if (/^https?:\/\//i.test(url)) { el.target = "_blank"; el.rel = "noopener"; }
+      else { el.removeAttribute("target"); el.removeAttribute("rel"); }
+      el.hidden = false;
+    };
+
+    setText("category-banner-kicker", banner.title_top);
+    setText("category-banner-title", banner.title_bottom || banner.name);
+    setText("category-banner-text", banner.body_text);
+    setLink("category-banner-cta", banner.cta_label, banner.cta_url);
+    setLink("category-banner-cta-2", banner.cta_secondary_label, banner.cta_secondary_url);
+
+    box.setAttribute("data-category", String(banner.category || ""));
+    box.hidden = false;
+    window.C18SiteBanners.lastApplied = banner;
+    return true;
+  }
+
+  /* Chamado pelo app.js quando o visitante troca o filtro de categoria
+     (ou abre a página de um produto). Ids aceitos: o do site ("camisetas")
+     e o nome vindo do estoque ("T SHIRT", "CAMISETA"…). */
+  function setCategory(categoryId) {
+    const wanted = String(categoryId || "").trim();
+    const box = document.getElementById("category-banner");
+    if (!wanted || wanted === "todos") {
+      if (box) { box.hidden = true; box.removeAttribute("data-category"); }
+      window.C18SiteBanners.current = "";
+      return false;
+    }
+    const needle = wanted
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+    const match = categoryBanners.find((banner) => {
+      const value = String(banner.category || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+      return value === needle;
+    });
+    window.C18SiteBanners.current = wanted;
+    if (!match) return applyCategoryBanner(null);
+    trackBannerView(match);
+    return applyCategoryBanner(match);
+  }
+
+  /* O banner de categoria aparece na medição de audiência (banner_view) —
+     assim o painel mostra se a arte opcional está sendo vista. */
+  function trackBannerView(banner) {
+    const analytics = window.C18Analytics;
+    if (!analytics || typeof analytics.track !== "function") return;
+    analytics.track("banner_view", {
+      target: `Banner de categoria: ${banner.name || banner.category || ""}`,
+      category: banner.category || "",
+    });
+  }
+
   function isLiveNow(banner) {
     if (!banner || banner.active === false) return false;
     const now = Date.now();
@@ -156,8 +278,8 @@ window.C18_SITE = window.C18_SITE || {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // RLS já restringe: banner ativo na janela de datas e paleta ativa.
-    const [bannerResult, paletteResult] = await Promise.all([
+    // RLS já restringe: banners ativos na janela de datas e paleta ativa.
+    const [bannerResult, categoryResult, paletteResult] = await Promise.all([
       client
         .from("site_banners")
         .select("*")
@@ -165,6 +287,13 @@ window.C18_SITE = window.C18_SITE || {
         .eq("active", true)
         .order("priority", { ascending: true })
         .limit(1),
+      client
+        .from("site_banners")
+        .select("*")
+        .eq("position", "category-hero")
+        .eq("active", true)
+        .order("priority", { ascending: true })
+        .limit(60),
       client.from("site_palettes").select("*").eq("active", true).limit(1),
     ]);
 
@@ -172,6 +301,15 @@ window.C18_SITE = window.C18_SITE || {
     if (bannerResult.data && bannerResult.data[0] && isLiveNow(bannerResult.data[0])) {
       applyBanner(bannerResult.data[0]);
     }
+    categoryBanners = (categoryResult.data || []).filter(isLiveNow);
+    restoreCategoryBanner();
+  }
+
+  /* Se o app.js escolheu a categoria antes dos banners chegarem (ordem de
+     carregamento), aplica assim que a lista existir. */
+  function restoreCategoryBanner() {
+    const wanted = window.C18SiteBanners.current;
+    if (wanted) setCategory(wanted);
   }
 
   /* --------------------------- modo demonstração -------------------------- */
@@ -181,10 +319,27 @@ window.C18_SITE = window.C18_SITE || {
       if (palette) applyPalette(palette);
       const banner = JSON.parse(localStorage.getItem(BANNER_DEMO_KEY) || "null");
       if (banner && isLiveNow(banner)) applyBanner(banner);
+      const saved = JSON.parse(localStorage.getItem(CATEGORY_BANNER_DEMO_KEY) || "[]");
+      categoryBanners = Array.isArray(saved) ? saved.filter(isLiveNow) : [];
     } catch (_) {
       /* site segue com a arte e a paleta padrão */
     }
+    restoreCategoryBanner();
   }
+
+  /* API pública usada pelo app.js (filtros de categoria e página do produto). */
+  Object.assign(window.C18SiteBanners, {
+    setCategory,
+    list: () => categoryBanners.slice(),
+    has: (categoryId) => {
+      const needle = String(categoryId || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+      return categoryBanners.some((banner) => String(banner.category || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "") === needle);
+    },
+  });
 
   function boot() {
     if (cfg.mode === "supabase" && cfg.supabaseUrl && cfg.supabaseAnonKey) {
