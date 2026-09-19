@@ -142,10 +142,11 @@ else
 fi
 
 # Chave privada de verdade: marcador PEM seguido de material em base64
-# (código que apenas manipula o marcador, como marketing.ts, não é vazamento)
+# (código que apenas manipula o marcador, como marketing.ts, não é vazamento;
+#  a lista VARREDURA já deixa de fora documentação e os fixtures de testes)
 pem=""
-if (( ${#ARQUIVOS[@]} )); then
-  for arquivo in "${ARQUIVOS[@]}"; do
+if (( ${#VARREDURA[@]} )); then
+  for arquivo in "${VARREDURA[@]}"; do
     [[ -f "$arquivo" ]] || continue
     # awk portável (mawk não tem {n,}): limpa a linha e mede o que sobra
     if awk '

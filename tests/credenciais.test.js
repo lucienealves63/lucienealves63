@@ -180,6 +180,13 @@ test("status separa o que está pronto do que falta na base", (t) => {
   assert.match(texto, /○ SUPABASE_SERVICE_ROLE_KEY/, "chave de servidor vazia continua pendente");
   assert.match(texto, /○ PUBLIC_SITE_URL/, "o domínio placeholder do modelo continua pendente");
   assert.match(texto, /4 de 7 variáveis da base preenchidas/, "URL, anon key e os dois segredos gerados");
+  assert.match(texto, /○ admin\/assets\/config\.js → mode "demo"/);
+  assert.match(
+    texto,
+    /○ assets\/js\/site-config\.js → mode "static"/,
+    "o mode vem da linha de código — o comentário do topo do site-config.js também cita mode: \"supabase\"",
+  );
+  assert.match(texto, /○ URL\/anon key em config\.js/);
   assert.match(texto, /02_primeiro_admin\.sql/, "lembra o SQL do primeiro admin");
 
   const claro = semCor(rodar(SCRIPT, ["status", ...args, "--mostrar"]).out);
@@ -210,6 +217,11 @@ test("aplicar-config liga site e painel ao Supabase sem tocar nos comentários",
   assert.match(site, /^ {2}mode: "supabase",$/m, "só a linha de código muda de modo");
   assert.match(site, new RegExp(`supabaseAnonKey: "${ANON_OK}",`));
   assert.match(site, /mode: "static"   → lê do localStorage/, "o comentário do topo não vira código");
+
+  const status = semCor(rodar(SCRIPT, ["status", ...args]).out);
+  assert.match(status, /✓ admin\/assets\/config\.js → mode "supabase"/);
+  assert.match(status, /✓ assets\/js\/site-config\.js → mode "supabase"/);
+  assert.match(status, /✓ URL\/anon key preenchidos em config\.js e site-config\.js/);
 });
 
 test("aplicar-config recusa chave de servidor no lugar da anon key", (t) => {

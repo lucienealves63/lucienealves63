@@ -179,16 +179,16 @@ status() {
   if [[ ! -f "$config_admin" || ! -f "$config_site" ]]; then
     aviso "config.js/site-config.js não encontrados em ${RAIZ} — confira --raiz"
   else
-    modo_admin="$(sed -n 's/.*mode: "\([a-z]*\)".*/\1/p' "$config_admin" | head -n1)"
-    modo_site="$(sed -n 's/.*mode: "\([a-z]*\)".*/\1/p' "$config_site" | head -n1)"
+    modo_admin="$(ler_modo "$config_admin")"
+    modo_site="$(ler_modo "$config_site")"
     if [[ "$modo_admin" == "supabase" ]]; then ok "admin/assets/config.js → mode \"supabase\""
     else falta "admin/assets/config.js → mode \"${modo_admin}\" (demonstração)"; fi
     if [[ "$modo_site" == "supabase" ]]; then ok "assets/js/site-config.js → mode \"supabase\""
     else falta "assets/js/site-config.js → mode \"${modo_site}\" (demonstração)"; fi
-    if grep -q 'supabaseUrl: ""' "$config_admin"; then
-      falta "URL/anon key em config.js — use 'aplicar-config' depois de preencher o .env.local"
+    if [[ -n "$(ler_campo "$config_admin" supabaseUrl)" ]]; then
+      ok "URL/anon key preenchidos em config.js e site-config.js"
     else
-      ok "URL/anon key preenchidos em config.js"
+      falta "URL/anon key em config.js — use 'aplicar-config' depois de preencher o .env.local"
     fi
   fi
 
@@ -289,6 +289,24 @@ escrever_config() {  # escrever_config ARQUIVO VARIAVELGLOBAL MODO URL ANONKEY
   ' "$arquivo" > "$tmp"
   mv "$tmp" "$arquivo"
   ok "${arquivo#"${RAIZ}/"} → ${global} com URL + anon key e mode \"${modo}\""
+}
+
+# Os dois arquivos citam mode:/supabaseUrl: nos comentários do topo, então só a
+# linha de código (que termina em vírgula) conta.
+ler_modo() {
+  awk '
+    /^[[:space:]]*mode:[[:space:]]*"[^"]*",?[[:space:]]*$/ {
+      match($0, /"[^"]*"/); print substr($0, RSTART + 1, RLENGTH - 2); exit
+    }
+  ' "$1"
+}
+
+ler_campo() {  # ler_campo ARQUIVO CAMPO
+  awk -v campo="$2" '
+    index($0, campo ":") && $0 ~ ("^[[:space:]]*" campo ":[[:space:]]*\"[^\"]*\",?[[:space:]]*$") {
+      match($0, /"[^"]*"/); print substr($0, RSTART + 1, RLENGTH - 2); exit
+    }
+  ' "$1"
 }
 
 mudar_modo() {  # mudar_modo ARQUIVO MODO — só a linha de código do mode
