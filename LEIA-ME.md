@@ -51,11 +51,22 @@ Paleta: **preto · branco · cinza**.
 ├── docs/
 │   ├── DASHBOARD-OPERACOES.md
 │   ├── CREDENCIAIS.md    Todas as credenciais: onde obter e onde cadastrar
+│   ├── CREDENCIAIS-BASE.md ⭐ Passo a passo da base: Supabase, agendador,
+│   │                        domínio, token do feed e primeiro admin
 │   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
-└── supabase/             Migrations, RPCs e Edge Functions
+│
+├── scripts/              Ferramentas de implantação (bash puro)
+│   ├── credenciais-base.sh ⭐ gera segredos, aplica URL/anon key, imprime
+│   │                          os comandos do Supabase e confere o que falta
+│   └── auditoria-segredos.sh  varre o Git atrás de segredo vazado
+│
+└── supabase/             Migrations, RPCs, Edge Functions e SQL de setup
     ├── migrations/…_analytics_audience.sql   audiência (eventos + RPCs)
     ├── migrations/…_sales_channels.sql       canais de venda
     ├── migrations/…_category_banners.sql     banner de categoria
+    ├── setup/            00 pré-requisitos · 01 Vault · 02 primeiro admin ·
+    │                     03 conferência da base
+    ├── config.toml       verify_jwt = false em todas as funções (e o porquê)
     └── functions/          google-merchant-feed · marketing-events ·
                             channel-publish · integration-worker · …
 ```
@@ -343,7 +354,11 @@ Function `channel-publish`, usando os segredos do ambiente.
 > `sales_channels.config`. Tokens e chaves ficam nas Supabase Secrets —
 > `.env.example` lista todas e [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
 > diz onde obter cada uma. Sem segredo configurado o canal aparece como
-> *Aguardando credenciais* e a publicação é só prévia.
+> *Aguardando credenciais* e a publicação é só prévia. No seu computador os
+> valores ficam em `.env.local` (ignorado pelo Git), criado por
+> `scripts/credenciais-base.sh gerar`; antes de cada push,
+> `scripts/auditoria-segredos.sh` confirma que nada disso entrou no
+> repositório.
 
 Regras compartilhadas: `admin/assets/channels.js` (painel) e
 `supabase/functions/_shared/feeds.ts` (servidor) são a mesma lógica nas duas
@@ -409,6 +424,47 @@ CEP para entrega: ______
 
 Se quiser um checkout com pagamento integrado depois, o ponto de troca é a
 função `buildWhatsMessage()` em `app.js`.
+
+---
+
+## 🔑 Credenciais da base — o que falta para ir ao ar
+
+Tudo no repositório funciona sem credencial nenhuma (modo demonstração, prévia
+de feed, CSV do Google Ads). Para ligar ao ambiente real existem **sete itens**
+— o bloco "Base — Agora" de [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md) — e o
+guia de execução completo, com os comandos na ordem, está em
+[`docs/CREDENCIAIS-BASE.md`](docs/CREDENCIAIS-BASE.md):
+
+| Item | De onde vem | Onde entra |
+| --- | --- | --- |
+| `SUPABASE_URL` · `SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys | `.env.local`; URL + anon key também em `config.js`/`site-config.js`; a chave de servidor **só** no Supabase Secrets |
+| `INTEGRATION_WORKER_SECRET` (senha do agendador) | gerada por você | Supabase Secrets **e** Vault (`supabase/setup/01_vault_worker_secret.sql`) |
+| `PUBLIC_APP_ORIGIN` · `PUBLIC_SITE_URL` (domínio público) | GitHub Pages ou domínio próprio | `.env.local` + Supabase Secrets |
+| `GOOGLE_MERCHANT_FEED_TOKEN` (token do feed) | gerada por você | Supabase Secrets + URL cadastrada no Merchant Center |
+| Primeiro usuário `admin` | Supabase → Authentication | `public.profiles` (`supabase/setup/02_primeiro_admin.sql`) |
+
+Os dois segredos que você mesma produz saem prontos com um comando (ficam no
+`.env.local`, ignorado pelo Git):
+
+```bash
+scripts/credenciais-base.sh gerar          # senha do agendador + token do feed
+scripts/credenciais-base.sh status         # o que está pronto e o que falta
+scripts/credenciais-base.sh comandos       # secrets set, deploy, URL do feed, curl
+scripts/credenciais-base.sh aplicar-config # URL + anon key no site e no painel
+scripts/auditoria-segredos.sh              # nenhum segredo indo para o Git
+```
+
+O SQL de apoio vive em `supabase/setup/` e roda no SQL Editor:
+`00_pre_requisitos.sql` (pg_cron, pg_net, Vault e a URL do projeto — **antes**
+das migrations, senão os agendamentos não são criados),
+`01_vault_worker_secret.sql`, `02_primeiro_admin.sql` e
+`03_checagem_base.sql` (conferência final).
+
+> `supabase/config.toml` publica as Edge Functions com `verify_jwt = false`: as
+> chaves novas do Supabase (`sb_publishable_`/`sb_secret_`) não são JWT e a
+> coleta do Google não manda `Authorization`. Cada função se autentica sozinha
+> — sessão `admin`, `x-worker-secret`, `?token=` ou `clearsale-apikey`. O
+> arquivo explica o motivo em detalhe.
 
 ---
 
@@ -510,6 +566,12 @@ ser extraída diretamente dos arquivos.
 - [x] Estoque único no **Ecommerce C18** (loja virtual = estoque central):
       é dele que saem site, feeds e marketplaces, e a troca de loja é feita
       em um lugar só — as seis lojas físicas são pontos de retirada
+- [x] Kit de credenciais da base: `scripts/credenciais-base.sh` (gera a senha
+      do agendador e o token do feed, aplica URL/anon key no site e no painel,
+      imprime os comandos do Supabase e confere o que falta),
+      `scripts/auditoria-segredos.sh` (segredo não entra no Git),
+      `supabase/setup/*.sql` (pré-requisitos, Vault, primeiro admin e
+      conferência) e o guia `docs/CREDENCIAIS-BASE.md`
 - [x] Suíte de testes com o Node puro: `node --test tests/*.test.js`
 
 ## 🔜 Próximos passos sugeridos
@@ -518,7 +580,8 @@ ser extraída diretamente dos arquivos.
 - [ ] Substituir as fotos de exemplo pelas fotos reais do catálogo
 - [ ] Criar o projeto Supabase, rodar as migrations de `supabase/` e
       ligar o painel (incluindo banners/paleta e geração por IA) ao ambiente
-      real — passo a passo em `docs/DASHBOARD-OPERACOES.md`
+      real — passo a passo em `docs/DASHBOARD-OPERACOES.md` e, para as
+      credenciais, `docs/CREDENCIAIS-BASE.md`
 - [ ] Cadastrar as Supabase Secrets dos canais (`.env.example`), habilitar
       cada canal no painel e agendar as funções `marketing-events` (flush de
       conversões), `google-ads-conversions` (upload por `gclid`) e
@@ -528,8 +591,14 @@ ser extraída diretamente dos arquivos.
       painel em Objetivos → Conversões → Uploads
 - [ ] Cadastrar a URL do feed `google-merchant-feed` no Merchant Center e
       pedir a revisão do catálogo
-- [ ] **Credenciais** — última etapa antes de ligar tudo: a lista completa,
-      com onde obter cada uma e onde cadastrar, está em
+- [ ] **Credenciais da base** — última etapa antes de ligar tudo: projeto
+      Supabase, URL + anon key + chave de servidor, senha do agendador,
+      domínio público, token do feed e o primeiro usuário `admin`. Guia de
+      execução em [`docs/CREDENCIAIS-BASE.md`](docs/CREDENCIAIS-BASE.md), com
+      `scripts/credenciais-base.sh` fazendo a parte mecânica e
+      `supabase/setup/*.sql` cuidando do banco
+- [ ] **Demais credenciais** (mídia, medição, operação e marketplaces): a
+      lista completa, com onde obter cada uma e onde cadastrar, está em
       [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
 - [ ] Marketplaces (Mercado Livre, Shopee, Amazon, Magalu, Americanas): só
       quando houver conta de vendedor — a integração já está pronta e a
@@ -543,7 +612,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 128 testes (Node puro, sem dependências)
+node --test tests/*.test.js   # 153 testes (Node puro, sem dependências)
 # ou, por arquivo:
 node --test tests/analytics.test.js tests/audience.test.js \
   tests/channels.test.js tests/admin-panel.test.js
@@ -574,6 +643,17 @@ crescimento:
   banco com o painel** (seed dos canais — ids, nomes, formatos, markup e
   campos obrigatórios — e a migration do estoque central, lendo todas as
   migrations);
+- `tests/credenciais.test.js` — o kit de credenciais da base: `.gitignore`
+  protegendo o `.env.local`, `.env.example` sem segredo preenchido, geração
+  idempotente e rotação dos dois segredos (64 caracteres hex), o `status` que
+  separa pronto de pendente, o `aplicar-config` gravando URL e anon key sem
+  tocar nos comentários **e recusando chave de servidor**, os comandos
+  impressos (secrets, Vault, deploy das 8 funções, URL do feed e `curl`), a
+  auditoria que acha `sb_secret_`, JWT de `service_role`, chave privada PEM e
+  segredo do `.env.local` em arquivo versionado, e a coerência entre
+  `config.toml` (verify_jwt), as guardas de cada Edge Function, o SQL de
+  `supabase/setup/` (nome do segredo no Vault, papel `admin`, extensões e
+  agendamentos) e a documentação;
 - `tests/admin-panel.test.js` — o painel inteiro carregado num DOM mínimo
   (`tests/helpers/admin-dom.js`), na mesma ordem de scripts do
   `admin/index.html`: páginas de Audiência e Canais desenhadas, troca de

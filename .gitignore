@@ -7,6 +7,19 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Segredos e ambiente local — NUNCA versionar.
+# O modelo (.env.example) segue versionado de propósito, sem valor nenhum.
+# Veja docs/CREDENCIAIS-BASE.md e scripts/auditoria-segredos.sh.
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.p12
+*.key
+supabase/.temp/
+supabase/.branches/
+
 # Logos e fotos enviadas pelo cliente
 # (descomente se não quiser versionar)
 # assets/img/logos/*.png
