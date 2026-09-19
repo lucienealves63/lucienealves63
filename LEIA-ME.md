@@ -50,6 +50,7 @@ Paleta: **preto · branco · cinza**.
 │   └── ver docs/DASHBOARD-OPERACOES.md
 ├── docs/
 │   ├── DASHBOARD-OPERACOES.md
+│   ├── CREDENCIAIS.md    Todas as credenciais: onde obter e onde cadastrar
 │   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
 └── supabase/             Migrations, RPCs e Edge Functions
     ├── migrations/…_analytics_audience.sql   audiência (eventos + RPCs)
@@ -340,7 +341,8 @@ Function `channel-publish`, usando os segredos do ambiente.
 > **Segredos nunca passam pelo navegador.** O painel guarda só
 > identificadores públicos (Merchant ID, Pixel ID, Seller ID, Shop ID…) em
 > `sales_channels.config`. Tokens e chaves ficam nas Supabase Secrets —
-> `.env.example` lista todas. Sem segredo configurado o canal aparece como
+> `.env.example` lista todas e [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
+> diz onde obter cada uma. Sem segredo configurado o canal aparece como
 > *Aguardando credenciais* e a publicação é só prévia.
 
 Regras compartilhadas: `admin/assets/channels.js` (painel) e
@@ -525,7 +527,13 @@ ser extraída diretamente dos arquivos.
       de cliques) e, enquanto a API não é liberada, subir o CSV gerado pelo
       painel em Objetivos → Conversões → Uploads
 - [ ] Cadastrar a URL do feed `google-merchant-feed` no Merchant Center e
-      pedir a revisão do catálogo; homologar preço/estoque nos marketplaces
+      pedir a revisão do catálogo
+- [ ] **Credenciais** — última etapa antes de ligar tudo: a lista completa,
+      com onde obter cada uma e onde cadastrar, está em
+      [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
+- [ ] Marketplaces (Mercado Livre, Shopee, Amazon, Magalu, Americanas): só
+      quando houver conta de vendedor — a integração já está pronta e a
+      importação dos pedidos entra nessa hora
 - [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages (e ligar "Enforce HTTPS")
 - [ ] Integrar um gateway de pagamento, se fizer sentido

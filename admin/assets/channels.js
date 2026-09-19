@@ -214,7 +214,7 @@
       ],
       fields: [
         { key: "seller_id", label: "Seller ID", placeholder: "A1B2C3D4E5F6G7", required: true },
-        { key: "marketplace_id", label: "Marketplace", placeholder: "A1AM78C64UM0Y8 (Brasil)", required: true },
+        { key: "marketplace_id", label: "Marketplace", placeholder: "A2Q3Y263D00KWC (Brasil)", required: true },
         { key: "sku_prefix", label: "Prefixo de SKU", placeholder: "C18-" },
       ],
       operations: ["catalog.push", "price.update", "stock.update", "order.pull"],

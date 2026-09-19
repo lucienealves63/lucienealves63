@@ -237,7 +237,8 @@ Implantação específica:
 4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 5. Cadastrar URL e anon key em `admin/assets/config.js`;
 6. Cadastrar os segredos de `.env.example` via Supabase Secrets
-   (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
+   (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida) — a lista do
+   que obter em cada conta, e onde cadastrar, está em `docs/CREDENCIAIS.md`;
 7. Publicar as Edge Functions (`gerar-banner`, `integration-worker`,
    `clearsale-webhook`, `cotar-frete`, `google-merchant-feed`,
    `marketing-events`, `google-ads-conversions` e `channel-publish`);
