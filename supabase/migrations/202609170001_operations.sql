@@ -23,6 +23,9 @@ create table public.stores (
   code text not null unique,
   name text not null,
   alterdata_id text unique,
+  -- Estoque único: marca a ÚNICA loja que concentra saldo físico. As demais
+  -- lojas não têm estoque próprio — funcionam como pontos de retirada.
+  fulfills_stock boolean not null default false,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -36,6 +39,17 @@ insert into public.stores (code, name) values
   ('NILOPOLIS', 'Nilópolis — Mirandela'),
   ('QUEIMADOS', 'Queimados — Centro')
 on conflict (code) do nothing;
+
+-- Estoque único: a loja abaixo concentra todo o saldo físico. As demais
+-- unidades atendem como pontos de retirada. Para trocar a loja do estoque
+-- depois de implantado:
+--   select public.set_stock_store('NI-BECO');
+update public.stores set fulfills_stock = (code = 'NI-CALCADAO');
+
+-- Garante que só exista UMA loja de estoque por vez.
+create unique index stores_one_stock_location
+  on public.stores ((1))
+  where fulfills_stock;
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -341,6 +355,48 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
+-- Id da loja que concentra o estoque (sempre no máximo uma ativa).
+create or replace function public.stock_store_id()
+returns uuid
+language sql
+stable
+set search_path = public
+as $$
+  select id
+  from public.stores
+  where fulfills_stock and active
+  order by created_at
+  limit 1
+$$;
+
+-- Troca a loja de estoque central (uso: select public.set_stock_store('NI-BECO');).
+create or replace function public.set_stock_store(p_code text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if not public.has_role(array['admin']::public.app_role[]) then
+    raise exception 'Somente admin pode trocar a loja de estoque';
+  end if;
+
+  select id into v_id
+  from public.stores
+  where code = upper(trim(p_code)) and active;
+  if v_id is null then
+    raise exception 'Loja % não encontrada ou inativa', p_code;
+  end if;
+
+  update public.stores set fulfills_stock = false where fulfills_stock;
+  update public.stores set fulfills_stock = true where id = v_id;
+
+  return upper(trim(p_code));
+end;
+$$;
+
 create or replace function public.has_role(allowed public.app_role[])
 returns boolean
 language sql stable
@@ -426,8 +482,12 @@ begin
   if jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) = 0 then
     raise exception 'A importação não possui linhas';
   end if;
-  if not exists (select 1 from public.stores where id = p_store_id and active) then
-    raise exception 'Loja inválida ou inativa';
+
+  -- Estoque único: o saldo importado entra sempre na loja de estoque central,
+  -- independentemente do valor recebido no parâmetro.
+  p_store_id := public.stock_store_id();
+  if p_store_id is null then
+    raise exception 'Nenhuma loja ativa marcada como estoque central (stores.fulfills_stock)';
   end if;
 
   insert into public.stock_imports (
@@ -592,8 +652,12 @@ begin
   if not public.has_role(array['admin', 'inventory']::public.app_role[]) then
     raise exception 'Sem permissão para ajustar estoque';
   end if;
-  if not exists (select 1 from public.stores where id = p_store_id and active) then
-    raise exception 'Loja inválida ou inativa';
+
+  -- Estoque único: o movimento acontece sempre na loja de estoque central,
+  -- independentemente do valor recebido no parâmetro.
+  p_store_id := public.stock_store_id();
+  if p_store_id is null then
+    raise exception 'Nenhuma loja ativa marcada como estoque central (stores.fulfills_stock)';
   end if;
   if p_movement not in ('set', 'entry', 'exit', 'adjustment') then
     raise exception 'Tipo de movimento inválido';
