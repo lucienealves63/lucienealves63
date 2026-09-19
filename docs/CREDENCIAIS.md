@@ -17,9 +17,11 @@ a integração passa a valer de verdade.
 
 | Onde | O quê | Como |
 | --- | --- | --- |
-| `admin/assets/config.js` | `supabaseUrl` e `supabaseAnonKey`, `mode: "supabase"` | Editar o arquivo e publicar (a anon key pode ficar no cliente: o acesso é protegido por RLS). |
+| `.env.local` (seu computador, fora do Git) | Todas as variáveis com valor | `scripts/credenciais-base.sh gerar` cria o arquivo a partir de `.env.example`; você preenche as chaves do Supabase. |
+| `admin/assets/config.js` e `assets/js/site-config.js` | `supabaseUrl` e `supabaseAnonKey`, `mode: "supabase"` | `scripts/credenciais-base.sh aplicar-config` (a anon key pode ficar no cliente: o acesso é protegido por RLS). |
 | Supabase Secrets | Todas as variáveis de `.env.example` com valor | Project Settings → Edge Functions → Secrets → *Add new* (ou `supabase secrets set NOME=valor`). Depois **republicar** as Edge Functions para lerem o valor novo. |
-| Supabase Vault | `INTEGRATION_WORKER_SECRET` (cópia) | Database → Vault → *New secret* com o mesmo nome. É de lá que o `pg_cron` lê o cabeçalho `x-worker-secret`. |
+| Supabase Vault | `INTEGRATION_WORKER_SECRET` (cópia) | Database → Vault → *New secret* com o mesmo nome, ou `supabase/setup/01_vault_worker_secret.sql`. É de lá que o `pg_cron` lê o cabeçalho `x-worker-secret`. |
+| `supabase/setup/*.sql` | Pré-requisitos, Vault, primeiro admin e conferência | Rodar no SQL Editor, na ordem dos arquivos, antes/depois das migrations (guia: `docs/CREDENCIAIS-BASE.md`). |
 | Painel → Canais & Marketing → Configurar | Campos públicos de cada canal | Preencher e salvar; habilitar o canal só depois do segredo cadastrado (o painel recusa habilitar sem os campos obrigatórios). |
 
 Legenda de prioridade: **Agora** = necessário para ir ao ar · **Quando ativar**
@@ -30,14 +32,31 @@ Legenda de prioridade: **Agora** = necessário para ir ao ar · **Quando ativar*
 
 ## 1. Base — Agora
 
+> **Este bloco tem guia de execução próprio:**
+> [`docs/CREDENCIAIS-BASE.md`](CREDENCIAIS-BASE.md) — criar o projeto, pegar as
+> três chaves, gerar a senha do agendador e o token do feed, rodar as
+> migrations, publicar as funções, promover o primeiro `admin` e conferir tudo,
+> na ordem e com os comandos prontos. A parte mecânica fica por conta de
+> `scripts/credenciais-base.sh` (gera, aplica e imprime os comandos) e
+> `scripts/auditoria-segredos.sh` (garante que nada disso foi para o Git).
+
 | Variável / campo | O que é | Onde obter |
 | --- | --- | --- |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Endereço do projeto e chave pública | Supabase → Project Settings → API. Vão também em `admin/assets/config.js`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave de servidor (Edge Functions) | Mesma tela (*service_role*). Já fica disponível para as funções; **nunca** no navegador. |
-| `INTEGRATION_WORKER_SECRET` | Senha que autoriza o agendador a chamar as funções | Você mesma gera (ex.: `openssl rand -hex 32`). Cadastrar em Secrets **e** no Vault. |
-| `PUBLIC_APP_ORIGIN`, `PUBLIC_SITE_URL` | Domínio público do site (CORS, links do feed, `event_source_url` da Meta) | O domínio final do GitHub Pages (ex.: `https://censura18.com.br`). |
-| `GOOGLE_MERCHANT_FEED_TOKEN` | Senha da URL de coleta do feed | Você mesma gera (outro `openssl rand -hex 32`). Entra na URL cadastrada no Merchant Center. |
-| Primeiro usuário `admin` | Login do painel | Supabase → Authentication → Users → criar; depois promover a `admin` pelo SQL Editor (`docs/DASHBOARD-OPERACOES.md`). |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Endereço do projeto e chave pública | Supabase → Project Settings → API Keys. Vão também em `admin/assets/config.js` e `assets/js/site-config.js` (`scripts/credenciais-base.sh aplicar-config` faz isso). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave de servidor (Edge Functions) | Mesma tela. Projetos novos mostram `sb_secret_…` (*Secret key*); projetos antigos, o JWT `service_role` (aba *Legacy*). O Supabase já injeta nas funções; **nunca** no navegador nem no Git. |
+| `INTEGRATION_WORKER_SECRET` | Senha que autoriza o agendador a chamar as funções | Você mesma gera (`scripts/credenciais-base.sh gerar`, ou `openssl rand -hex 32`). Cadastrar em Secrets **e** no Vault (`supabase/setup/01_vault_worker_secret.sql`). |
+| `PUBLIC_APP_ORIGIN`, `PUBLIC_SITE_URL` | Domínio público do site (CORS, links do feed, `event_source_url` da Meta) | Enquanto não há domínio próprio, o endereço do GitHub Pages; depois, o domínio final (ex.: `https://censura18.com.br`). |
+| `GOOGLE_MERCHANT_FEED_TOKEN` | Senha da URL de coleta do feed | Você mesma gera (outro `openssl rand -hex 32`, valor diferente do anterior). Entra na URL cadastrada no Merchant Center. |
+| Primeiro usuário `admin` | Login do painel | Supabase → Authentication → Users → criar; depois promover a `admin` com `supabase/setup/02_primeiro_admin.sql` (papéis em `docs/DASHBOARD-OPERACOES.md`). |
+
+Chaves do Supabase, em 2026: projetos criados a partir de novembro de 2025 só
+têm as chaves novas — `sb_publishable_…` (entra onde o código pede
+`SUPABASE_ANON_KEY`) e `sb_secret_…` (onde pede `SUPABASE_SERVICE_ROLE_KEY`).
+Os nomes das variáveis continuam os mesmos e o `supabase-js` aceita os dois
+formatos; as chaves legadas em JWT serão removidas pelo Supabase no fim de 2026.
+Como elas não são JWT, as Edge Functions do projeto são publicadas com
+`verify_jwt = false` (já configurado em `supabase/config.toml`) e se
+autenticam sozinhas.
 
 ## 2. Mídia e medição — Agora
 
@@ -124,8 +143,13 @@ fila de separação do painel (os clientes de API já têm `getOrders`/
 
 ## Checklist para marcar
 
-- [ ] Supabase: URL + anon key em `config.js`; `INTEGRATION_WORKER_SECRET` em Secrets **e** Vault
-- [ ] Migrations rodadas até `202609210002` e Edge Functions publicadas
+- [ ] **Base completa** (guia: [`docs/CREDENCIAIS-BASE.md`](CREDENCIAIS-BASE.md)):
+      projeto criado, URL + anon key em `config.js`/`site-config.js`,
+      `INTEGRATION_WORKER_SECRET` em Secrets **e** Vault, token do feed gerado,
+      domínio público definido e primeiro usuário `admin` promovido
+- [ ] Migrations rodadas até `202609210002` e as 8 Edge Functions publicadas
+      (`verify_jwt = false` pelo `supabase/config.toml`)
+- [ ] `scripts/auditoria-segredos.sh` sem achados e `node --test tests/*.test.js` verde
 - [ ] Google Merchant: Merchant ID, conta de serviço JSON (com acesso na conta), token do feed, URL do feed cadastrada
 - [ ] Meta: Pixel ID, token da Conversions API, ID do catálogo, conta de anúncios, domínio verificado
 - [ ] GA4: ID da métrica e API secret

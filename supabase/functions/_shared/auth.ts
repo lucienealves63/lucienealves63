@@ -21,12 +21,27 @@ export type AdminCheck =
   | { ok: true; userId: string; role: string }
   | { ok: false; status: number; message: string };
 
+/* O JWT da sessão vem no cabeçalho Authorization: Bearer <token>. Com as chaves
+   novas do Supabase (sb_publishable_/sb_secret_) esse cabeçalho pode trazer a
+   chave pública em vez de um JWT — não é sessão de ninguém, então devolve null
+   e quem chama responde 401. */
+export function bearerToken(request: Request): string | null {
+  const header = request.headers.get("authorization") ?? "";
+  const [scheme, ...rest] = header.trim().split(/\s+/);
+  if (!scheme || scheme.toLowerCase() !== "bearer") return null;
+  const token = rest.join(" ").trim();
+  return token ? token : null;
+}
+
 export async function requireAdmin(
   request: Request,
   client: ServiceClient,
   roles: string[] = ["admin"],
 ): Promise<AdminCheck> {
-  const { user, error } = await client.auth.getUser(request);
+  const token = bearerToken(request);
+  if (!token) return { ok: false, status: 401, message: "Sessão inválida ou expirada" };
+  const { data, error } = await client.auth.getUser(token);
+  const user = data?.user;
   if (error || !user) return { ok: false, status: 401, message: "Sessão inválida ou expirada" };
   const { data: profile } = await client
     .from("profiles")

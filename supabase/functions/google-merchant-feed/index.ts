@@ -1,7 +1,7 @@
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { requiredEnv } from "../_shared/http.ts";
 import { feedTokenMatches, requireAdmin, serviceClient, workerSecretMatches } from "../_shared/auth.ts";
-import { buildFeedRow, renderFeed, type CatalogItem, type FeedRow, type Policy } from "../_shared/feeds.ts";
+import { buildFeedRow, toCsv, toGoogleXml, type CatalogItem, type FeedRow, type Policy } from "../_shared/feeds.ts";
 
 /*
  * google-merchant-feed — feed de produtos para o Google Merchant Center.
@@ -150,10 +150,15 @@ Deno.serve(async (request) => {
       const { rows, source } = await feedRows();
       const format = url.searchParams.get("format") === "csv" ? "csv" : "xml";
       const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://censura18.com.br";
-      const body = renderFeed(rows, CHANNEL_ID, {
-        title: "Censura 18 — Google Merchant Center",
-        link: siteUrl,
-      });
+      /* O corpo precisa seguir o formato pedido na URL (o Content-Type abaixo
+         já prometia isso): xml é o que o Merchant Center coleta, csv serve
+         para conferir a mesma lista numa planilha. */
+      const body = format === "csv"
+        ? toCsv(rows, CHANNEL_ID)
+        : toGoogleXml(rows, {
+            title: "Censura 18 — Google Merchant Center",
+            link: siteUrl,
+          });
       return new Response(body, {
         status: 200,
         headers: {

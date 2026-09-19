@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireAdmin } from "../_shared/auth.ts";
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { requiredEnv } from "../_shared/http.ts";
 
@@ -125,16 +126,14 @@ Deno.serve(async (request) => {
     { auth: { persistSession: false } },
   );
 
-  // Só administradores do painel geram banners.
-  const { user } = await supabase.auth.getUser(request);
-  if (!user) return json({ error: "Sessão inválida ou expirada" }, 401);
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, active")
-    .eq("id", user.id)
-    .single();
-  if (!profile?.active || profile.role !== "admin") {
-    return json({ error: "Somente administradores podem gerar banners" }, 403);
+  /* Só administradores do painel geram banners — a mesma checagem das outras
+     funções (_shared/auth.ts): JWT da sessão no cabeçalho Authorization. */
+  const check = await requireAdmin(request, supabase);
+  if (!check.ok) {
+    const message = check.status === 403
+      ? "Somente administradores podem gerar banners"
+      : check.message;
+    return json({ error: message }, check.status);
   }
 
   let payload: { prompt?: unknown; style?: unknown; aspect?: unknown };

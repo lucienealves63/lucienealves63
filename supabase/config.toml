@@ -1,7 +1,46 @@
 project_id = "censura18-operacoes"
 
+# -----------------------------------------------------------------------------
+# verify_jwt = false em TODAS as funções — e por quê
+# -----------------------------------------------------------------------------
+# Cada função já se autentica sozinha, do jeito que o chamador consegue:
+#   • sessão do painel com papel admin  → requireAdmin() (_shared/auth.ts)
+#   • agendador (pg_cron → pg_net)      → cabeçalho x-worker-secret
+#   • coleta do Google Merchant Center  → ?token= na URL
+#   • webhook da ClearSale              → cabeçalho clearsale-apikey
+#   • cotação de frete no checkout      → pública (só lê tabelas de frete)
+#
+# O verificador de JWT do Supabase só entende JWT assinado com o segredo legado.
+# Projetos novos usam as chaves sb_publishable_/sb_secret_, que NÃO são JWT:
+# com verify_jwt ligado, a chamada morre em 401 "Invalid JWT" antes de chegar ao
+# código — inclusive a coleta do Google, que não manda Authorization nenhum.
+# Por isso a porta fica aberta e a função decide. Nada aqui expõe dado: sem o
+# segredo/sessão certos a resposta é 401/403 do próprio código.
+#
+# Depois de mudar este arquivo, republique a função (o CLI aplica o valor):
+#   supabase functions deploy <nome>
+# -----------------------------------------------------------------------------
+
+[functions.gerar-banner]
+verify_jwt = false
+
 [functions.integration-worker]
 verify_jwt = false
 
 [functions.clearsale-webhook]
+verify_jwt = false
+
+[functions.cotar-frete]
+verify_jwt = false
+
+[functions.google-merchant-feed]
+verify_jwt = false
+
+[functions.marketing-events]
+verify_jwt = false
+
+[functions.google-ads-conversions]
+verify_jwt = false
+
+[functions.channel-publish]
 verify_jwt = false
