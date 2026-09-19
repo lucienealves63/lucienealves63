@@ -59,6 +59,14 @@
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.6-1-2.5c0-1.4 1-2 2.5-2H18a4 4 0 0 0 4-4c0-4.4-4-7.5-10-7.5Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></symbol>
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></symbol>
     <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16.5 5.2a3.4 3.4 0 0 1 0 6.6M18 14.4a6.5 6.5 0 0 1 3.5 5.6"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-1.6.6-3 1.4-4.2C9 9.6 9.6 11 11 11c1.4 0 1.8-1.6 1.6-3.2C12.4 6 12 4.4 12 3Z"/><path d="M8.4 17.6A5 5 0 0 0 12 21a5 5 0 0 0 3.6-3.4"/></symbol>
+    <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M4 10v4a2 2 0 0 0 2 2h2l8 4V4L8 8H6a2 2 0 0 0-2 2Z"/><path d="M19 9a3.5 3.5 0 0 1 0 6M7 16v4h3"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9h16v11H4z"/><path d="M3 9 5 4h14l2 5"/><path d="M9 20v-6h6v6"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 17v3h16v-3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 1 0-5.7-5.7L11.4 6"/><path d="M14 11a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 1 0 5.7 5.7L12.6 18"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V6M4 20h16"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="14" width="3" height="4"/></symbol>
   </svg>
 
   <aside class="sidebar" id="sidebar">
@@ -94,6 +102,14 @@
       </button>
       <button class="side-nav__item" data-nav="customers">
         <svg><use href="#i-user"/></svg><span>Clientes</span>
+      </button>
+
+      <p class="side-nav__label side-nav__label--spaced">Crescimento</p>
+      <button class="side-nav__item" data-nav="audience" data-permission="audience">
+        <svg><use href="#i-users"/></svg><span>Audiência</span>
+      </button>
+      <button class="side-nav__item" data-nav="channels" data-permission="channels">
+        <svg><use href="#i-megaphone"/></svg><span>Canais &amp; Marketing</span>
       </button>
 
       <p class="side-nav__label side-nav__label--spaced">Sistema</p>
@@ -289,6 +305,138 @@
         </article>
       </section>
 
+      <section class="page" data-page="audience">
+        <div class="page-head">
+          <div><p class="page-kicker">AUDIÊNCIA DO SITE</p><h2>Audiência</h2><p>Páginas mais visitadas, região de calor e origem do tráfego — medidos pelo próprio site, com consentimento do visitante e sem empresas de anúncio.</p></div>
+          <div class="page-actions">
+            <label class="form-field form-field--inline"><span>Período</span><select id="audience-range" aria-label="Período analisado"><option value="7">Últimos 7 dias</option><option value="14">Últimos 14 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>
+            <button class="btn btn--secondary" id="audience-sample"><svg><use href="#i-spark"/></svg><span id="audience-sample-label">Base de exemplo</span></button>
+            <button class="btn btn--secondary" id="audience-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button>
+            <button class="btn btn--primary" id="audience-export"><svg><use href="#i-download"/></svg>Exportar CSV</button>
+          </div>
+        </div>
+
+        <div class="audience-notice" id="audience-notice"></div>
+
+        <div class="metrics" id="audience-metrics"></div>
+
+        <div class="dashboard-grid">
+          <article class="panel panel--wide">
+            <div class="panel__head">
+              <div><span class="panel__eyebrow">EVOLUÇÃO DIÁRIA</span><h3>Sessões e páginas vistas</h3></div>
+              <span class="trend-legend"><i class="trend-legend__bar"></i>Sessões<i class="trend-legend__line"></i>Páginas vistas</span>
+            </div>
+            <div class="trend-wrap" id="audience-trend"></div>
+          </article>
+          <article class="panel">
+            <div class="panel__head"><div><span class="panel__eyebrow">ORIGEM DO TRÁFEGO</span><h3>Como chegaram</h3></div><span class="panel__hint" id="audience-source-hint"></span></div>
+            <div class="source-list" id="audience-sources"></div>
+            <div class="panel__foot"><h4>Sites de referência</h4><div class="referrer-list" id="audience-referrers"></div></div>
+          </article>
+
+          <article class="panel panel--wide table-panel">
+            <div class="panel__head"><div><span class="panel__eyebrow">PÁGINAS MAIS VISITADAS</span><h3>O que a audiência procura</h3></div><span class="panel__hint" id="audience-pages-hint"></span></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Página</th><th>Participação</th><th>Visualizações</th><th>Sessões</th><th>% do tráfego</th><th>Conversões</th></tr></thead><tbody id="audience-pages"></tbody></table></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel__head"><div><span class="panel__eyebrow">JORNADA DE COMPRA</span><h3>Funil do site</h3></div></div>
+            <div class="funnel" id="audience-funnel"></div>
+          </article>
+        </div>
+
+        <article class="panel heat-panel">
+          <div class="panel__head">
+            <div><span class="panel__eyebrow">REGIÃO DE CALOR DO SITE</span><h3>Onde a audiência clica</h3><p class="panel__sub">As faixas mostram a intensidade por região da página; a grade mostra a posição real dos cliques.</p></div>
+            <label class="form-field form-field--inline"><span>Página</span><select id="audience-heat-path" aria-label="Página do mapa de calor"></select></label>
+          </div>
+          <div class="heat-body">
+            <div class="heat-column">
+              <div id="audience-heat-zones"></div>
+              <div id="audience-heat-legend"></div>
+            </div>
+            <div class="heat-column heat-column--grid">
+              <div class="heat-frame" id="audience-heat-grid"></div>
+              <div class="hot-list"><h4>Pontos quentes</h4><div id="audience-heat-targets"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <div class="dashboard-grid">
+          <article class="panel panel--wide table-panel">
+            <div class="panel__head"><div><span class="panel__eyebrow">CAMPANHAS COM UTM</span><h3>Desempenho por campanha</h3></div><button class="text-link" data-nav="channels">Abrir canais <svg><use href="#i-arrow"/></svg></button></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Campanha</th><th>Sessões</th><th>Páginas</th><th>Conversões</th><th>Taxa</th></tr></thead><tbody id="audience-campaigns"></tbody></table></div>
+          </article>
+          <article class="panel">
+            <div class="panel__head"><div><span class="panel__eyebrow">QUEM VISITA</span><h3>Dispositivos e cidades</h3></div></div>
+            <div class="split-list">
+              <div class="source-list" id="audience-devices"></div>
+              <div class="panel__foot"><h4>Cidades</h4><div class="referrer-list" id="audience-locations"></div></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel table-panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">PROFUNDIDADE DE LEITURA</span><h3>Rolagem por página</h3></div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Página</th><th>Sessões</th><th>Rolagem média</th><th>Chegaram a 25%</th><th>Passaram de 50%</th><th>Leram até o fim</th></tr></thead><tbody id="audience-scroll"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="page" data-page="channels">
+        <div class="page-head">
+          <div><p class="page-kicker">CANAIS DE VENDA E MÍDIA</p><h2>Canais &amp; Marketing</h2><p>Google Merchant Center, Meta Ads, GA4 e os marketplaces mais usados no Brasil — catálogo, preço e estoque saindo do mesmo cadastro do estoque.</p></div>
+          <div class="page-actions"><button class="btn btn--secondary" id="channels-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button><button class="btn btn--primary" id="channels-publish"><svg><use href="#i-upload"/></svg>Publicar catálogo</button></div>
+        </div>
+
+        <div class="channels-notice" id="channels-notice"></div>
+
+        <div class="channel-group">
+          <h3 class="channel-group__title"><svg><use href="#i-megaphone"/></svg>Mídia, feed e medição</h3>
+          <div class="channel-cards" id="channel-cards-ads"></div>
+        </div>
+
+        <div class="channel-group">
+          <h3 class="channel-group__title"><svg><use href="#i-store"/></svg>Marketplaces</h3>
+          <div class="channel-cards" id="channel-cards-marketplaces"></div>
+        </div>
+
+        <article class="panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">POLÍTICA DE PREÇO E ESTOQUE</span><h3>Regras aplicadas na publicação</h3></div><span class="panel__hint" id="channel-policy-hint"></span></div>
+          <form id="channel-policy-form" class="policy-body">
+            <label class="form-field"><span>Canal</span><select id="channel-policy-channel" aria-label="Canal da política"></select></label>
+            <label class="form-field"><span>Markup sobre o preço de varejo (%)</span><input id="channel-policy-markup" type="number" step="0.1" min="0" max="200" value="0"><small id="channel-policy-suggestion"></small></label>
+            <label class="form-field"><span>Arredondamento</span><select id="channel-policy-rounding"><option value="psychological">Preço psicológico (R$ 149,90)</option><option value="cent">Centavos exatos</option><option value="none">Sem arredondamento</option></select></label>
+            <label class="form-field"><span>Reserva de estoque (un.)</span><input id="channel-policy-buffer" type="number" min="0" max="99" step="1" value="1"><small>Peças que nunca vão para o canal — evita vender a última unidade em dois lugares.</small></label>
+            <label class="form-field"><span>Preço mínimo no canal (R$)</span><input id="channel-policy-min" type="number" min="0" step="0.01" value="0"></label>
+            <label class="form-field"><span>Limite publicado por item (0 = sem limite)</span><input id="channel-policy-max" type="number" min="0" step="1" value="0"></label>
+            <label class="banner-active-check policy-check"><input type="checkbox" id="channel-policy-available" checked><span>Publicar somente itens com saldo disponível</span></label>
+            <div class="policy-actions"><button type="submit" class="btn btn--primary">Aplicar política</button></div>
+          </form>
+        </article>
+
+        <article class="panel table-panel">
+          <div class="panel__head">
+            <div><span class="panel__eyebrow">FEED DE PRODUTOS</span><h3>Prévia do que será publicado</h3></div>
+            <div class="panel__actions">
+              <label class="form-field form-field--inline"><span>Canal</span><select id="feed-channel" aria-label="Canal do feed"></select></label>
+              <button type="button" class="btn btn--secondary" id="feed-download"><svg><use href="#i-download"/></svg><span id="feed-download-label">Baixar feed</span></button>
+            </div>
+          </div>
+          <div class="feed-summary" id="feed-summary"></div>
+          <div class="table-wrap"><table class="data-table"><thead id="feed-head"></thead><tbody id="feed-body"></tbody></table></div>
+        </article>
+
+        <article class="panel table-panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">ANÚNCIOS E LISTAGENS</span><h3>Itens por canal</h3></div><span class="panel__hint" id="channel-listings-hint"></span></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Canal</th><th>Produto</th><th>SKU</th><th>Preço no canal</th><th>Estoque</th><th>Status</th><th>Pendências</th></tr></thead><tbody id="channel-listings"></tbody></table></div>
+        </article>
+
+        <article class="panel table-panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">CONVERSÕES</span><h3>Eventos do site → Meta CAPI e GA4</h3></div><span class="panel__hint" id="conversion-hint"></span></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Evento do site</th><th>Meta Conversions API</th><th>GA4 / Measurement Protocol</th><th>No período</th><th>Envio</th></tr></thead><tbody id="conversion-map"></tbody></table></div>
+        </article>
+      </section>
+
       <section class="page" data-page="integrations">
         <div class="page-head">
           <div><p class="page-kicker">CONEXÕES</p><h2>Integrações</h2><p>Saúde, credenciais e histórico de sincronização.</p></div>
@@ -410,7 +558,9 @@
             </div>
             <div class="banner-fields">
               <label class="form-field"><span>Nome do banner <b>*</b></span><input id="banner-name" required maxlength="120" placeholder="Ex.: Drop de inverno"></label>
-              <label class="form-field"><span>Posição</span><select id="banner-position"><option value="home-hero">Home — hero principal</option></select></label>
+              <label class="form-field"><span>Posição</span><select id="banner-position"><option value="home-hero">Home — hero principal</option><option value="category-hero">Categoria — banner opcional</option><option value="promo-strip">Faixa promocional</option></select></label>
+              <label class="form-field" id="banner-category-field" hidden><span>Categoria do banner <b>*</b></span><input id="banner-category" maxlength="60" list="banner-category-options" placeholder="Ex.: camisetas ou T SHIRT"><small>Opcional: o catálogo só mostra a arte quando o visitante filtra esta categoria (ou abre um produto dela).</small></label>
+              <datalist id="banner-category-options"></datalist>
               <div class="form-row-2">
                 <label class="form-field"><span>Linha 1 do título</span><input id="banner-title-top" maxlength="60" placeholder="Streetwear"></label>
                 <label class="form-field"><span>Linha 2 do título</span><input id="banner-title-bottom" maxlength="60" placeholder="desde 1989"></label>
@@ -474,6 +624,47 @@
     </section>
   </div>
 
+  <div class="modal" id="channel-modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal></div>
+    <section class="modal__dialog modal__dialog--lg" role="dialog" aria-modal="true" aria-labelledby="channel-modal-title">
+      <header class="modal__head"><div><span class="modal__kicker" id="channel-modal-kicker">CANAIS &amp; MARKETING</span><h2 id="channel-modal-title">Configurar canal</h2></div><button class="icon-only" data-close-modal aria-label="Fechar"><svg><use href="#i-close"/></svg></button></header>
+      <form id="channel-form">
+        <div class="modal__body channel-modal-body">
+          <div class="channel-modal-side">
+            <p class="channel-modal__role" id="channel-modal-role"></p>
+            <div class="secret-box">
+              <h4><svg><use href="#i-alert"/></svg>Credenciais ficam só no servidor</h4>
+              <p>Cadastre estes segredos em <strong>Supabase → Settings → Edge Functions → Secrets</strong> (veja o <code>.env.example</code>). O navegador nunca recebe chave, token ou secret.</p>
+              <ul id="channel-modal-secrets"></ul>
+            </div>
+            <div class="channel-modal__ops">
+              <h4>Operações prontas</h4>
+              <div id="channel-modal-operations"></div>
+            </div>
+            <a class="text-link" id="channel-modal-docs" href="#" target="_blank" rel="noopener">Documentação oficial <svg><use href="#i-arrow"/></svg></a>
+          </div>
+          <div class="channel-modal-fields">
+            <div class="form-grid" id="channel-modal-config"></div>
+            <div class="channel-modal-policy">
+              <h4>Preço e estoque deste canal</h4>
+              <div class="form-row-2">
+                <label class="form-field"><span>Markup (%)</span><input id="channel-modal-markup" type="number" step="0.1" min="0" max="200"></label>
+                <label class="form-field"><span>Arredondamento</span><select id="channel-modal-rounding"><option value="psychological">Preço psicológico</option><option value="cent">Centavos exatos</option><option value="none">Sem arredondamento</option></select></label>
+              </div>
+              <div class="form-row-2">
+                <label class="form-field"><span>Reserva de estoque</span><input id="channel-modal-buffer" type="number" min="0" max="99" step="1"></label>
+                <label class="form-field"><span>Preço mínimo (R$)</span><input id="channel-modal-min" type="number" min="0" step="0.01"></label>
+              </div>
+              <p class="palette-hint" id="channel-modal-suggestion"></p>
+            </div>
+            <label class="banner-active-check"><input type="checkbox" id="channel-modal-enabled"><span>Canal habilitado (a fila de integração passa a processar este serviço)</span></label>
+          </div>
+        </div>
+        <footer class="modal__foot"><p id="channel-foot-note">Salvar não envia nada: a publicação do catálogo é o passo seguinte.</p><div><button type="button" class="btn btn--secondary" data-close-modal>Cancelar</button><button type="submit" class="btn btn--primary" id="channel-save">Salvar configuração</button></div></footer>
+      </form>
+    </section>
+  </div>
+
   <div class="drawer" id="order-drawer" aria-hidden="true">
     <div class="drawer__backdrop" data-close-drawer></div>
     <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -488,8 +679,11 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/js/coupons.js"></script>
+  <script src="../assets/js/analytics.js"></script>
   <script src="assets/config.js"></script>
   <script src="assets/importer.js"></script>
+  <script src="assets/channels.js"></script>
+  <script src="assets/audience.js"></script>
   <script src="assets/admin.js"></script>
 </body>
 </html>

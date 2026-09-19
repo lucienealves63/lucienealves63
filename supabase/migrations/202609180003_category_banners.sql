@@ -1,38 +1,48 @@
--- Censura 18 — números de estatística do hero 100% editáveis no painel
+-- Censura 18 — banner de categoria (opcional)
 -- Executar após 202609170002_banners_paletas.sql.
 --
--- O banner da home ganha uma lista de até 4 pares número/legenda, que o
--- site (assets/js/site-config.js) aplica por posição na faixa abaixo dos
--- botões do hero (index.html → #hero-stat-1..4-value/-label):
+-- Além do hero da home, o painel passa a poder criar uma arte para cada
+-- categoria do catálogo. Ela é OPCIONAL: sem banner ativo para a
+-- categoria, produtos.html e produto.html continuam exatamente como são
+-- hoje (o contêiner nasce com hidden).
 --
---   "stats": [ { "value": "36", "label": "anos de rua" }, ... ]
---
--- Item em branco é ignorado pelo site, que segue com o texto padrão da
--- marca — o painel não precisa reenviar a faixa em todo banner.
+-- Regras:
+--   * position aceita 'home-hero', 'category-hero' e 'promo-strip';
+--   * 'category-hero' exige category (id do site ou nome do Alterdata);
+--   * só um banner ativo por posição E categoria;
+--   * a chave anônima continua vendo apenas banners ativos na janela de
+--     datas (política "anon read live banner" da migration anterior).
 
 -- =====================================================================
--- Coluna nova
+-- Estrutura
 -- =====================================================================
 
 alter table public.site_banners
-  add column if not exists stats jsonb not null default '[]'::jsonb;
+  drop constraint if exists site_banners_position_check;
 
--- Mesmo formato do formulário: lista, no máximo 4 itens.
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'site_banners_stats_shape'
-  ) then
-    alter table public.site_banners
-      add constraint site_banners_stats_shape
-      check (jsonb_typeof(stats) = 'array' and jsonb_array_length(stats) <= 4);
-  end if;
-end
-$$;
+alter table public.site_banners
+  add column if not exists category text
+    check (category is null or char_length(category) <= 60);
+
+alter table public.site_banners
+  add constraint site_banners_position_check
+  check (position in ('home-hero', 'category-hero', 'promo-strip'));
+
+alter table public.site_banners
+  add constraint site_banners_category_required
+  check (position <> 'category-hero' or (category is not null and trim(category) <> ''));
+
+-- Um único banner ativo por posição/categoria (categoria nula = home).
+create unique index if not exists site_banners_one_active_per_slot
+  on public.site_banners (position, coalesce(category, ''))
+  where active = true;
+
+create index if not exists site_banners_category_idx
+  on public.site_banners (category)
+  where position = 'category-hero';
 
 -- =====================================================================
--- save_site_banner: passa a aceitar/validar a faixa de números
--- (mantém o restante do contrato do painel — papéis, datas e ativação)
+-- RPCs (recriadas com o campo categoria)
 -- =====================================================================
 
 create or replace function public.save_site_banner(p_payload jsonb)
@@ -54,11 +64,6 @@ declare
   v_cta_url text;
   v_cta2_label text;
   v_cta2_url text;
-  v_stats jsonb;
-  v_clean_stats jsonb := '[]'::jsonb;
-  v_item jsonb;
-  v_item_value text;
-  v_item_label text;
   v_prompt text;
   v_priority integer;
   v_starts timestamptz;
@@ -89,7 +94,7 @@ begin
   v_prompt := nullif(trim(coalesce(p_payload ->> 'ai_prompt', '')), '');
   v_priority := coalesce((p_payload ->> 'priority')::integer, 100);
   v_starts := nullif(trim(coalesce(p_payload ->> 'starts_at', '')), '')::timestamptz;
-  v_ends := nullif(trim(coalesce(p_payload ->> 'ends_at', '')), '');
+  v_ends := nullif(trim(coalesce(p_payload ->> 'ends_at', '')), '')::timestamptz;
   v_want_active := coalesce((p_payload ->> 'active')::boolean, false);
 
   if v_position not in ('home-hero', 'category-hero', 'promo-strip') then
@@ -114,54 +119,15 @@ begin
     raise exception 'A data final precisa ser depois da inicial';
   end if;
 
-  -- Números de estatística do hero: lista de objetos {value, label}.
-  -- Itens totalmente vazios são descartados; os preenchidos são validados
-  -- (tipos, limites de caracteres e até 4 posições).
-  v_stats := coalesce(p_payload -> 'stats', '[]'::jsonb);
-  if jsonb_typeof(v_stats) <> 'array' then
-    raise exception 'A lista de números do hero precisa ser uma lista';
-  end if;
-  if jsonb_array_length(v_stats) > 4 then
-    raise exception 'O hero aceita no máximo 4 números de estatística';
-  end if;
-
-  for v_item in select * from jsonb_array_elements(v_stats)
-  loop
-    if jsonb_typeof(v_item) <> 'object' then
-      raise exception 'Cada número do hero precisa ser um par número/legenda';
-    end if;
-    if exists (
-      select 1 from jsonb_object_keys(v_item) as key
-      where key not in ('value', 'label')
-    ) then
-      raise exception 'Campo não reconhecido nos números do hero';
-    end if;
-
-    v_item_value := trim(coalesce(v_item ->> 'value', ''));
-    v_item_label := trim(coalesce(v_item ->> 'label', ''));
-    if char_length(v_item_value) > 12 then
-      raise exception 'O número do hero aceita no máximo 12 caracteres';
-    end if;
-    if char_length(v_item_label) > 40 then
-      raise exception 'A legenda do número aceita no máximo 40 caracteres';
-    end if;
-
-    if v_item_value <> '' or v_item_label <> '' then
-      v_clean_stats := v_clean_stats || jsonb_build_array(
-        jsonb_build_object('value', v_item_value, 'label', v_item_label)
-      );
-    end if;
-  end loop;
-
   if v_id is null then
     insert into public.site_banners (
       position, category, name, image_path, title_top, title_bottom, body_text,
       cta_label, cta_url, cta_secondary_label, cta_secondary_url,
-      stats, source, ai_prompt, active, priority, starts_at, ends_at, created_by
+      source, ai_prompt, active, priority, starts_at, ends_at, created_by
     ) values (
       v_position, v_category, v_name, v_image, v_title_top, v_title_bottom, v_body,
       v_cta_label, v_cta_url, v_cta2_label, v_cta2_url,
-      v_clean_stats, v_source, v_prompt, false, v_priority, v_starts, v_ends, auth.uid()
+      v_source, v_prompt, false, v_priority, v_starts, v_ends, auth.uid()
     ) returning id into v_id;
   else
     update public.site_banners set
@@ -176,7 +142,6 @@ begin
       cta_url = v_cta_url,
       cta_secondary_label = v_cta2_label,
       cta_secondary_url = v_cta2_url,
-      stats = v_clean_stats,
       source = v_source,
       ai_prompt = v_prompt,
       priority = v_priority,
@@ -192,7 +157,80 @@ begin
     perform public.set_site_banner_active(v_id, true);
   end if;
 
-  return jsonb_build_object('id', v_id, 'active', v_want_active, 'position', v_position,
-                            'category', v_category, 'stats', jsonb_array_length(v_clean_stats));
+  return jsonb_build_object('id', v_id, 'active', v_want_active, 'position', v_position, 'category', v_category);
 end;
 $$;
+
+-- Ativa um banner desativando os demais da mesma posição e categoria.
+create or replace function public.set_site_banner_active(p_id uuid, p_active boolean)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_banner public.site_banners%rowtype;
+begin
+  if not public.has_role(array['admin']::public.app_role[]) then
+    raise exception 'Sem permissão para gerenciar banners';
+  end if;
+
+  select * into v_banner from public.site_banners where id = p_id for update;
+  if not found then
+    raise exception 'Banner não encontrado';
+  end if;
+
+  if p_active then
+    update public.site_banners
+    set active = false
+    where position = v_banner.position
+      and coalesce(category, '') = coalesce(v_banner.category, '')
+      and active = true
+      and id <> p_id;
+    update public.site_banners set active = true where id = p_id;
+  else
+    update public.site_banners set active = false where id = p_id;
+  end if;
+
+  return jsonb_build_object(
+    'id', p_id, 'active', p_active,
+    'position', v_banner.position, 'category', v_banner.category
+  );
+end;
+$$;
+
+-- Lista os banners de categoria no ar (usado pelo catálogo quando a RLS
+-- já filtrou; mantém a resposta enxuta para a chave anônima).
+create or replace function public.live_category_banners()
+returns table (
+  id uuid,
+  category text,
+  name text,
+  image_path text,
+  title_top text,
+  title_bottom text,
+  body_text text,
+  cta_label text,
+  cta_url text,
+  cta_secondary_label text,
+  cta_secondary_url text,
+  priority integer,
+  starts_at timestamptz,
+  ends_at timestamptz
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select b.id, b.category, b.name, b.image_path, b.title_top, b.title_bottom,
+         b.body_text, b.cta_label, b.cta_url, b.cta_secondary_label,
+         b.cta_secondary_url, b.priority, b.starts_at, b.ends_at
+  from public.site_banners b
+  where b.position = 'category-hero'
+    and b.active = true
+    and (b.starts_at is null or b.starts_at <= now())
+    and (b.ends_at is null or b.ends_at >= now())
+  order by b.priority asc, b.created_at desc;
+$$;
+
+grant execute on function public.live_category_banners() to anon, authenticated;

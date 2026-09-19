@@ -35,6 +35,7 @@ Paleta: **preto · branco · cinza**.
 │   ├── js/frete.js       ⭐ Frete: Correios, Mercado Envios, Uber, 99 e retirada
 │   ├── js/cliente.js     Cadastro do cliente: validação, LGPD e WhatsApp
 │   ├── js/pedido.js      Pedido do checkout: validação + Pix copia-e-cola (EMV)
+│   ├── js/analytics.js   ⭐ Audiência: mede o site (só após aceite na LGPD)
 │   └── img/
 │       ├── produtos/     Fotos do catálogo
 │       ├── logos/        ← solte as logos aqui
@@ -43,12 +44,19 @@ Paleta: **preto · branco · cinza**.
 │
 ├── LEIA-ME.md            Este arquivo
 │
-├── admin/                Dashboard de operações (Banners & Paleta, Cupons)
+├── admin/                Dashboard de operações
+│   ├── assets/audience.js  Painéis de audiência (métricas, calor, origem)
+│   ├── assets/channels.js  Canais de venda: feeds, política de preço/estoque
 │   └── ver docs/DASHBOARD-OPERACOES.md
 ├── docs/
 │   ├── DASHBOARD-OPERACOES.md
 │   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
 └── supabase/             Migrations, RPCs e Edge Functions
+    ├── migrations/…_analytics_audience.sql   audiência (eventos + RPCs)
+    ├── migrations/…_sales_channels.sql       canais de venda
+    ├── migrations/…_category_banners.sql     banner de categoria
+    └── functions/          google-merchant-feed · marketing-events ·
+                            channel-publish · integration-worker · …
 ```
 
 ---
@@ -232,15 +240,114 @@ estimativa (`assets/js/frete.js`); com o Supabase ligado, a Edge Function
 segredos de cada uma estão configurados. O passo a passo de implantação
 está em `docs/FRETE-ENTREGAS.md`.
 
+### 📊 Audiência do site
+
+O painel (`admin/` → **Audiência**) mostra o que acontece na loja sem
+ferramenta de terceiros:
+
+- **métricas do período** — sessões, páginas vistas, visitantes, conversões,
+  páginas por sessão, tempo médio, saídas sem interagir e rolagem média,
+  cada uma com o comparativo do período anterior;
+- **páginas mais visitadas** — com barra proporcional e conversões por página;
+- **região de calor** — as faixas da página (cabeçalho, hero, filtros, grade,
+  rodapé) pintadas pela intensidade de cliques **e** a grade clássica de
+  mapa de calor (12 × 18 células) da página escolhida, mais a lista de
+  pontos quentes (qual botão levou mais clique);
+- **origem do tráfego** — direto, busca orgânica, redes sociais, e-mail,
+  parceiros, tráfego pago e campanha com UTM (incluindo `gclid`, `fbclid` e
+  `ttclid` de clique em anúncio), além dos sites de referência;
+- **jornada de compra** — funil visitou → viu produto → adicionou →
+  finalizou → chamou no WhatsApp;
+- **dispositivos, cidades e profundidade de rolagem** por página.
+
+Como funciona:
+
+| Modo | De onde vêm os números |
+| --- | --- |
+| Demonstração | eventos medidos neste navegador + **base de exemplo** (sintética, determinística e avisada na tela — botão *Base de exemplo* liga/desliga) |
+| Supabase | RPC `audience_report` sobre a tabela `analytics_events` |
+
+A medição vive em `assets/js/analytics.js` (site) e
+`admin/assets/audience.js` (desenho dos painéis). **Nada é medido antes do
+aceite no aviso de privacidade** e nenhum dado pessoal é coletado: sem IP,
+sem `user-agent` gravado, sem cookie de terceiro — o visitante é um id de
+sessão aleatório que expira após 30 minutos. O painel `/admin` não se
+auto-mede.
+
+### 📣 Canais de venda e marketing
+
+O painel (`admin/` → **Canais & Marketing**) deixa prontos os canais que
+um varejo de moda usa no Brasil:
+
+| Canal | O que está pronto |
+| --- | --- |
+| **Google Merchant Center** | feed XML (RSS 2.0 / Content API) com `google_product_category`, `identifier_exists` e `custom_label_0..2`; URL de coleta primária na função `google-merchant-feed` |
+| **Meta Ads** | catálogo CSV + Conversions API (Pixel) com deduplicação por `event_id`; função `marketing-events` |
+| **GA4** | Measurement Protocol (audiência e conversões do site) |
+| **Mercado Livre** | Items API (anúncio, preço, estoque e pedidos) — comissão 14% |
+| **Shopee** | Open Platform v2 com assinatura HMAC-SHA256 — comissão 14% |
+| **Amazon** | SP-API (LWA + AWS SigV4), feed TSV — comissão 15% |
+| **Magazine Luiza** | API do Parceiro (catálogo, preço, estoque, pedidos) — comissão 12% |
+| **Americanas** | API B2W (client credentials) — comissão 16% |
+
+O coração do módulo é a **política de preço e estoque por canal**: cada
+marketplace cobra uma comissão diferente, então o painel calcula o markup
+que mantém a margem (comissão de 14% → markup de 16,3%), arredonda para o
+preço psicológico `,90`, reserva unidades para não vender a última peça em
+dois canais ao mesmo tempo (`maxPublished` e `minPrice` inclusos) e mostra
+o preço do site ao lado do preço do canal.
+
+Depois vem a **prévia do feed** com as colunas exatas de cada canal, as
+pendências de cada item (sem GTIN, sem imagem pública, título longo…) e o
+download (XML no Google, TSV na Amazon, CSV nos demais). O botão *Publicar*
+grava as listagens e enfileira o envio; quem fala com o provedor é a Edge
+Function `channel-publish`, usando os segredos do ambiente.
+
+> **Segredos nunca passam pelo navegador.** O painel guarda só
+> identificadores públicos (Merchant ID, Pixel ID, Seller ID, Shop ID…) em
+> `sales_channels.config`. Tokens e chaves ficam nas Supabase Secrets —
+> `.env.example` lista todas. Sem segredo configurado o canal aparece como
+> *Aguardando credenciais* e a publicação é só prévia.
+
+Regras compartilhadas: `admin/assets/channels.js` (painel) e
+`supabase/functions/_shared/feeds.ts` (servidor) são a mesma lógica nas duas
+linguagens — `tests/channels.test.js` compara coluna por coluna e preço por
+preço para ninguém divergir. No banco,
+`supabase/migrations/202609180005_sales_channels.sql` recalcula tudo
+(`channel_price`, `channel_stock`, `channel_listing_problems`), então o
+preço publicado nunca depende do navegador.
+
+### 🖼️ Banner de categoria (opcional)
+
+Além do hero da home, dá para criar uma arte para **cada categoria** do
+catálogo (`admin/` → Banners & Paleta → posição *Banner de categoria*).
+É opcional de verdade: sem banner ativo para a categoria, `produtos.html`
+e `produto.html` ficam exatamente como são hoje.
+
+- a posição `category-hero` exige a categoria (lista sugestões a partir do
+  catálogo e das categorias do site);
+- vale um banner ativo por posição **e** categoria (a home continua com um
+  só hero);
+- no modo demonstração a arte fica em `c18:demo-category-banners`; com o
+  Supabase ligado, em `site_banners.category`
+  (migration `202609180003_category_banners.sql`) — e a chave anônima só
+  enxerga banner ativo dentro da janela de datas.
+
 ### Privacidade (LGPD) e HTTPS
 
-O site não usa cookies de rastreamento e não envia dados a terceiros:
-carrinho e preferências ficam no `localStorage` do próprio navegador. O
-banner de `assets/js/lgpd.js` registra a escolha do visitante — com
-**"Só o essencial"**, o site para de gravar cupom, código de vendedor e
-cartão presente e apaga o que já estava salvo. A política completa está
-em `privacidade.html`, e o formulário de contato só envia com
-consentimento explícito. Por segurança, `assets/js/ssl.js` (no `<head>`
+Carrinho e preferências ficam no `localStorage` do próprio navegador e o
+site não usa cookie de terceiro. A medição de audiência
+(`assets/js/analytics.js`) só começa **depois do aceite** no aviso de
+privacidade e coleta apenas página, cliques por região, rolagem, canal de
+origem, dispositivo e cidade informada pelo navegador — nunca IP,
+`user-agent` gravado, e-mail ou telefone. Com **"Só o essencial"**, nada é
+medido: o site para de gravar cupom, código de vendedor e cartão presente,
+apaga o que já estava salvo e descarta a fila de eventos. Os eventos ficam
+13 meses no banco e a RPC `purge_analytics_events` apaga o que passou desse
+prazo. O banner de `assets/js/lgpd.js` registra a escolha e o painel
+mostra quantos eventos vieram de visitantes que aceitaram; a política
+completa está em `privacidade.html`, e o formulário de contato só envia
+com consentimento explícito. Por segurança, `assets/js/ssl.js` (no `<head>`
 de todas as páginas) redireciona `http://` → `https://` — útil até o
 "Enforce HTTPS" ser ligado num domínio próprio.
 
@@ -354,10 +461,20 @@ ser extraída diretamente dos arquivos.
       (`privacidade.html`) e consentimento explícito no formulário de contato
 - [x] HTTPS sempre: redirecionamento `http://` → `https://` e upgrade
       automático de links inseguros em todas as páginas
+- [x] Audiência do site no painel: páginas mais visitadas, região de calor
+      (faixas + grade de cliques), origem do tráfego, funil de compra,
+      dispositivos, cidades e rolagem — medição própria, opt-in pela LGPD
+- [x] Canais de venda prontos para conectar: Google Merchant Center (feed
+      XML), Meta Ads (catálogo + Conversions API), GA4 (Measurement
+      Protocol) e Mercado Livre, Shopee, Amazon, Magazine Luiza e Americanas
+- [x] Política de preço/estoque por canal (markup da comissão, preço
+      psicológico, reserva de estoque) com prévia e download do feed
+- [x] Banner de categoria opcional (uma arte por categoria, sem mudar o
+      layout quando não há banner ativo)
 - [x] Estoque único: todo o saldo fica na **loja de estoque central**
       (padrão: Nova Iguaçu — Calçadão) e a troca de loja é feita em um lugar
       só — as demais unidades continuam como pontos de retirada
-- [x] Suíte de testes com o Node puro: `node --test tests/`
+- [x] Suíte de testes com o Node puro: `node --test tests/*.test.js`
 
 ## 🔜 Próximos passos sugeridos
 
@@ -366,6 +483,11 @@ ser extraída diretamente dos arquivos.
 - [ ] Criar o projeto Supabase, rodar as migrations de `supabase/` e
       ligar o painel (incluindo banners/paleta e geração por IA) ao ambiente
       real — passo a passo em `docs/DASHBOARD-OPERACOES.md`
+- [ ] Cadastrar as Supabase Secrets dos canais (`.env.example`), habilitar
+      cada canal no painel e agendar as funções `marketing-events` (flush de
+      conversões) e `channel-publish` (fila de publicação)
+- [ ] Cadastrar a URL do feed `google-merchant-feed` no Merchant Center e
+      pedir a revisão do catálogo; homologar preço/estoque nos marketplaces
 - [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages (e ligar "Enforce HTTPS")
 - [ ] Integrar um gateway de pagamento, se fizer sentido
@@ -375,14 +497,33 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 70 testes
+node --test tests/*.test.js   # 118 testes
 # ou, por arquivo:
-node --test tests/gift-card.test.js tests/coupons.test.js \
-           tests/checkout.test.js tests/site-config.test.js \
-           tests/importer.test.js
+node --test tests/analytics.test.js tests/audience.test.js \
+  tests/channels.test.js tests/admin-panel.test.js
 ```
 
-Os testes cobrem o contrato do checkout (vendedor, cupom, cartão
-presente e parcelamento), os cupons por escopo, a página de cartão
-presente, o `site-config` nos modos static/demo (banner, paleta e os
-números de estatística do hero) e o importador da planilha Alterdata.
+Os testes cobrem o contrato do checkout (vendedor, cupom, cartão presente e
+parcelamento), os cupons por escopo, a página de cartão presente, o
+`site-config` nos modos static/demo (banner, paleta e os números de
+estatística do hero), o importador da planilha Alterdata e as entregas de
+crescimento:
+
+- `tests/analytics.test.js` — classificação de origem (UTM, `gclid`/`fbclid`,
+  clique interno), dispositivos, normalização de caminho, faixas da página,
+  grade do mapa de calor, agregação do relatório (inclusive a atribuição da
+  conversão à origem da sessão) e a base de exemplo determinística;
+- `tests/audience.test.js` — formatação em português, cartões com comparativo,
+  evolução diária, páginas, origens, regiões de calor, pontos quentes,
+  rolagem, funil e a renderização ponta a ponta de todas as seções;
+- `tests/channels.test.js` — política de preço/estoque, agrupamento do
+  catálogo, colunas e pendências de cada canal, formatos CSV/TSV/XML, a
+  identidade entre o painel (JS) e o servidor (TypeScript) **e a coerência do
+  seed do banco com o cadastro do painel** (ids, nomes, formatos, markup e
+  campos obrigatórios);
+- `tests/admin-panel.test.js` — o painel inteiro carregado num DOM mínimo
+  (`tests/helpers/admin-dom.js`), na mesma ordem de scripts do
+  `admin/index.html`: páginas de Audiência e Canais desenhadas, troca de
+  período e de página do mapa de calor, feed que muda de colunas por canal,
+  modal de configuração sem expor segredo, publicação simulada, campo de
+  categoria do banner e a prova de que o `/admin` não mede a si mesmo.
