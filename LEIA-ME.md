@@ -471,6 +471,9 @@ ser extraída diretamente dos arquivos.
       psicológico, reserva de estoque) com prévia e download do feed
 - [x] Banner de categoria opcional (uma arte por categoria, sem mudar o
       layout quando não há banner ativo)
+- [x] Estoque único: todo o saldo fica na **loja de estoque central**
+      (padrão: Nova Iguaçu — Calçadão) e a troca de loja é feita em um lugar
+      só — as demais unidades continuam como pontos de retirada
 - [x] Suíte de testes com o Node puro: `node --test tests/*.test.js`
 
 ## 🔜 Próximos passos sugeridos
@@ -494,7 +497,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 112 testes
+node --test tests/*.test.js   # 118 testes
 # ou, por arquivo:
 node --test tests/analytics.test.js tests/audience.test.js \
   tests/channels.test.js tests/admin-panel.test.js

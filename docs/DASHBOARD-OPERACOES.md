@@ -40,8 +40,11 @@ esquerda. Se o Excel entregar `Cód Produto` como número, o importador recompõ
 padrão Alterdata de 10 dígitos. Enquanto o Alterdata não fornecer uma coluna específica de
 referência, `Cód Produto` também é usado como referência.
 
-A planilha não contém uma coluna de loja. Por isso, a loja de destino é uma
-escolha obrigatória no início de cada importação.
+A planilha não contém uma coluna de loja — e não precisa: **todo o saldo
+entra na loja de estoque central**, marcada em `public.stores.fulfills_stock`
+(na tela, o campo vem fixo com a loja). A troca dessa loja é feita em um
+único lugar — no painel de demonstração, a constante `STOCK_STORE_ID` em
+`admin/assets/admin.js`; no Supabase, `select public.set_stock_store('NI-BECO');`.
 
 ## Seleção antes da importação
 
@@ -69,6 +72,19 @@ registra diferenças de saldo e guarda o lote para auditoria.
 - `inventory_balances`: saldo físico, reservado e disponível por loja;
 - `inventory_movements`: razão imutável de entradas e saídas;
 - `stock_imports`: lote da planilha, arquivo, usuário, seleção e erros.
+
+**Estoque único.** A operação concentra todo o saldo físico em **uma única
+loja** (`public.stores.fulfills_stock`, semeada na *Nova Iguaçu — Calçadão*).
+Um índice único parcial (`stores_one_stock_location`) impede que duas lojas
+fiquem marcadas ao mesmo tempo. As demais unidades **não têm saldo próprio**:
+continuam atendendo como **pontos de retirada** das compras do site — o pedido
+segue apontando para a loja de retirada escolhida pelo cliente, mas a baixa do
+estoque acontece sempre na loja central (`import_inventory_rows` e
+`adjust_inventory_stock` ignoram a loja recebida e usam
+`public.stock_store_id()`).
+
+Para trocar a loja do estoque: `select public.set_stock_store('NI-BECO');`
+(somente `admin`). O painel reflete a mudança automaticamente.
 
 O Alterdata será o estoque mestre. O dashboard não deve sobrescrever o ERP sem
 um evento rastreável e uma confirmação da integração.
