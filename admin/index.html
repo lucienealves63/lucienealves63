@@ -189,7 +189,7 @@
 
       <section class="page" data-page="inventory">
         <div class="page-head">
-          <div><p class="page-kicker">CATÁLOGO E SALDOS</p><h2>Estoque</h2><p>Produtos e variações com saldo único, na loja de estoque. As demais lojas funcionam como pontos de retirada.</p></div>
+          <div><p class="page-kicker">CATÁLOGO E SALDOS</p><h2>Estoque</h2><p>Produtos e variações com saldo único, no estoque central — o <strong>Ecommerce C18</strong> (loja virtual, que atende site, feeds e marketplaces). As lojas físicas funcionam como pontos de retirada.</p></div>
           <div class="page-actions" data-permission="inventory"><button class="btn btn--secondary" data-action="manual"><svg><use href="#i-plus"/></svg>Cadastro manual</button><button class="btn btn--primary" data-action="import"><svg><use href="#i-upload"/></svg>Importar Excel</button></div>
         </div>
         <div class="toolbar">
@@ -362,6 +362,11 @@
           </div>
         </article>
 
+        <article class="panel table-panel">
+          <div class="panel__head"><div><span class="panel__eyebrow">BANNERS MAIS CLICADOS</span><h3>Qual arte leva mais clique</h3><p class="panel__sub">Hero da home e banners de categoria: quantas vezes cada arte apareceu, quantas foi clicada (CTR) e quantas sessões que clicaram acabaram convertendo.</p></div><button class="text-link" data-nav="banners">Abrir banners <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Banner</th><th>Vezes exibido</th><th>Cliques</th><th>CTR</th><th>Sessões que clicaram</th><th>Converteram</th></tr></thead><tbody id="audience-banners"></tbody></table></div>
+        </article>
+
         <div class="dashboard-grid">
           <article class="panel panel--wide table-panel">
             <div class="panel__head"><div><span class="panel__eyebrow">CAMPANHAS COM UTM</span><h3>Desempenho por campanha</h3></div><button class="text-link" data-nav="channels">Abrir canais <svg><use href="#i-arrow"/></svg></button></div>
@@ -384,7 +389,7 @@
 
       <section class="page" data-page="channels">
         <div class="page-head">
-          <div><p class="page-kicker">CANAIS DE VENDA E MÍDIA</p><h2>Canais &amp; Marketing</h2><p>Google Merchant Center, Meta Ads, GA4 e os marketplaces mais usados no Brasil — catálogo, preço e estoque saindo do mesmo cadastro do estoque.</p></div>
+          <div><p class="page-kicker">CANAIS DE VENDA E MÍDIA</p><h2>Canais &amp; Marketing</h2><p>Google Merchant Center, Meta Ads, GA4, Google Ads e os marketplaces mais usados no Brasil — catálogo, preço e estoque saindo do mesmo cadastro do estoque; as vendas voltam aos anúncios.</p></div>
           <div class="page-actions"><button class="btn btn--secondary" id="channels-refresh"><svg><use href="#i-refresh"/></svg>Atualizar</button><button class="btn btn--primary" id="channels-publish"><svg><use href="#i-upload"/></svg>Publicar catálogo</button></div>
         </div>
 
@@ -396,7 +401,7 @@
         </div>
 
         <div class="channel-group">
-          <h3 class="channel-group__title"><svg><use href="#i-store"/></svg>Marketplaces</h3>
+          <h3 class="channel-group__title"><svg><use href="#i-store"/></svg>Marketplaces <span class="channel-group__note">— para o futuro: ainda não há conta de vendedor. A integração já está pronta; quando a conta existir, é só cadastrar as credenciais (docs/CREDENCIAIS.md) e habilitar.</span></h3>
           <div class="channel-cards" id="channel-cards-marketplaces"></div>
         </div>
 
@@ -432,8 +437,8 @@
         </article>
 
         <article class="panel table-panel">
-          <div class="panel__head"><div><span class="panel__eyebrow">CONVERSÕES</span><h3>Eventos do site → Meta CAPI e GA4</h3></div><span class="panel__hint" id="conversion-hint"></span></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Evento do site</th><th>Meta Conversions API</th><th>GA4 / Measurement Protocol</th><th>No período</th><th>Envio</th></tr></thead><tbody id="conversion-map"></tbody></table></div>
+          <div class="panel__head"><div><span class="panel__eyebrow">CONVERSÕES</span><h3>Eventos do site → Meta CAPI, GA4 e Google Ads</h3><p class="panel__sub">A compra no checkout e o WhatsApp voltam ao Google Ads pelo id do clique (gclid) — pela API ou pelo CSV de upload.</p></div><div class="page-actions"><span class="panel__hint" id="conversion-hint"></span><button class="btn btn--secondary" id="conversion-ads-csv"><svg><use href="#i-download"/></svg>CSV para o Google Ads</button></div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Evento do site</th><th>Meta Conversions API</th><th>GA4 / Measurement Protocol</th><th>Google Ads (ação de conversão)</th><th>No período</th><th>Envio</th></tr></thead><tbody id="conversion-map"></tbody></table></div>
         </article>
       </section>
 

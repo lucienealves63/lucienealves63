@@ -146,10 +146,14 @@ export function slugify(value: string): string {
 /* Agrupa linhas de estoque (SKU por loja) em itens de catálogo. */
 export function catalogFromInventory(
   inventory: Record<string, unknown>[],
-  options?: { siteUrl?: string },
+  options?: { siteUrl?: string; storeId?: string },
 ): (CatalogItem & { link: string; image_link: string; availability: string })[] {
   const opts = options || {};
   const siteUrl = String(opts.siteUrl || "").replace(/\/$/, "");
+  /* Estoque publicado: com storeId, só o saldo dessa loja conta (o estoque
+     central "Ecommerce C18"); os itens continuam listados mesmo sem saldo
+     nela. Sem storeId soma todas as lojas. */
+  const storeId = String(opts.storeId || "").trim();
   const groups = new Map<string, CatalogItem & { skus: string[] }>();
 
   (Array.isArray(inventory) ? inventory : []).forEach((row) => {
@@ -176,7 +180,8 @@ export function catalogFromInventory(
     }
     const item = groups.get(key)!;
     const quantity = Math.max(0, Number(row.quantity || 0) - Number(row.reserved || 0));
-    item.stock += quantity;
+    const rowStore = String(row.storeId || row.store_id || "").trim();
+    if (!storeId || rowStore === storeId) item.stock += quantity;
     item.price = item.price || Number(row.price) || 0;
     item.skus!.push(String(row.code || reference));
     const color = row.color ? String(row.color) : "";
@@ -212,6 +217,8 @@ export function feedColumns(channelId: string): string[] {
         "image_link", "brand", "google_product_category", "item_group_id", "sale_price", "visibility"];
     case "ga4":
       return ["event_name", "client_id", "timestamp_micros", "items", "value", "currency"];
+    case "google-ads":
+      return GOOGLE_ADS_COLUMNS.slice();
     case "mercadolivre":
       return ["title", "category_id", "price", "currency_id", "available_quantity", "condition",
         "description", "picture_source", "attributes", "shipping"];
@@ -447,6 +454,7 @@ export function feedFormat(channelId: string): "xml" | "csv" | "tsv" | "json" {
     case "google-merchant":
       return "xml";
     case "meta-ads":
+    case "google-ads":
       return "csv";
     case "amazon":
       return "tsv";
@@ -466,15 +474,108 @@ export function renderFeed(rows: FeedRow[], channelId: string, options?: { title
 /* Eventos do site (assets/js/analytics.js) → Meta CAPI e GA4.
    Mesmo mapa exibido no painel (Channels.CONVERSION_EVENTS). */
 export const CONVERSION_EVENTS = [
-  { site: "page_view", meta: "PageView", ga4: "page_view", label: "Página vista" },
-  { site: "product_view", meta: "ViewContent", ga4: "view_item", label: "Produto visualizado" },
-  { site: "category_view", meta: "ViewCategory", ga4: "view_item_list", label: "Categoria visualizada" },
-  { site: "search", meta: "Search", ga4: "search", label: "Busca no site" },
-  { site: "add_to_cart", meta: "AddToCart", ga4: "add_to_cart", label: "Adicionou ao carrinho" },
-  { site: "checkout_intent", meta: "InitiateCheckout", ga4: "begin_checkout", label: "Iniciou a finalização" },
-  { site: "whatsapp", meta: "Contact", ga4: "generate_lead", label: "Chamou no WhatsApp" },
+  { site: "page_view", meta: "PageView", ga4: "page_view", ads: "", label: "Página vista" },
+  { site: "product_view", meta: "ViewContent", ga4: "view_item", ads: "", label: "Produto visualizado" },
+  { site: "category_view", meta: "ViewCategory", ga4: "view_item_list", ads: "", label: "Categoria visualizada" },
+  { site: "search", meta: "Search", ga4: "search", ads: "", label: "Busca no site" },
+  { site: "add_to_cart", meta: "AddToCart", ga4: "add_to_cart", ads: "", label: "Adicionou ao carrinho" },
+  { site: "checkout_intent", meta: "InitiateCheckout", ga4: "begin_checkout", ads: "", label: "Iniciou a finalização" },
+  { site: "whatsapp", meta: "Contact", ga4: "generate_lead", ads: "whatsapp", label: "Chamou no WhatsApp" },
+  { site: "purchase", meta: "Purchase", ga4: "purchase", ads: "purchase", label: "Fechou o pedido (Pix/cartão)" },
 ];
 
 export function conversionEvent(siteKind: string) {
   return CONVERSION_EVENTS.find((event) => event.site === siteKind) || CONVERSION_EVENTS[0];
+}
+
+/* ---------------------------------------------------- Google Ads (conversões) */
+
+/* Porta de Channels.googleAdsConversionRows / toGoogleAdsCsv: as conversões
+   do site (compra e, se cadastrada, WhatsApp) voltam ao Google Ads pelo id
+   do clique guardado na sessão (gclid/gbraid/wbraid). */
+export const GOOGLE_ADS_COLUMNS = ["Google Click ID", "Conversion Name", "Conversion Time", "Conversion Value", "Conversion Currency", "Order ID"];
+export const GOOGLE_ADS_DEFAULTS = { conversionName: "Compra no site", whatsappName: "", currency: "BRL", timeZone: "-03:00" };
+
+export type GoogleAdsOptions = Partial<typeof GOOGLE_ADS_DEFAULTS>;
+
+export type GoogleAdsSourceEvent = {
+  id?: number | string | null;
+  kind: string;
+  occurred_at: string | number;
+  value?: number | string | null;
+  category?: string | null;
+  order_id?: string | null;
+  utm?: Record<string, unknown> | null;
+  gclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
+};
+
+export type GoogleAdsRow = {
+  "Google Click ID": string;
+  "Conversion Name": string;
+  "Conversion Time": string;
+  "Conversion Value": string;
+  "Conversion Currency": string;
+  "Order ID": string;
+  gbraid: string;
+  wbraid: string;
+  kind: string;
+  event_id: number | string | null;
+};
+
+/* "2026-09-19 14:03:00-03:00" — horário de Brasília (deslocamento fixo). */
+export function googleAdsTime(value: string | number, timeZone?: string): string {
+  const at = typeof value === "number" ? value : Date.parse(String(value || ""));
+  if (!Number.isFinite(at)) return "";
+  const offset = /^[+-]\d{2}:\d{2}$/.test(String(timeZone || "")) ? String(timeZone) : GOOGLE_ADS_DEFAULTS.timeZone;
+  const sign = offset.startsWith("-") ? -1 : 1;
+  const minutes = sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
+  return `${new Date(at + minutes * 60000).toISOString().slice(0, 19).replace("T", " ")}${offset}`;
+}
+
+export function googleAdsConversionRows(events: GoogleAdsSourceEvent[], options?: GoogleAdsOptions | null): GoogleAdsRow[] {
+  const opts = Object.assign({}, GOOGLE_ADS_DEFAULTS, options || {});
+  const names: Record<string, string> = {
+    purchase: opts.conversionName || GOOGLE_ADS_DEFAULTS.conversionName,
+    whatsapp: opts.whatsappName || "",
+  };
+  const rows: GoogleAdsRow[] = [];
+  (events || []).forEach((event) => {
+    const name = names[event && event.kind];
+    if (!name) return;
+    const utm = (event && event.utm) || {};
+    const clickId = String(utm.gclid || event.gclid || "").trim();
+    const gbraid = String(utm.gbraid || event.gbraid || "").trim();
+    const wbraid = String(utm.wbraid || event.wbraid || "").trim();
+    if (!clickId && !gbraid && !wbraid) return;
+    const time = googleAdsTime(event.occurred_at, opts.timeZone);
+    if (!time) return;
+    const value = Math.round((Number(event.value) || 0) * 100) / 100;
+    rows.push({
+      "Google Click ID": clickId,
+      "Conversion Name": name,
+      "Conversion Time": time,
+      "Conversion Value": value > 0 ? value.toFixed(2) : "",
+      "Conversion Currency": value > 0 ? String(opts.currency || "BRL") : "",
+      "Order ID": String(event.order_id || (event.kind === "purchase" ? event.category : "") || "").trim().slice(0, 64),
+      gbraid,
+      wbraid,
+      kind: String(event.kind),
+      event_id: event.id !== undefined ? (event.id as number | string | null) : null,
+    });
+  });
+  return rows;
+}
+
+export function toGoogleAdsCsv(rows: GoogleAdsRow[]): string {
+  const escape = (value: unknown) => {
+    const text = String(value ?? "");
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const lines = [GOOGLE_ADS_COLUMNS.join(",")];
+  (rows || []).filter((row) => row["Google Click ID"]).forEach((row) => {
+    lines.push(GOOGLE_ADS_COLUMNS.map((column) => escape((row as Record<string, unknown>)[column])).join(","));
+  });
+  return lines.join("\n");
 }

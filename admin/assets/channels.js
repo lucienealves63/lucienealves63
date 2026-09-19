@@ -11,6 +11,8 @@
      • Google Merchant Center — feed de produtos (Shopping, anúncios)
      • Meta Ads              — catálogo + Conversions API (Pixel)
      • GA4                   — Measurement Protocol (audiência e conversões)
+     • Google Ads            — conversões do site devolvidas ao anúncio
+                               (gclid → upload de conversões / CSV)
      • Mercado Livre, Shopee, Amazon, Magazine Luiza e Americanas —
        os marketplaces mais usados no varejo de moda brasileiro
 
@@ -128,6 +130,31 @@
       policy: { ...DEFAULT_POLICY },
     },
     {
+      id: "google-ads",
+      name: "Google Ads",
+      initials: "GADS",
+      kind: KINDS.MEASUREMENT,
+      role: "Conversões do site de volta ao anúncio (gclid) — API ou CSV de upload",
+      fee: 0,
+      docs: "https://developers.google.com/google-ads/api/docs/conversions/upload-clicks",
+      secrets: [
+        { name: "GOOGLE_ADS_DEVELOPER_TOKEN", label: "Developer token da API (Centro de API do MCC)" },
+        { name: "GOOGLE_ADS_CLIENT_ID", label: "OAuth client ID (Google Cloud)" },
+        { name: "GOOGLE_ADS_CLIENT_SECRET", label: "OAuth client secret" },
+        { name: "GOOGLE_ADS_REFRESH_TOKEN", label: "Refresh token da conta que anuncia" },
+      ],
+      fields: [
+        { key: "customer_id", label: "ID do cliente (só números)", placeholder: "1234567890", required: true },
+        { key: "conversion_name", label: "Nome da ação de conversão (compra)", placeholder: "Compra no site", required: true },
+        { key: "conversion_action_id", label: "ID da ação de conversão (upload pela API)", placeholder: "987654321" },
+        { key: "whatsapp_conversion_name", label: "Ação de conversão do WhatsApp (opcional)", placeholder: "Pedido pelo WhatsApp" },
+        { key: "login_customer_id", label: "Conta de administrador (MCC)", placeholder: "0987654321" },
+      ],
+      operations: ["conversion.upload", "conversion.export", "conversion.status"],
+      feedFormat: "csv",
+      policy: { ...DEFAULT_POLICY },
+    },
+    {
       id: "mercadolivre",
       name: "Mercado Livre",
       initials: "ML",
@@ -187,7 +214,7 @@
       ],
       fields: [
         { key: "seller_id", label: "Seller ID", placeholder: "A1B2C3D4E5F6G7", required: true },
-        { key: "marketplace_id", label: "Marketplace", placeholder: "A1AM78C64UM0Y8 (Brasil)", required: true },
+        { key: "marketplace_id", label: "Marketplace", placeholder: "A2Q3Y263D00KWC (Brasil)", required: true },
         { key: "sku_prefix", label: "Prefixo de SKU", placeholder: "C18-" },
       ],
       operations: ["catalog.push", "price.update", "stock.update", "order.pull"],
@@ -237,17 +264,88 @@
     },
   ];
 
-  /* Eventos do site (assets/js/analytics.js) → Meta Conversions API e GA4.
-     É o mapa usado pela Edge Function marketing-events e exibido no painel. */
+  /* Eventos do site (assets/js/analytics.js) → Meta Conversions API, GA4 e
+     Google Ads. É o mapa usado pelas Edge Functions marketing-events e
+     google-ads-conversions e exibido no painel. "ads" é a ação de conversão
+     do Google Ads (só as saídas que fecham venda voltam ao anúncio). */
   const CONVERSION_EVENTS = [
-    { site: "page_view", meta: "PageView", ga4: "page_view", label: "Página vista" },
-    { site: "product_view", meta: "ViewContent", ga4: "view_item", label: "Produto visualizado" },
-    { site: "category_view", meta: "ViewCategory", ga4: "view_item_list", label: "Categoria visualizada" },
-    { site: "search", meta: "Search", ga4: "search", label: "Busca no site" },
-    { site: "add_to_cart", meta: "AddToCart", ga4: "add_to_cart", label: "Adicionou ao carrinho" },
-    { site: "checkout_intent", meta: "InitiateCheckout", ga4: "begin_checkout", label: "Iniciou a finalização" },
-    { site: "whatsapp", meta: "Contact", ga4: "generate_lead", label: "Chamou no WhatsApp" },
+    { site: "page_view", meta: "PageView", ga4: "page_view", ads: "", label: "Página vista" },
+    { site: "product_view", meta: "ViewContent", ga4: "view_item", ads: "", label: "Produto visualizado" },
+    { site: "category_view", meta: "ViewCategory", ga4: "view_item_list", ads: "", label: "Categoria visualizada" },
+    { site: "search", meta: "Search", ga4: "search", ads: "", label: "Busca no site" },
+    { site: "add_to_cart", meta: "AddToCart", ga4: "add_to_cart", ads: "", label: "Adicionou ao carrinho" },
+    { site: "checkout_intent", meta: "InitiateCheckout", ga4: "begin_checkout", ads: "", label: "Iniciou a finalização" },
+    { site: "whatsapp", meta: "Contact", ga4: "generate_lead", ads: "whatsapp", label: "Chamou no WhatsApp" },
+    { site: "purchase", meta: "Purchase", ga4: "purchase", ads: "purchase", label: "Fechou o pedido (Pix/cartão)" },
   ];
+
+  /* ------------------------------------------------ Google Ads (conversões) */
+
+  /* Colunas do modelo "Conversões de cliques" do Google Ads (Objetivos →
+     Conversões → Uploads). O mesmo arquivo serve para o upload manual e
+     para a API (uploadClickConversions). */
+  const GOOGLE_ADS_COLUMNS = ["Google Click ID", "Conversion Name", "Conversion Time", "Conversion Value", "Conversion Currency", "Order ID"];
+  const GOOGLE_ADS_DEFAULTS = { conversionName: "Compra no site", whatsappName: "", currency: "BRL", timeZone: "-03:00" };
+
+  /* "2026-09-19 14:03:00-03:00" — horário de Brasília (sem horário de verão
+     desde 2019, então o deslocamento é fixo). */
+  function googleAdsTime(value, timeZone) {
+    const at = typeof value === "number" ? value : Date.parse(String(value || ""));
+    if (!Number.isFinite(at)) return "";
+    const offset = /^[+-]\d{2}:\d{2}$/.test(String(timeZone || "")) ? String(timeZone) : GOOGLE_ADS_DEFAULTS.timeZone;
+    const sign = offset.startsWith("-") ? -1 : 1;
+    const minutes = sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
+    return `${new Date(at + minutes * 60000).toISOString().slice(0, 19).replace("T", " ")}${offset}`;
+  }
+
+  /* Eventos do site com id de clique → linhas de conversão. Entram a compra
+     (purchase) e, quando a loja cadastra a ação, o WhatsApp. Sem gclid,
+     gbraid ou wbraid o Google não tem a que anúncio atribuir — a linha
+     não sai. */
+  function googleAdsConversionRows(events, options) {
+    const opts = Object.assign({}, GOOGLE_ADS_DEFAULTS, options || {});
+    const names = { purchase: opts.conversionName || GOOGLE_ADS_DEFAULTS.conversionName, whatsapp: opts.whatsappName || "" };
+    const rows = [];
+    (events || []).forEach((event) => {
+      const name = names[event && event.kind];
+      if (!name) return;
+      const utm = (event && event.utm) || {};
+      const clickId = String(utm.gclid || event.gclid || "").trim();
+      const gbraid = String(utm.gbraid || event.gbraid || "").trim();
+      const wbraid = String(utm.wbraid || event.wbraid || "").trim();
+      if (!clickId && !gbraid && !wbraid) return;
+      const time = googleAdsTime(event.occurred_at, opts.timeZone);
+      if (!time) return;
+      const value = Math.round((Number(event.value) || 0) * 100) / 100;
+      rows.push({
+        "Google Click ID": clickId,
+        "Conversion Name": name,
+        "Conversion Time": time,
+        "Conversion Value": value > 0 ? value.toFixed(2) : "",
+        "Conversion Currency": value > 0 ? String(opts.currency || "BRL") : "",
+        "Order ID": String(event.order_id || (event.kind === "purchase" ? event.category : "") || "").trim().slice(0, 64),
+        gbraid,
+        wbraid,
+        kind: String(event.kind),
+        event_id: event.id !== undefined ? event.id : null,
+      });
+    });
+    return rows;
+  }
+
+  /* Arquivo CSV no formato aceito pelo Google Ads. Linhas sem gclid, mas
+     com gbraid/wbraid (iOS), ficam de fora do CSV — só a API as aceita. */
+  function toGoogleAdsCsv(rows) {
+    const escape = (value) => {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const lines = [GOOGLE_ADS_COLUMNS.join(",")];
+    (rows || []).filter((row) => row["Google Click ID"]).forEach((row) => {
+      lines.push(GOOGLE_ADS_COLUMNS.map((column) => escape(row[column])).join(","));
+    });
+    return lines.join("\n");
+  }
 
   /* ------------------------------------------------------------- consultas */
 
@@ -347,6 +445,10 @@
   function catalogFromInventory(inventory, options) {
     const opts = options || {};
     const siteUrl = String(opts.siteUrl || "").replace(/\/$/, "");
+    /* Estoque publicado: com storeId, só o saldo dessa loja conta (o estoque
+       central "Ecommerce C18"); os itens continuam listados mesmo sem saldo
+       nela. Sem storeId soma todas as lojas. */
+    const storeId = String(opts.storeId || "").trim();
     const groups = new Map();
 
     (Array.isArray(inventory) ? inventory : []).forEach((row) => {
@@ -373,7 +475,8 @@
       }
       const item = groups.get(key);
       const quantity = Math.max(0, Number(row.quantity || 0) - Number(row.reserved || 0));
-      item.stock += quantity;
+      const rowStore = String(row.storeId || row.store_id || "").trim();
+      if (!storeId || rowStore === storeId) item.stock += quantity;
       item.price = item.price || Number(row.price) || 0;
       item.skus.push(String(row.code || reference));
       if (row.color && !item.colors.includes(row.color)) item.colors.push(row.color);
@@ -413,6 +516,8 @@
           "image_link", "brand", "google_product_category", "item_group_id", "sale_price", "visibility"];
       case "ga4":
         return ["event_name", "client_id", "timestamp_micros", "items", "value", "currency"];
+      case "google-ads":
+        return GOOGLE_ADS_COLUMNS.slice();
       case "mercadolivre":
         return ["title", "category_id", "price", "currency_id", "available_quantity", "condition",
           "description", "picture_source", "attributes", "shipping"];
@@ -639,6 +744,8 @@ ${items}
     CHANNELS,
     CONVERSION_EVENTS,
     DEFAULT_POLICY,
+    GOOGLE_ADS_COLUMNS,
+    GOOGLE_ADS_DEFAULTS,
     KINDS,
     KIND_LABELS,
     LISTING_STATUS_LABELS,
@@ -650,6 +757,8 @@ ${items}
     channelById,
     feedColumns,
     formatPrice,
+    googleAdsConversionRows,
+    googleAdsTime,
     listingStatus,
     marketplaces,
     normalizePolicy,
@@ -659,6 +768,7 @@ ${items}
     stockForChannel,
     suggestedMarkup,
     toCsv,
+    toGoogleAdsCsv,
     toGoogleXml,
     toTsv,
     validateFeedRow,

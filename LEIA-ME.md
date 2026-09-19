@@ -50,6 +50,7 @@ Paleta: **preto · branco · cinza**.
 │   └── ver docs/DASHBOARD-OPERACOES.md
 ├── docs/
 │   ├── DASHBOARD-OPERACOES.md
+│   ├── CREDENCIAIS.md    Todas as credenciais: onde obter e onde cadastrar
 │   └── FRETE-ENTREGAS.md Implantação das transportadoras e do frete
 └── supabase/             Migrations, RPCs e Edge Functions
     ├── migrations/…_analytics_audience.sql   audiência (eventos + RPCs)
@@ -164,6 +165,24 @@ Os **endereços e WhatsApp reais** das 6 unidades estão em `STORES`, dentro de
 - Nilópolis — Mirandela
 - Queimados — Centro
 
+### 📦 Estoque central: Ecommerce C18
+
+A operação trabalha com **estoque único**: todo o saldo fica na loja virtual
+**Ecommerce C18**, o estoque central — é dela que saem o site, o catálogo
+publicado nos canais (Google Merchant, Meta Ads, Google Ads e marketplaces) e
+a baixa de cada venda. As seis lojas físicas **não têm saldo próprio**:
+funcionam como pontos de retirada das compras do site (o pedido guarda a loja
+de retirada escolhida pela cliente).
+
+- No painel de demonstração a loja já vem como estoque central (constante
+  `STOCK_STORE_ID` em `admin/assets/admin.js`); a importação da Alterdata e o
+  movimento manual entram sempre nela;
+- No Supabase, `202609210002_estoque_central_ecommerce.sql` cria a loja
+  (`ECOMMERCE-C18`, `kind = 'ecommerce'`), marca-a em `stores.fulfills_stock`,
+  transfere para ela qualquer saldo que já estivesse em outra loja e faz
+  `channel_catalog()` publicar o saldo dela. Para trocar a loja do estoque:
+  `select public.set_stock_store('CODIGO');` (somente admin).
+
 ---
 
 ## 🛍️ Como funciona a compra
@@ -256,9 +275,21 @@ ferramenta de terceiros:
 - **origem do tráfego** — direto, busca orgânica, redes sociais, e-mail,
   parceiros, tráfego pago e campanha com UTM (incluindo `gclid`, `fbclid` e
   `ttclid` de clique em anúncio), além dos sites de referência;
+- **banners mais clicados** — hero da home e banners de categoria: quantas
+  vezes cada arte apareceu, quantas foi clicada (CTR), sessões que clicaram,
+  quantas converteram e qual botão da arte levou mais clique (o hero recebe
+  `data-banner-id/-name/-position`; o `site-config.js` troca pelo banner ativo
+  do painel e avisa a medição com o evento `c18:banner-applied`);
 - **jornada de compra** — funil visitou → viu produto → adicionou →
-  finalizou → chamou no WhatsApp;
+  iniciou a finalização → **fechou o pedido (Pix/cartão)** → chamou no
+  WhatsApp (o checkout registra `checkout_intent` ao abrir e `purchase` ao
+  criar o pedido; `conta.html` também entra na audiência);
 - **dispositivos, cidades e profundidade de rolagem** por página.
+
+Os ids de clique dos anúncios (`gclid`, `gbraid`, `wbraid` do Google Ads e
+`fbclid` da Meta) ficam guardados na sessão junto da UTM — são ids do clique,
+não da pessoa — e é por eles que a venda volta ao anúncio (canal Google Ads
+abaixo).
 
 Como funciona:
 
@@ -284,6 +315,7 @@ um varejo de moda usa no Brasil:
 | **Google Merchant Center** | feed XML (RSS 2.0 / Content API) com `google_product_category`, `identifier_exists` e `custom_label_0..2`; URL de coleta primária na função `google-merchant-feed` |
 | **Meta Ads** | catálogo CSV + Conversions API (Pixel) com deduplicação por `event_id`; função `marketing-events` |
 | **GA4** | Measurement Protocol (audiência e conversões do site) |
+| **Google Ads** | as vendas voltam ao anúncio pelo `gclid`: função `google-ads-conversions` faz o upload de conversões de clique pela API (`uploadClickConversions`, com `orderId` para não duplicar) e o painel gera o **CSV no modelo de upload** do Google Ads (Objetivos → Conversões → Uploads) para quem ainda não tem developer token; compra sempre, WhatsApp quando a ação é cadastrada |
 | **Mercado Livre** | Items API (anúncio, preço, estoque e pedidos) — comissão 14% |
 | **Shopee** | Open Platform v2 com assinatura HMAC-SHA256 — comissão 14% |
 | **Amazon** | SP-API (LWA + AWS SigV4), feed TSV — comissão 15% |
@@ -297,16 +329,20 @@ preço psicológico `,90`, reserva unidades para não vender a última peça em
 dois canais ao mesmo tempo (`maxPublished` e `minPrice` inclusos) e mostra
 o preço do site ao lado do preço do canal.
 
-Depois vem a **prévia do feed** com as colunas exatas de cada canal, as
-pendências de cada item (sem GTIN, sem imagem pública, título longo…) e o
-download (XML no Google, TSV na Amazon, CSV nos demais). O botão *Publicar*
+O estoque publicado é sempre o do **Ecommerce C18** (estoque central) — o
+aviso da página e o resumo do feed mostram isso; as lojas físicas são pontos
+de retirada e não têm saldo próprio. Depois vem a **prévia do feed** com as
+colunas exatas de cada canal, as pendências de cada item (sem GTIN, sem
+imagem pública, título longo, sem estoque…) e o download (XML no Google, TSV
+na Amazon, CSV nos demais). O botão *Publicar*
 grava as listagens e enfileira o envio; quem fala com o provedor é a Edge
 Function `channel-publish`, usando os segredos do ambiente.
 
 > **Segredos nunca passam pelo navegador.** O painel guarda só
 > identificadores públicos (Merchant ID, Pixel ID, Seller ID, Shop ID…) em
 > `sales_channels.config`. Tokens e chaves ficam nas Supabase Secrets —
-> `.env.example` lista todas. Sem segredo configurado o canal aparece como
+> `.env.example` lista todas e [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
+> diz onde obter cada uma. Sem segredo configurado o canal aparece como
 > *Aguardando credenciais* e a publicação é só prévia.
 
 Regras compartilhadas: `admin/assets/channels.js` (painel) e
@@ -471,9 +507,9 @@ ser extraída diretamente dos arquivos.
       psicológico, reserva de estoque) com prévia e download do feed
 - [x] Banner de categoria opcional (uma arte por categoria, sem mudar o
       layout quando não há banner ativo)
-- [x] Estoque único: todo o saldo fica na **loja de estoque central**
-      (padrão: Nova Iguaçu — Calçadão) e a troca de loja é feita em um lugar
-      só — as demais unidades continuam como pontos de retirada
+- [x] Estoque único no **Ecommerce C18** (loja virtual = estoque central):
+      é dele que saem site, feeds e marketplaces, e a troca de loja é feita
+      em um lugar só — as seis lojas físicas são pontos de retirada
 - [x] Suíte de testes com o Node puro: `node --test tests/*.test.js`
 
 ## 🔜 Próximos passos sugeridos
@@ -485,9 +521,19 @@ ser extraída diretamente dos arquivos.
       real — passo a passo em `docs/DASHBOARD-OPERACOES.md`
 - [ ] Cadastrar as Supabase Secrets dos canais (`.env.example`), habilitar
       cada canal no painel e agendar as funções `marketing-events` (flush de
-      conversões) e `channel-publish` (fila de publicação)
+      conversões), `google-ads-conversions` (upload por `gclid`) e
+      `channel-publish` (fila de publicação)
+- [ ] No Google Ads, criar a ação de conversão "Compra no site" (importação
+      de cliques) e, enquanto a API não é liberada, subir o CSV gerado pelo
+      painel em Objetivos → Conversões → Uploads
 - [ ] Cadastrar a URL do feed `google-merchant-feed` no Merchant Center e
-      pedir a revisão do catálogo; homologar preço/estoque nos marketplaces
+      pedir a revisão do catálogo
+- [ ] **Credenciais** — última etapa antes de ligar tudo: a lista completa,
+      com onde obter cada uma e onde cadastrar, está em
+      [`docs/CREDENCIAIS.md`](docs/CREDENCIAIS.md)
+- [ ] Marketplaces (Mercado Livre, Shopee, Amazon, Magalu, Americanas): só
+      quando houver conta de vendedor — a integração já está pronta e a
+      importação dos pedidos entra nessa hora
 - [ ] Revisar textos e preços com a equipe da Censura 18
 - [ ] Configurar o domínio próprio no GitHub Pages (e ligar "Enforce HTTPS")
 - [ ] Integrar um gateway de pagamento, se fizer sentido
@@ -497,7 +543,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 118 testes
+node --test tests/*.test.js   # 128 testes (Node puro, sem dependências)
 # ou, por arquivo:
 node --test tests/analytics.test.js tests/audience.test.js \
   tests/channels.test.js tests/admin-panel.test.js
@@ -506,24 +552,33 @@ node --test tests/analytics.test.js tests/audience.test.js \
 Os testes cobrem o contrato do checkout (vendedor, cupom, cartão presente e
 parcelamento), os cupons por escopo, a página de cartão presente, o
 `site-config` nos modos static/demo (banner, paleta e os números de
-estatística do hero), o importador da planilha Alterdata e as entregas de
+estatística do hero), o importador da planilha Alterdata, o frete, o
+cadastro de clientes, o pedido do checkout (Pix EMV) e as entregas de
 crescimento:
 
 - `tests/analytics.test.js` — classificação de origem (UTM, `gclid`/`fbclid`,
-  clique interno), dispositivos, normalização de caminho, faixas da página,
-  grade do mapa de calor, agregação do relatório (inclusive a atribuição da
-  conversão à origem da sessão) e a base de exemplo determinística;
+  clique interno), ids de clique guardados na sessão, dispositivos,
+  normalização de caminho, faixas da página, grade do mapa de calor, agregação
+  do relatório (inclusive a atribuição da conversão à origem da sessão, o
+  ranking de banners e a compra do checkout) e a base de exemplo
+  determinística;
 - `tests/audience.test.js` — formatação em português, cartões com comparativo,
   evolução diária, páginas, origens, regiões de calor, pontos quentes,
-  rolagem, funil e a renderização ponta a ponta de todas as seções;
+  rolagem, banners mais clicados, funil (com a etapa da compra) e a
+  renderização ponta a ponta de todas as seções;
 - `tests/channels.test.js` — política de preço/estoque, agrupamento do
-  catálogo, colunas e pendências de cada canal, formatos CSV/TSV/XML, a
+  catálogo (com o saldo publicado só do estoque central Ecommerce C18),
+  colunas e pendências de cada canal, formatos CSV/TSV/XML, o CSV de
+  conversões do Google Ads (horário de Brasília, só com id de clique), a
   identidade entre o painel (JS) e o servidor (TypeScript) **e a coerência do
-  seed do banco com o cadastro do painel** (ids, nomes, formatos, markup e
-  campos obrigatórios);
+  banco com o painel** (seed dos canais — ids, nomes, formatos, markup e
+  campos obrigatórios — e a migration do estoque central, lendo todas as
+  migrations);
 - `tests/admin-panel.test.js` — o painel inteiro carregado num DOM mínimo
   (`tests/helpers/admin-dom.js`), na mesma ordem de scripts do
   `admin/index.html`: páginas de Audiência e Canais desenhadas, troca de
-  período e de página do mapa de calor, feed que muda de colunas por canal,
-  modal de configuração sem expor segredo, publicação simulada, campo de
-  categoria do banner e a prova de que o `/admin` não mede a si mesmo.
+  período e de página do mapa de calor, tabela de banners mais clicados, feed
+  que muda de colunas por canal e publica só o saldo do Ecommerce C18, modal
+  de configuração sem expor segredo,
+  publicação simulada, CSV de conversões do Google Ads, campo de categoria do
+  banner e a prova de que o `/admin` não mede a si mesmo.

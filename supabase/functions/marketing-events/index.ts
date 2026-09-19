@@ -21,6 +21,9 @@ import { ga4Client, metaClient, sha256Hex } from "../_shared/marketing.ts";
  *
  * Segredos: META_PIXEL_ID, META_CAPI_ACCESS_TOKEN, META_TEST_EVENT_CODE,
  *           GA4_MEASUREMENT_ID, GA4_API_SECRET.
+ * A compra (purchase) sai como Purchase/purchase com o número do pedido
+ * (order_id / transaction_id). O Google Ads é atendido pela função irmã
+ * google-ads-conversions (upload por gclid).
  *
  * Privacidade: nenhum dado pessoal é enviado. O visitante vira um
  * external_id = SHA-256 do id de sessão aleatório do site; não há e-mail,
@@ -85,7 +88,12 @@ async function buildMetaEvent(event: SiteEvent): Promise<Record<string, unknown>
     customData.content_ids = [String(event.product_id)];
     customData.content_type = "product";
   }
-  if (event.category) customData.content_category = String(event.category);
+  /* na compra, "category" guarda o número do pedido (assets/js/analytics.js) */
+  if (event.kind === "purchase") {
+    if (event.category) customData.order_id = String(event.category);
+  } else if (event.category) {
+    customData.content_category = String(event.category);
+  }
   const query = event.meta?.query || event.meta?.term;
   if (query) customData.search_string = String(query);
 
@@ -130,7 +138,11 @@ function buildGa4Event(event: SiteEvent): Record<string, unknown> {
   if (event.product_id) {
     params.items = [{ item_id: String(event.product_id), item_name: String(event.meta?.title || event.product_id) }];
   }
-  if (event.category) params.item_list_name = String(event.category);
+  if (event.kind === "purchase") {
+    if (event.category) params.transaction_id = String(event.category);
+  } else if (event.category) {
+    params.item_list_name = String(event.category);
+  }
   const query = event.meta?.query || event.meta?.term;
   if (query) params.search_term = String(query);
   params.page_location = `${SITE_URL}${event.path || "/"}`;
@@ -168,7 +180,7 @@ async function sendGa4(events: SiteEvent[]): Promise<{ sent: number; errors: str
 
 const FORWARDABLE_KINDS = [
   "page_view", "product_view", "category_view", "search",
-  "add_to_cart", "checkout_intent", "whatsapp",
+  "add_to_cart", "checkout_intent", "whatsapp", "purchase",
 ];
 
 async function flush(limit: number) {

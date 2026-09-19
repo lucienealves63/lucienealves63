@@ -93,6 +93,30 @@ test("agrupa SKU por loja em item de catálogo (saldo disponível somado)", () =
   assert.equal(Channels.catalogFromInventory([{ code: "X" }, { reference: "Y", description: "" }]).length, 0);
 });
 
+test("estoque central: o feed publica só o saldo do Ecommerce C18, mas lista o catálogo inteiro", () => {
+  const perStore = [
+    { reference: "CAM-001", code: "SKU-1", description: "Camiseta Oversized Preta", price: 149.9, quantity: 20, reserved: 2, size: "M", storeId: "ecommerce-c18" },
+    { reference: "CAM-001", code: "SKU-1", description: "Camiseta Oversized Preta", price: 149.9, quantity: 5, reserved: 0, size: "M", storeId: "ni-calcadao" },
+    { reference: "CAM-001", code: "SKU-2", description: "Camiseta Oversized Preta", price: 149.9, quantity: 7, reserved: 0, size: "G", store_id: "caxias" },
+    { reference: "BONE-9", code: "SKU-3", description: "Boné Estruturado", price: 39.9, quantity: 9, reserved: 0, storeId: "queimados" },
+  ];
+
+  const central = Channels.catalogFromInventory(perStore, { siteUrl: SITE_URL, storeId: "ecommerce-c18" });
+  assert.equal(central.length, 2, "os itens continuam listados mesmo sem saldo no central");
+  const camiseta = central.find((item) => item.sku === "CAM-001");
+  assert.equal(camiseta.stock, 18, "20 − 2 reservadas no Ecommerce C18; as lojas físicas não entram");
+  assert.deepEqual(camiseta.sizes, ["M", "G"], "variações vêm de todas as lojas");
+  const bone = central.find((item) => item.sku === "BONE-9");
+  assert.equal(bone.stock, 0, "só existe em loja física → sem saldo publicável");
+  assert.equal(bone.availability, "out of stock");
+
+  /* sem loja central marcada, volta a somar todas as lojas */
+  const all = Channels.catalogFromInventory(perStore, { siteUrl: SITE_URL });
+  assert.equal(all.find((item) => item.sku === "CAM-001").stock, 30);
+  assert.equal(all.find((item) => item.sku === "BONE-9").stock, 9);
+  assert.equal(Channels.catalogFromInventory(perStore, { siteUrl: SITE_URL, storeId: "" }).find((item) => item.sku === "BONE-9").stock, 9);
+});
+
 /* --------------------------------------------------------------------- feeds */
 
 test("cada canal tem as colunas da sua especificação", () => {
@@ -231,8 +255,14 @@ test("exporta nos formatos CSV, TSV e XML do Google", () => {
 
 test("canais prontos: mídia, medição e os marketplaces mais usados", () => {
   const ids = Channels.CHANNELS.map((channel) => channel.id);
-  ["google-merchant", "meta-ads", "ga4", "mercadolivre", "shopee", "amazon", "magalu", "americanas"]
+  ["google-merchant", "meta-ads", "ga4", "google-ads", "mercadolivre", "shopee", "amazon", "magalu", "americanas"]
     .forEach((id) => assert.ok(ids.includes(id), `${id} precisa estar pronto`));
+  assert.equal(Channels.channelById("google-ads").kind, "measurement");
+  assert.equal(Channels.channelById("google-ads").feedFormat, "csv");
+  assert.deepEqual(
+    Channels.channelById("google-ads").fields.filter((field) => field.required).map((field) => field.key),
+    ["customer_id", "conversion_name"],
+  );
 
   assert.deepEqual(Channels.marketplaces().map((channel) => channel.id), [
     "mercadolivre", "shopee", "amazon", "magalu", "americanas",
@@ -256,17 +286,75 @@ test("canais prontos: mídia, medição e os marketplaces mais usados", () => {
   });
 });
 
-test("mapa de conversões liga o evento do site à Meta e ao GA4", () => {
+test("mapa de conversões liga o evento do site à Meta, ao GA4 e ao Google Ads", () => {
   assert.deepEqual(Channels.CONVERSION_EVENTS.map((event) => event.site), [
-    "page_view", "product_view", "category_view", "search", "add_to_cart", "checkout_intent", "whatsapp",
+    "page_view", "product_view", "category_view", "search", "add_to_cart", "checkout_intent", "whatsapp", "purchase",
   ]);
   const cart = Channels.CONVERSION_EVENTS.find((event) => event.site === "add_to_cart");
   assert.equal(cart.meta, "AddToCart");
   assert.equal(cart.ga4, "add_to_cart");
+  const purchase = Channels.CONVERSION_EVENTS.find((event) => event.site === "purchase");
+  assert.equal(purchase.meta, "Purchase");
+  assert.equal(purchase.ga4, "purchase");
+  assert.equal(purchase.ads, "purchase");
+  /* só as saídas que fecham venda voltam ao Google Ads */
+  assert.deepEqual(Channels.CONVERSION_EVENTS.filter((event) => event.ads).map((event) => event.site), ["whatsapp", "purchase"]);
   Channels.CONVERSION_EVENTS.forEach((event) => {
     assert.ok(event.label, `${event.site} precisa de rótulo`);
     assert.ok(event.meta && event.ga4);
+    assert.equal(typeof event.ads, "string");
   });
+});
+
+/* -------------------------------------------------- Google Ads (conversões) */
+
+test("conversões para o Google Ads saem só com id de clique, no horário de Brasília", () => {
+  const events = [
+    { id: 1, kind: "purchase", occurred_at: "2026-09-19T17:03:00.000Z", value: 189.9, category: "C18-1001", utm: { source: "googleads", gclid: "Cj0KCQjw_abc-123" } },
+    { id: 2, kind: "purchase", occurred_at: "2026-09-19T18:00:00.000Z", value: 99.9, category: "C18-1002", utm: { source: "instagram" } },
+    { id: 3, kind: "whatsapp", occurred_at: "2026-09-19T19:30:00.000Z", utm: { gclid: "Cj0zap" } },
+    { id: 4, kind: "purchase", occurred_at: "2026-09-19T20:00:00.000Z", value: 50, category: "C18-1003", utm: { wbraid: "wb-ios-1" } },
+    { id: 5, kind: "add_to_cart", occurred_at: "2026-09-19T20:00:00.000Z", value: 50, utm: { gclid: "Cj0carrinho" } },
+    { id: 6, kind: "purchase", occurred_at: "data inválida", value: 50, utm: { gclid: "Cj0semdata" } },
+  ];
+
+  assert.equal(Channels.googleAdsTime("2026-09-19T17:03:00.000Z"), "2026-09-19 14:03:00-03:00");
+  assert.equal(Channels.googleAdsTime(Date.UTC(2026, 0, 5, 2, 0, 0)), "2026-01-04 23:00:00-03:00");
+  assert.equal(Channels.googleAdsTime("nada"), "");
+
+  const rows = Channels.googleAdsConversionRows(events);
+  assert.deepEqual(rows.map((row) => row.event_id), [1, 4], "sem gclid ou sem ação cadastrada não sobe");
+  assert.deepEqual(rows[0], {
+    "Google Click ID": "Cj0KCQjw_abc-123",
+    "Conversion Name": "Compra no site",
+    "Conversion Time": "2026-09-19 14:03:00-03:00",
+    "Conversion Value": "189.90",
+    "Conversion Currency": "BRL",
+    "Order ID": "C18-1001",
+    gbraid: "",
+    wbraid: "",
+    kind: "purchase",
+    event_id: 1,
+  });
+  assert.equal(rows[1]["Google Click ID"], "");
+  assert.equal(rows[1].wbraid, "wb-ios-1");
+
+  /* com a ação do WhatsApp cadastrada, o contato também volta ao anúncio */
+  const withZap = Channels.googleAdsConversionRows(events, { conversionName: "Venda C18", whatsappName: "Pedido pelo WhatsApp" });
+  assert.deepEqual(withZap.map((row) => row["Conversion Name"]), ["Venda C18", "Pedido pelo WhatsApp", "Venda C18"]);
+  assert.equal(withZap[1]["Conversion Value"], "", "sem valor, sem moeda");
+  assert.equal(withZap[1]["Conversion Currency"], "");
+
+  /* o CSV segue o modelo de upload e deixa de fora as linhas só com gbraid/wbraid */
+  const csv = Channels.toGoogleAdsCsv(withZap);
+  const lines = csv.split("\n");
+  assert.equal(lines[0], Channels.GOOGLE_ADS_COLUMNS.join(","));
+  assert.equal(lines.length, 3);
+  assert.equal(lines[1], "Cj0KCQjw_abc-123,Venda C18,2026-09-19 14:03:00-03:00,189.90,BRL,C18-1001");
+  assert.ok(Channels.toGoogleAdsCsv(Channels.googleAdsConversionRows([
+    { kind: "purchase", occurred_at: "2026-09-19T17:03:00.000Z", value: 10, category: 'Pedido "especial", loja', utm: { gclid: "Cj0aspas" } },
+  ])).includes('"Pedido ""especial"", loja"'), "aspas e vírgulas escapadas");
+  assert.deepEqual(Channels.feedColumns("google-ads"), Channels.GOOGLE_ADS_COLUMNS);
 });
 
 /* ------------------------------------------------ painel (JS) × servidor (TS) */
@@ -283,9 +371,31 @@ test("o feed do servidor é idêntico à prévia do painel", async () => {
   assert.deepEqual(TS.DEFAULT_POLICY, Channels.DEFAULT_POLICY);
   assert.deepEqual(TS.CONVERSION_EVENTS, Channels.CONVERSION_EVENTS);
 
+  /* conversões do Google Ads: a Edge Function e o painel geram o mesmo CSV */
+  assert.deepEqual(TS.GOOGLE_ADS_COLUMNS, Channels.GOOGLE_ADS_COLUMNS);
+  assert.deepEqual(TS.GOOGLE_ADS_DEFAULTS, Channels.GOOGLE_ADS_DEFAULTS);
+  const adsEvents = [
+    { id: 1, kind: "purchase", occurred_at: "2026-09-19T17:03:00.000Z", value: 189.9, category: "C18-1001", utm: { gclid: "Cj0KCQjw_abc-123" } },
+    { id: 2, kind: "whatsapp", occurred_at: 1789000000000, utm: { gbraid: "gb-1234" } },
+    { id: 3, kind: "purchase", occurred_at: "2026-09-19T18:00:00.000Z", value: 99.9, utm: {} },
+  ];
+  [undefined, { whatsappName: "Pedido pelo WhatsApp" }, { conversionName: "Venda", currency: "BRL", timeZone: "+00:00" }].forEach((options) => {
+    assert.deepEqual(TS.googleAdsConversionRows(adsEvents, options), Channels.googleAdsConversionRows(adsEvents, options));
+    assert.equal(
+      TS.toGoogleAdsCsv(TS.googleAdsConversionRows(adsEvents, options)),
+      Channels.toGoogleAdsCsv(Channels.googleAdsConversionRows(adsEvents, options)),
+    );
+  });
+
   const catalogJs = Channels.catalogFromInventory(INVENTORY, { siteUrl: SITE_URL });
   const catalogTs = TS.catalogFromInventory(INVENTORY, { siteUrl: SITE_URL });
   assert.deepEqual(catalogTs, catalogJs, "catálogo a partir do estoque");
+  const perStore = INVENTORY.map((row, index) => ({ ...row, storeId: index === 0 ? "ecommerce-c18" : "ni-beco" }));
+  assert.deepEqual(
+    TS.catalogFromInventory(perStore, { siteUrl: SITE_URL, storeId: "ecommerce-c18" }),
+    Channels.catalogFromInventory(perStore, { siteUrl: SITE_URL, storeId: "ecommerce-c18" }),
+    "estoque central: mesmo saldo publicado no servidor e no painel",
+  );
 
   const policies = [
     undefined, {}, { markup: 16 }, { markup: 18.5, rounding: "cent" },
@@ -333,10 +443,15 @@ test("o feed do servidor é idêntico à prévia do painel", async () => {
 });
 
 test("o seed do banco tem os mesmos canais do painel", () => {
-  const migration = fs.readFileSync(
-    path.join(__dirname, "..", "supabase", "migrations", "202609180005_sales_channels.sql"),
-    "utf8",
-  );
+  /* o canal nasce na migration em que foi criado (google-ads chegou depois
+     de 202609180005); a leitura junta todas, em ordem, e a última definição
+     de channel_required_fields/channel_feed_format é a que vale */
+  const migrationsDir = path.join(__dirname, "..", "supabase", "migrations");
+  const migration = fs.readdirSync(migrationsDir)
+    .filter((file) => file.endsWith(".sql"))
+    .sort()
+    .map((file) => fs.readFileSync(path.join(migrationsDir, file), "utf8"))
+    .join("\n");
   const seeded = new Map();
   const pattern = /\('([a-z0-9-]+)', '([^']+)', '(feed|marketplace|measurement)', false, 'pending'[\s\S]*?'markup', (\d+)\)[\s\S]*?'(xml|csv|tsv|json)'\)/g;
   let match = pattern.exec(migration);
@@ -367,4 +482,50 @@ test("o seed do banco tem os mesmos canais do painel", () => {
     const expected = channel.fields.filter((field) => field.required).map((field) => field.key);
     assert.deepEqual(requiredFields.get(channel.id) || [], expected, `campos obrigatórios de ${channel.id}`);
   });
+
+  /* formato do feed declarado no banco = formato do painel */
+  const formats = new Map();
+  const formatBlocks = migration.match(/create or replace function public\.channel_feed_format[\s\S]*?\$\$;/g) || [];
+  const lastFormatBlock = formatBlocks[formatBlocks.length - 1] || "";
+  const formatRule = /when '([a-z0-9-]+)' then '(xml|csv|tsv|json)'/g;
+  let format = formatRule.exec(lastFormatBlock);
+  while (format) {
+    formats.set(format[1], format[2]);
+    format = formatRule.exec(lastFormatBlock);
+  }
+  Channels.CHANNELS.forEach((channel) => {
+    assert.equal(formats.get(channel.id) || "json", channel.feedFormat, `formato de ${channel.id} no banco`);
+  });
+});
+
+test("o banco publica nos canais o saldo da loja de estoque (Ecommerce C18)", () => {
+  const migrationsDir = path.join(__dirname, "..", "supabase", "migrations");
+  const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")).sort();
+  const file = files.find((name) => name.includes("estoque_central"));
+  assert.ok(file, "migration do estoque central");
+  const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
+
+  /* a assinatura antiga sai antes da nova para não deixar channel_catalog('url') ambígua */
+  const dropAt = sql.indexOf("drop function if exists public.channel_catalog(text);");
+  const createAt = sql.indexOf("create or replace function public.channel_catalog(");
+  assert.ok(dropAt > -1 && createAt > dropAt, "drop da versão antiga antes da nova");
+  assert.match(sql, /p_store_id uuid default public\.stock_store_id\(\)/, "padrão = loja do estoque único");
+  assert.match(sql, /filter \(where p_store_id is null or v\.store_id = p_store_id\)/, "saldo publicado = loja de estoque (ou todas, se nula)");
+  assert.match(sql, /grant execute on function public\.channel_catalog\(text, uuid\) to authenticated/);
+
+  /* o corpo continua o mesmo do seed dos canais — só o saldo e a assinatura mudam */
+  const seed = fs.readFileSync(path.join(migrationsDir, "202609180005_sales_channels.sql"), "utf8");
+  const body = (text) => text.slice(text.indexOf("returns table ("), text.indexOf("$$;", text.indexOf("returns table (")));
+  const original = body(seed.slice(seed.indexOf("create or replace function public.channel_catalog(")));
+  const updated = body(sql.slice(createAt));
+  const strip = (text) => text.replace(/\s+/g, " ");
+  assert.equal(
+    strip(updated).replace(/-- saldo publicável[^\n]*?coalesce\(sum\(greatest\(0, coalesce\(v\.on_hand, 0\) - coalesce\(v\.reserved, 0\)\)\) filter \(where p_store_id is null or v\.store_id = p_store_id\), 0\)::integer as stock,/, "sum(greatest(0, coalesce(v.on_hand, 0) - coalesce(v.reserved, 0)))::integer as stock,"),
+    strip(original),
+    "colunas e joins do catálogo não mudaram",
+  );
+
+  /* a Edge Function do Merchant continua chamando o RPC só com a URL (o resto tem padrão) */
+  const merchant = fs.readFileSync(path.join(__dirname, "..", "supabase", "functions", "google-merchant-feed", "index.ts"), "utf8");
+  assert.match(merchant, /rpc\("channel_catalog", \{ p_site_url: siteUrl \}\)/);
 });

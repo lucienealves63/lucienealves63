@@ -7,6 +7,8 @@
 
    Canais:
      • Google Merchant Center — Content API v2.1 (OAuth2 com conta de serviço)
+     • Google Ads            — Google Ads API (OAuth2 com refresh token):
+                               upload de conversões de clique (gclid)
      • Meta Ads              — Conversions API (Pixel) + Commerce Manager
      • GA4                   — Measurement Protocol
      • Mercado Livre         — OAuth2 (refresh token) + Items API
@@ -175,6 +177,97 @@ export const googleMerchantClient = {
     return requestJson<Record<string, unknown>>(
       `https://shoppingcontent.googleapis.com/content/v2.1/${encodeURIComponent(merchantId)}/productstatuses?feedLabel=BR`,
       { method: "GET", headers: { Authorization: `Bearer ${token}` } },
+    );
+  },
+};
+
+/* -------------------------------------------------------------- Google Ads */
+
+/* A API do Google Ads não aceita conta de serviço: o acesso é OAuth2 da
+   conta que anuncia (client id/secret do Google Cloud + refresh token
+   gerado uma vez) mais o developer token do Centro de API do MCC. */
+async function googleAdsAccessToken(): Promise<string> {
+  const hit = cached("google-ads");
+  if (hit) return hit;
+  const token = await requestJson<{ access_token: string; expires_in?: number }>(
+    "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: requiredEnv("GOOGLE_ADS_CLIENT_ID"),
+        client_secret: requiredEnv("GOOGLE_ADS_CLIENT_SECRET"),
+        refresh_token: requiredEnv("GOOGLE_ADS_REFRESH_TOKEN"),
+      }).toString(),
+    },
+  );
+  return remember("google-ads", token.access_token, token.expires_in || 3600);
+}
+
+function googleAdsVersion(): string {
+  return (Deno.env.get("GOOGLE_ADS_API_VERSION") || "v23").replace(/[^a-z0-9]/gi, "");
+}
+
+async function googleAdsHeaders(loginCustomerId?: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${await googleAdsAccessToken()}`,
+    "developer-token": requiredEnv("GOOGLE_ADS_DEVELOPER_TOKEN"),
+    "Content-Type": "application/json",
+  };
+  const login = String(loginCustomerId || Deno.env.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") || "").replace(/\D/g, "");
+  if (login) headers["login-customer-id"] = login;
+  return headers;
+}
+
+export type GoogleAdsClickConversion = {
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  conversionAction: string;
+  conversionDateTime: string;
+  conversionValue?: number;
+  currencyCode?: string;
+  orderId?: string;
+};
+
+export const googleAdsClient = {
+  /* Ações de conversão da conta: é o "teste de conexão" do painel e mostra
+     o id que precisa ser cadastrado em conversion_action_id. */
+  async conversionActions(customerId: string, loginCustomerId?: string) {
+    const customer = String(customerId || "").replace(/\D/g, "");
+    return requestJson<Array<{ results?: Array<Record<string, unknown>> }>>(
+      `https://googleads.googleapis.com/${googleAdsVersion()}/customers/${customer}/googleAds:searchStream`,
+      {
+        method: "POST",
+        headers: await googleAdsHeaders(loginCustomerId),
+        body: JSON.stringify({
+          query: "SELECT conversion_action.id, conversion_action.name, conversion_action.status, conversion_action.type "
+            + "FROM conversion_action WHERE conversion_action.status = 'ENABLED' ORDER BY conversion_action.name LIMIT 50",
+        }),
+      },
+    );
+  },
+
+  /* Upload de conversões de clique (gclid/gbraid/wbraid). partialFailure:
+     uma linha inválida não derruba o lote — o erro volta por conversão. */
+  async uploadClickConversions(
+    customerId: string,
+    conversions: GoogleAdsClickConversion[],
+    options?: { loginCustomerId?: string; validateOnly?: boolean },
+  ) {
+    const customer = String(customerId || "").replace(/\D/g, "");
+    return requestJson<Record<string, unknown>>(
+      `https://googleads.googleapis.com/${googleAdsVersion()}/customers/${customer}:uploadClickConversions`,
+      {
+        method: "POST",
+        headers: await googleAdsHeaders(options?.loginCustomerId),
+        body: JSON.stringify({
+          conversions,
+          partialFailure: true,
+          validateOnly: Boolean(options?.validateOnly),
+        }),
+      },
     );
   },
 };

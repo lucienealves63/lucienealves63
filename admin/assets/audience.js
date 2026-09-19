@@ -10,7 +10,9 @@
      • região de calor do site (faixas da página + grade de cliques);
      • origem do tráfego (canal, campanha UTM, sites de referência);
      • dispositivos e cidades;
-     • profundidade de rolagem e pontos quentes.
+     • profundidade de rolagem e pontos quentes;
+     • banners mais clicados (hero da home e banner de categoria);
+     • funil da jornada até o pedido fechado (Pix/cartão) ou o WhatsApp.
 
    As funções retornam string (não tocam no DOM), então rodam nos testes
    com Node puro: node --test tests/audience.test.js
@@ -255,13 +257,39 @@
     </tr>`).join("");
   }
 
+  /* ------------------------------------------------------------ banners */
+
+  /* Ranking dos banners: vistos, clicados, CTR e sessões que clicaram e
+     converteram. report.banners vem do aggregate() (demo) ou da RPC
+     audience_report (chave "banners"). */
+  function bannersTable(report, limit) {
+    const rows = ((report && report.banners) || []).slice(0, Number(limit) || 8);
+    if (!rows.length) return emptyMessage("Nenhum banner visto no período — a home e o catálogo passam a contar assim que houver visitas.", 6);
+    const max = Math.max(...rows.map((row) => Number(row.clicks || 0)), 1);
+    const positionLabel = (row) => row.positionLabel
+      || (Analytics.BANNER_POSITIONS && Analytics.BANNER_POSITIONS[row.position])
+      || row.position || "";
+    return rows.map((row, index) => `<tr>
+      <td><span class="movement-product"><strong>${index + 1}. ${esc(row.name || row.id)}</strong><small>${esc(positionLabel(row))}${row.topTarget ? ` · mais clicado: ${esc(row.topTarget)}` : ""}</small></span></td>
+      <td>${number(row.views)}</td>
+      <td><span class="source-row"><span class="source-row__bar"><i style="width:${Math.round((Number(row.clicks || 0) / max) * 100)}%"></i></span><span class="source-row__value">${number(row.clicks)}</span></span></td>
+      <td>${percent(row.ctr)}</td>
+      <td>${number(row.sessions)}</td>
+      <td>${number(row.conversions)}</td>
+    </tr>`).join("");
+  }
+
   /* -------------------------------------------------------------- funil */
 
+  /* Jornada até a compra: o pedido fecha no checkout (Pix/cartão) ou, no
+     fluxo tradicional da marca, na conversa do WhatsApp — por isso as duas
+     saídas aparecem, uma após a outra, como últimas etapas. */
   const FUNNEL_STEPS = [
     { kind: "page_view", label: "Visitou o site" },
     { kind: "product_view", label: "Viu um produto" },
     { kind: "add_to_cart", label: "Adicionou ao carrinho" },
     { kind: "checkout_intent", label: "Iniciou a finalização" },
+    { kind: "purchase", label: "Fechou o pedido (Pix/cartão)" },
     { kind: "whatsapp", label: "Falou no WhatsApp" },
   ];
 
@@ -303,6 +331,7 @@
   global.C18Audience = {
     AUDIENCE_METRICS,
     FUNNEL_STEPS,
+    bannersTable,
     campaignsTable,
     devicesList,
     duration,

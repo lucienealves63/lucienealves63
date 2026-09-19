@@ -142,6 +142,133 @@ window.C18_SITE = window.C18_SITE || {
       const og = document.querySelector('meta[property="og:image"]');
       if (og) og.setAttribute("content", banner.image_path);
     }
+
+    // Identifica a arte no hero para a audiência (banner visto/clicado)
+    const media = document.getElementById("hero-media");
+    const hero = (media && media.parentElement) || (document.querySelector ? document.querySelector(".hero") : null);
+    tagBanner(hero, banner, "home-hero");
+  }
+
+  /* ------------------------------------------------------------------
+     Audiência dos banners: o contêiner recebe data-banner-* e a página
+     avisa a medição (assets/js/analytics.js) — que só grava depois do
+     aceite no aviso de privacidade. Sem analytics carregado, os atributos
+     ficam no DOM e a medição os lê quando iniciar.
+     ------------------------------------------------------------------ */
+  function tagBanner(element, banner, position) {
+    if (!element || !banner || !element.setAttribute) return;
+    const id = String(banner.id || banner.name || "").trim().slice(0, 80);
+    if (!id) return;
+    const name = String(banner.name || id).trim().slice(0, 120);
+    element.setAttribute("data-banner-id", id);
+    element.setAttribute("data-banner-name", name);
+    element.setAttribute("data-banner-position", position);
+    try {
+      if (typeof CustomEvent === "function" && typeof document.dispatchEvent === "function") {
+        document.dispatchEvent(new CustomEvent("c18:banner-applied", {
+          detail: { id, name, position, category: String(banner.category || "") },
+        }));
+      }
+    } catch (_) { /* medição é opcional */ }
+  }
+
+  /* ------------------------------------------------------------------
+     Banner de categoria (opcional)
+
+     O contêiner já existe em produtos.html e produto.html com o atributo
+     hidden. Quando não há banner ativo para a categoria, ele continua
+     escondido — nada muda no layout. Todo o conteúdo vindo do banco é
+     aplicado com textContent/href (nunca innerHTML), como no hero.
+     ------------------------------------------------------------------ */
+  function safeUrl(value) {
+    const url = String(value || "").trim();
+    if (!url) return "";
+    if (/^\s*(javascript|data|vbscript):/i.test(url)) return "";
+    return url;
+  }
+
+  function applyCategoryBanner(banner) {
+    const box = document.getElementById("category-banner");
+    if (!box) return false;
+    if (!banner || !isLiveNow(banner)) {
+      box.hidden = true;
+      box.removeAttribute("data-category");
+      return false;
+    }
+
+    const image = document.getElementById("category-banner-img");
+    const src = safeUrl(banner.image_path);
+    if (image) {
+      if (src) {
+        image.src = src;
+        image.hidden = false;
+        image.alt = banner.name || "";
+        box.classList.remove("is-missing");
+      } else {
+        image.hidden = true;
+        box.classList.add("is-missing");
+      }
+    }
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof value === "string" ? value.trim() : "";
+      el.textContent = text;
+      el.hidden = !text;
+    };
+
+    const setLink = (id, label, href) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof label === "string" ? label.trim() : "";
+      const url = safeUrl(href);
+      if (!text || !url) { el.hidden = true; return; }
+      el.textContent = text;
+      el.href = url;
+      if (/^https?:\/\//i.test(url)) { el.target = "_blank"; el.rel = "noopener"; }
+      else { el.removeAttribute("target"); el.removeAttribute("rel"); }
+      el.hidden = false;
+    };
+
+    setText("category-banner-kicker", banner.title_top);
+    setText("category-banner-title", banner.title_bottom || banner.name);
+    setText("category-banner-text", banner.body_text);
+    setLink("category-banner-cta", banner.cta_label, banner.cta_url);
+    setLink("category-banner-cta-2", banner.cta_secondary_label, banner.cta_secondary_url);
+
+    box.setAttribute("data-category", String(banner.category || ""));
+    box.hidden = false;
+    window.C18SiteBanners.lastApplied = banner;
+    tagBanner(box, banner, "category-hero");
+    return true;
+  }
+
+  /* Chamado pelo app.js quando o visitante troca o filtro de categoria
+     (ou abre a página de um produto). Ids aceitos: o do site ("camisetas")
+     e o nome vindo do estoque ("T SHIRT", "CAMISETA"…). */
+  function setCategory(categoryId) {
+    const wanted = String(categoryId || "").trim();
+    const box = document.getElementById("category-banner");
+    if (!wanted || wanted === "todos") {
+      if (box) { box.hidden = true; box.removeAttribute("data-category"); }
+      window.C18SiteBanners.current = "";
+      return false;
+    }
+    const needle = wanted
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+    const match = categoryBanners.find((banner) => {
+      const value = String(banner.category || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+      return value === needle;
+    });
+    window.C18SiteBanners.current = wanted;
+    if (!match) return applyCategoryBanner(null);
+    /* o banner aplicado entra na audiência (banner_view / banner_click)
+       pelos atributos data-banner-* gravados em applyCategoryBanner */
+    return applyCategoryBanner(match);
   }
 
   /* ------------------------------------------------------------------

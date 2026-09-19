@@ -182,25 +182,48 @@ test("funil da jornada conta sessões por etapa", () => {
     { kind: "product_view", session_id: "s1", occurred_at: at },
     { kind: "add_to_cart", session_id: "s1", occurred_at: at },
     { kind: "checkout_intent", session_id: "s1", occurred_at: at },
+    { kind: "purchase", session_id: "s1", occurred_at: at },
     { kind: "whatsapp", session_id: "s2", occurred_at: at },
     { kind: "click", session_id: "s2", occurred_at: at },
   ];
   const steps = Audience.funnel(events);
   assert.deepEqual(steps.map((step) => step.kind), Audience.FUNNEL_STEPS.map((step) => step.kind));
-  assert.deepEqual(steps.map((step) => step.sessions), [2, 1, 1, 1, 1]);
-  assert.deepEqual(steps.map((step) => step.share), [100, 50, 50, 50, 50]);
+  assert.deepEqual(steps.map((step) => step.kind), ["page_view", "product_view", "add_to_cart", "checkout_intent", "purchase", "whatsapp"]);
+  assert.deepEqual(steps.map((step) => step.sessions), [2, 1, 1, 1, 1, 1]);
+  assert.deepEqual(steps.map((step) => step.share), [100, 50, 50, 50, 50, 50]);
   assert.equal(steps[0].label, "Visitou o site");
-  assert.equal(steps[4].label, "Falou no WhatsApp");
+  assert.equal(steps[4].label, "Fechou o pedido (Pix/cartão)");
+  assert.equal(steps[5].label, "Falou no WhatsApp");
 
   /* período fora da janela não conta */
   const filtered = Audience.funnel(events, { from: new Date(Date.now() + 60_000).toISOString() });
-  assert.deepEqual(filtered.map((step) => step.sessions), [0, 0, 0, 0, 0]);
+  assert.deepEqual(filtered.map((step) => step.sessions), [0, 0, 0, 0, 0, 0]);
 
   const html = Audience.funnelChart(steps);
-  assert.equal((html.match(/class="funnel-step"/g) || []).length, 5);
+  assert.equal((html.match(/class="funnel-step"/g) || []).length, 6);
   assert.ok(html.includes('style="width:100%"'));
   assert.ok(html.includes('style="width:50%"'));
   assert.ok(Audience.funnelChart([]).includes("Sem dados de jornada"));
+});
+
+test("tabela de banners mais clicados ordena e mostra CTR e conversões", () => {
+  const report = {
+    banners: [
+      { id: "banner-drop", name: "Drop de inverno", position: "home-hero", positionLabel: "Hero da home", views: 120, clicks: 30, sessions: 24, ctr: 20, conversions: 6, topTarget: "Ver coleção" },
+      { id: "banner-cat", name: "Moletons", position: "category-hero", views: 40, clicks: 4, sessions: 4, ctr: 10, conversions: 0, topTarget: "" },
+    ],
+  };
+  const html = Audience.bannersTable(report);
+  assert.equal((html.match(/<tr>/g) || []).length, 2);
+  assert.ok(html.indexOf("Drop de inverno") < html.indexOf("Moletons"), "mais clicado vem primeiro");
+  assert.ok(html.includes("1. Drop de inverno"));
+  assert.ok(html.includes("Hero da home"));
+  assert.ok(html.includes("mais clicado: Ver coleção"));
+  assert.ok(html.includes("20%"));
+  assert.ok(html.includes("width:100%"), "barra proporcional ao mais clicado");
+  assert.ok(html.includes("Banner de categoria") || html.includes("category-hero"), "posição sem rótulo cai no padrão do analytics");
+  assert.ok(Audience.bannersTable({ banners: [] }).includes("Nenhum banner visto"));
+  assert.equal((Audience.bannersTable(report, 1).match(/<tr>/g) || []).length, 1);
 });
 
 /* ------------------------------------------------------------ ponta a ponta */

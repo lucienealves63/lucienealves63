@@ -18,8 +18,8 @@ test("o painel carrega os scripts na ordem do index.html e abre na visão geral"
     "admin/assets/audience.js",
     "admin/assets/admin.js",
   ]);
-  assert.ok(panel.sandbox.C18Channels.CHANNELS.length === 8);
-  assert.ok(panel.sandbox.C18Audience.FUNNEL_STEPS.length === 5);
+  assert.ok(panel.sandbox.C18Channels.CHANNELS.length === 9);
+  assert.ok(panel.sandbox.C18Audience.FUNNEL_STEPS.length === 6);
   assert.equal(panel.text("#page-title"), "Visão geral");
   assert.ok(panel.html("#metrics").length > 100, "cartões da visão geral");
   assert.ok(panel.text("#today-label").startsWith("HOJE, "));
@@ -36,6 +36,9 @@ test("a página de audiência desenha métricas, páginas, calor, origem e funil
   assert.ok(panel.html("#audience-pages").includes("<tr>"), "páginas mais visitadas");
   assert.ok(panel.html("#audience-sources").includes("source-row"), "origem do tráfego");
   assert.ok(panel.html("#audience-funnel").includes("funnel-step"), "funil de compra");
+  assert.ok(panel.html("#audience-funnel").includes("Fechou o pedido"), "funil chega até a compra no checkout");
+  assert.ok(panel.html("#audience-banners").includes("<tr>"), "banners mais clicados");
+  assert.ok(panel.html("#audience-banners").includes("Drop de inverno"), "banner da base de exemplo");
   assert.ok(panel.html("#audience-devices").length > 50);
   assert.ok(panel.html("#audience-scroll").includes("%"));
   assert.ok(panel.html("#audience-heat-zones").includes("heat-zone"), "faixas de calor");
@@ -44,7 +47,7 @@ test("a página de audiência desenha métricas, páginas, calor, origem e funil
   assert.ok(panel.html("#audience-notice").includes("exemplo"), "avisa que a base é de exemplo");
 
   /* nenhuma seção pode vazar undefined/NaN nem executar script */
-  ["#audience-metrics", "#audience-pages", "#audience-sources", "#audience-funnel", "#audience-heat-grid"]
+  ["#audience-metrics", "#audience-pages", "#audience-sources", "#audience-funnel", "#audience-heat-grid", "#audience-banners"]
     .forEach((selector) => {
       const content = panel.html(selector);
       assert.ok(!content.includes("undefined"), `${selector} com undefined`);
@@ -102,7 +105,65 @@ test("a página de canais mostra mídia, marketplaces, feed, listagens e convers
   assert.ok(panel.html("#feed-summary").includes("Itens no catálogo"));
   assert.ok(panel.html("#channel-listings").includes("<tr>"), "listagens por canal");
   assert.ok(panel.html("#conversion-map").includes("ViewContent"), "eventos do site → Meta/GA4");
+  assert.ok(panel.html("#conversion-map").includes("Purchase"), "a compra do checkout entra no mapa");
+  assert.ok(panel.html("#conversion-map").includes("Compra no site"), "ação de conversão padrão do Google Ads");
   assert.ok(panel.html("#channels-notice").includes("Nenhum canal habilitado"));
+
+  /* estoque central: o feed publica o saldo do Ecommerce C18 */
+  assert.ok(panel.html("#channels-notice").includes("Estoque publicado: <strong>Ecommerce C18</strong>"), "aviso do estoque central");
+  assert.ok(panel.html("#feed-summary").includes("Ecommerce C18"), "chip do estoque publicado");
+
+  /* Google Ads: cartão de medição com CSV de conversões e teste de conexão */
+  assert.ok(ads.includes("Google Ads"), "canal Google Ads");
+  assert.ok(ads.includes("Vendas com id do anúncio"));
+  assert.ok(ads.includes('data-channel-ads-csv="google-ads"'), "botão do CSV de conversões");
+  assert.ok(ads.includes('data-channel-test="google-ads"'), "teste de conexão");
+});
+
+test("o CSV de conversões do Google Ads sai da base de exemplo com gclid", () => {
+  const panel = bootAdmin();
+  panel.navigate("channels");
+  const downloads = [];
+  const originalCreate = panel.sandbox.URL.createObjectURL;
+  panel.sandbox.URL.createObjectURL = (blob) => { downloads.push(blob); return "blob:google-ads"; };
+  try {
+    panel.clickSelector("[data-channel-ads-csv]", { channelAdsCsv: "google-ads" });
+  } finally {
+    panel.sandbox.URL.createObjectURL = originalCreate;
+  }
+  assert.equal(downloads.length, 1, "um arquivo baixado");
+  const csv = downloads[0].parts.join("");
+  const lines = csv.split("\n");
+  assert.equal(lines[0], "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID");
+  assert.ok(lines.length > 1, "a base de exemplo tem compras vindas do Google Ads");
+  assert.ok(lines[1].startsWith("demo-gclid-"), "o gclid da sessão vai na primeira coluna");
+  assert.ok(lines[1].includes(",Compra no site,"), "nome padrão da ação de conversão");
+  assert.ok(/-03:00,/.test(lines[1]), "horário de Brasília");
+  assert.ok(!/undefined|NaN/.test(csv));
+});
+
+test("o estoque central é a loja virtual Ecommerce C18 e é o saldo dela que vai para os canais", () => {
+  const panel = bootAdmin();
+
+  /* etiqueta da página de estoque e campos de importação/movimento presos à loja */
+  assert.ok(panel.html("#stock-hub-tag").includes("Estoque central: <b>Ecommerce C18</b>"), "etiqueta do estoque central");
+  assert.ok(panel.html("#stock-hub-tag").includes("lojas físicas: ponto de retirada"));
+  assert.ok(panel.html("#import-store").includes("Ecommerce C18 — estoque central"), "importação entra no Ecommerce C18");
+  assert.ok(panel.html("#manual-store").includes("Ecommerce C18 — estoque central"), "movimento manual entra no Ecommerce C18");
+
+  /* pedidos continuam com a loja de retirada escolhida pela cliente */
+  assert.ok(panel.html("#orders-table").includes("NI Calçadão"), "retirada no Calçadão");
+  assert.ok(!panel.html("#orders-table").includes("Ecommerce C18"), "a loja virtual não é ponto de retirada");
+
+  panel.navigate("channels");
+  panel.get("#feed-channel").value = "mercadolivre";
+  panel.get("#feed-channel").fire("change");
+  const body = panel.html("#feed-body");
+  const rowOf = (code) => body.split("<tr>").find((row) => row.includes(code)) || "";
+  /* REGATA SPORT C18 P (0000000080): 12 no Ecommerce C18 → publica 11 (1 de reserva da política) */
+  const regata = rowOf("0000000080");
+  assert.ok(regata.includes("REGATA SPORT C18"));
+  assert.ok(regata.includes('title="11"'), "saldo publicado = saldo do estoque central menos a reserva");
 });
 
 test("o feed muda de colunas conforme o canal escolhido", () => {

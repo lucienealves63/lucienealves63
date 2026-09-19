@@ -44,7 +44,8 @@ A planilha não contém uma coluna de loja — e não precisa: **todo o saldo
 entra na loja de estoque central**, marcada em `public.stores.fulfills_stock`
 (na tela, o campo vem fixo com a loja). A troca dessa loja é feita em um
 único lugar — no painel de demonstração, a constante `STOCK_STORE_ID` em
-`admin/assets/admin.js`; no Supabase, `select public.set_stock_store('NI-BECO');`.
+`admin/assets/admin.js`; no Supabase, `select public.set_stock_store('ECOMMERCE-C18');`.
+Hoje essa loja é a virtual **Ecommerce C18** (veja *Estoque central* abaixo).
 
 ## Seleção antes da importação
 
@@ -74,20 +75,45 @@ registra diferenças de saldo e guarda o lote para auditoria.
 - `stock_imports`: lote da planilha, arquivo, usuário, seleção e erros.
 
 **Estoque único.** A operação concentra todo o saldo físico em **uma única
-loja** (`public.stores.fulfills_stock`, semeada na *Nova Iguaçu — Calçadão*).
-Um índice único parcial (`stores_one_stock_location`) impede que duas lojas
-fiquem marcadas ao mesmo tempo. As demais unidades **não têm saldo próprio**:
-continuam atendendo como **pontos de retirada** das compras do site — o pedido
-segue apontando para a loja de retirada escolhida pelo cliente, mas a baixa do
-estoque acontece sempre na loja central (`import_inventory_rows` e
-`adjust_inventory_stock` ignoram a loja recebida e usam
-`public.stock_store_id()`).
+loja** (`public.stores.fulfills_stock`): a loja virtual **Ecommerce C18**
+(`202609170001` semeia a *Nova Iguaçu — Calçadão*; `202609210002` cria o
+Ecommerce C18 e passa a marca para ele). Um índice único parcial
+(`stores_one_stock_location`) impede que duas lojas fiquem marcadas ao mesmo
+tempo. As seis lojas físicas **não têm saldo próprio**: atendem como **pontos
+de retirada** das compras do site — o pedido segue apontando para a loja de
+retirada escolhida pelo cliente, mas a baixa do estoque acontece sempre na
+loja central (`import_inventory_rows` e `adjust_inventory_stock` ignoram a
+loja recebida e usam `public.stock_store_id()`).
 
-Para trocar a loja do estoque: `select public.set_stock_store('NI-BECO');`
+Para trocar a loja do estoque: `select public.set_stock_store('ECOMMERCE-C18');`
 (somente `admin`). O painel reflete a mudança automaticamente.
 
 O Alterdata será o estoque mestre. O dashboard não deve sobrescrever o ERP sem
 um evento rastreável e uma confirmação da integração.
+
+### Estoque central: Ecommerce C18
+
+O estoque central da operação é a loja virtual **Ecommerce C18**
+(`stores.code = 'ECOMMERCE-C18'`, `kind = 'ecommerce'`,
+`fulfills_stock = true`), criada por
+`202609210002_estoque_central_ecommerce.sql`. A migration:
+
+- cria a coluna `stores.kind` (`physical` | `ecommerce`) e a loja virtual;
+- tira a marca de estoque da loja anterior e marca o Ecommerce C18 (na ordem
+  certa para não esbarrar no índice `stores_one_stock_location`);
+- **transfere para o Ecommerce C18 qualquer saldo** que já estivesse em outra
+  loja (`inventory_balances`), somando quando a variação já existir lá e
+  registrando o movimento em `inventory_movements` (`kind = 'adjustment'`);
+- recria `channel_catalog(p_site_url, p_store_id)` com `p_store_id` padrão
+  `stock_store_id()`: o estoque publicado nos canais (Google Merchant, Meta,
+  Google Ads e marketplaces) é o saldo do Ecommerce C18; `p_store_id => null`
+  soma todas as lojas.
+
+No painel, o Ecommerce C18 é a primeira loja da lista: a etiqueta da página
+**Estoque**, a importação e o movimento manual apontam para ele, e a página
+**Canais & Marketing** mostra "Estoque publicado: Ecommerce C18" no aviso e no
+resumo do feed. Os pedidos continuam guardando a loja de **retirada** escolhida
+pela cliente (coluna *Retirada*), e a baixa acontece no estoque central.
 
 ## Fluxo de pedidos
 
@@ -203,18 +229,24 @@ Implantação específica:
    8 canais no seed), `202609180006_growth_schedules.sql` (agendamentos),
    `202609190001_customers.sql` (cadastro de clientes com LGPD),
    `202609190002_checkout_pagamentos.sql` (pedidos do checkout e
-   pagamentos) e `202609200001_hero_stats.sql` (faixa de números do
-   hero);
+   pagamentos), `202609200001_hero_stats.sql` (faixa de números do
+   hero), `202609210001_audiencia_banners_google_ads.sql` (banners mais
+   clicados, compra do checkout na audiência e o 9º canal, Google Ads) e
+   `202609210002_estoque_central_ecommerce.sql` (loja virtual Ecommerce C18
+   como estoque central único: canais, pedidos e saldo);
 4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 5. Cadastrar URL e anon key em `admin/assets/config.js`;
 6. Cadastrar os segredos de `.env.example` via Supabase Secrets
-   (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
+   (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida) — a lista do
+   que obter em cada conta, e onde cadastrar, está em `docs/CREDENCIAIS.md`;
 7. Publicar as Edge Functions (`gerar-banner`, `integration-worker`,
    `clearsale-webhook`, `cotar-frete`, `google-merchant-feed`,
-   `marketing-events` e `channel-publish`);
+   `marketing-events`, `google-ads-conversions` e `channel-publish`);
 8. Conferir os agendamentos criados por `202609180006_growth_schedules.sql`
+   e `202609210001_audiencia_banners_google_ads.sql`
    (`select jobname, schedule from cron.job`): retenção da audiência todo dia
    1º, `marketing-events` com `{"flush":true}` a cada 15 minutos,
+   `google-ads-conversions` com `{"flush":true}` a cada hora,
    `channel-publish` a cada 30 minutos e `integration-worker` a cada 5. Se
    `pg_cron`/`pg_net`/Vault não estiverem habilitados, a migration só emite um
    `NOTICE` — nesse caso dispare as funções por fora (POST com o cabeçalho
@@ -286,7 +318,8 @@ terceiro no modo demonstração.
 | Páginas mais visitadas | barra proporcional, sessões, participação e conversões por página |
 | Região de calor | faixas da página (cabeçalho, hero, filtros, grade, rodapé) pintadas por intensidade, grade 12 × 18 de cliques e pontos quentes (elemento clicado) |
 | Origem do tráfego | direto, orgânico, social, e-mail, parceiros, pago e campanha UTM (inclusive `gclid`/`fbclid`/`ttclid`), mais sites de referência |
-| Jornada | funil visitou → viu produto → adicionou → finalizou → WhatsApp |
+| Banners mais clicados | hero da home e banners de categoria: exibições, cliques, CTR, sessões que clicaram, quantas converteram e o botão mais clicado de cada arte (`banner_view`/`banner_click`, identificados por `data-banner-id`) |
+| Jornada | funil visitou → viu produto → adicionou → iniciou a finalização → fechou o pedido (Pix/cartão) → WhatsApp |
 | Dispositivos e cidades | participação por tipo de aparelho e cidade informada pelo navegador |
 | Rolagem | média e marcos de 25/50/75/100% por página |
 
@@ -308,6 +341,16 @@ RPCs da migration `202609180004_analytics_audience.sql`:
   (período atual e anterior);
 - `purge_analytics_events(p_before)` — retenção LGPD (padrão 13 meses, papel
   `admin`).
+
+A migration `202609210001_audiencia_banners_google_ads.sql` completa a
+medição: eventos `banner_click` e `purchase`, colunas `banner_id`/`banner_name`
+(qual arte foi vista ou clicada) e `ads_uploaded_at`/`ads_upload_error`
+(controle do upload ao Google Ads); `track_site_events` passa a guardar os
+ids de clique `gclid`/`gbraid`/`wbraid`/`fbclid` na UTM da sessão (só no
+formato que as plataformas emitem); `audience_report` conta a compra como
+conversão, traz a chave `banners` e o funil com a etapa "Fechou o pedido".
+Na compra, `category` guarda o número do pedido (é o *Order ID* que volta ao
+Google Ads e o `transaction_id`/`order_id` do GA4 e da Meta).
 
 Privacidade: nenhum IP, `user-agent`, e-mail ou telefone é gravado; o visitante
 é um id de sessão aleatório que expira após 30 minutos de inatividade. A
@@ -341,7 +384,15 @@ Fluxo de publicação:
    após 8 tentativas, igual ao `integration-worker`);
 4. `marketing-events` encaminha as conversões do site para a Meta Conversions
    API e o GA4 Measurement Protocol, com `event_id` igual ao do Pixel do
-   navegador para a Meta deduplicar.
+   navegador para a Meta deduplicar (a compra sai como `Purchase`/`purchase`
+   com o número do pedido);
+5. `google-ads-conversions` devolve as vendas ao Google Ads: lê as compras
+   (e o WhatsApp, quando a ação está cadastrada) cuja sessão trouxe
+   `gclid`/`gbraid`/`wbraid`, sobe pela API (`uploadClickConversions`, com
+   `orderId` para não duplicar) e marca `ads_uploaded_at`. Sem developer token,
+   o painel gera o **CSV no modelo de upload** (botão *CSV para o Google Ads*
+   ou *CSV de conversões* no cartão do canal) para subir em Objetivos →
+   Conversões → Uploads.
 
 Política por canal (`sales_channels.config.policy`):
 
@@ -369,9 +420,10 @@ RPCs da migration `202609180005_sales_channels.sql` (todas papel `admin`):
 - `publish_catalog_to_channel(p_channel_id, p_options)` — publica (ou simula
   com `dry_run`) e devolve itens, publicáveis, pendências, preço médio e valor
   publicável;
-- `channel_catalog(p_site_url)` — o catálogo agrupado por referência (saldo
-  disponível somado entre lojas), que também alimenta o feed quando o canal
-  ainda não foi publicado;
+- `channel_catalog(p_site_url, p_store_id)` — o catálogo agrupado por
+  referência com o saldo disponível do **estoque central** (padrão de
+  `p_store_id` é `stock_store_id()`, o Ecommerce C18; nulo soma todas as
+  lojas), que também alimenta o feed quando o canal ainda não foi publicado;
 - `channel_summary()` — contadores por canal para o cartão do painel.
 
 Edge Functions:
@@ -382,6 +434,13 @@ Edge Functions:
   resumo sem enviar nada;
 - `marketing-events` — `{test:true, channel}` (botão de teste do painel),
   `{flush:true}` (agendador) ou `{events:[…]}` (servidor a servidor);
+- `google-ads-conversions` — `{test:true}` (lista as ações de conversão da
+  conta e mostra o id a cadastrar), `{flush:true, limit}` (upload pela API;
+  agendado a cada hora pela migration `202609210001`) ou `{export:true, days,
+  pending}` (CSV para upload manual). Campos públicos do canal: `customer_id`,
+  `conversion_name` (obrigatórios), `conversion_action_id`,
+  `whatsapp_conversion_name` e `login_customer_id` (MCC). O Google só aceita
+  conversões de cliques com até 90 dias;
 - `channel-publish` — fila de publicação, sem corpo ou `{channel, dryRun}`.
 
 Segredos por canal estão listados em `.env.example` e aparecem no modal de

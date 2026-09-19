@@ -6,7 +6,7 @@
   const Analytics = window.C18Analytics;
   const Audience = window.C18Audience;
   const Channels = window.C18Channels;
-  const STORE_KEY = "c18-operations-demo-v3"; // v3: estoque único numa só loja
+  const STORE_KEY = "c18-operations-demo-v4"; // v4: estoque único no Ecommerce C18 (loja virtual)
   const BANNER_DEMO_KEY = "c18:demo-banner";
   const CATEGORY_BANNER_DEMO_KEY = "c18:demo-category-banners";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
@@ -46,7 +46,11 @@
     line: "--pv-line",
   };
 
+  /* A primeira loja é a virtual "Ecommerce C18": é o estoque central (único)
+     da operação — de onde saem site, feeds e marketplaces. As seis lojas
+     físicas não têm saldo próprio: funcionam como pontos de retirada. */
   const stores = [
+    { id: "ecommerce-c18", name: "Ecommerce C18", short: "Ecommerce C18", kind: "ecommerce" },
     { id: "ni-calcadao", name: "Nova Iguaçu — Calçadão", short: "NI Calçadão" },
     { id: "ni-beco", name: "Nova Iguaçu — Beco", short: "NI Beco" },
     { id: "ni-top", name: "Nova Iguaçu — Top Shopping", short: "Top Shopping" },
@@ -55,12 +59,12 @@
     { id: "queimados", name: "Queimados — Centro", short: "Queimados" },
   ];
 
-  // 👉 Estoque único: TODA a mercadoria fica na loja abaixo (estoque central).
-  // As outras unidades não têm saldo próprio — continuam atendendo como
+  // 👉 Estoque único: TODA a mercadoria fica na loja virtual Ecommerce C18
+  // (estoque central). As lojas físicas não têm saldo próprio — atendem como
   // pontos de retirada das compras do site. Para trocar a loja do estoque,
   // basta mudar o id aqui. No Supabase, use:
-  //   select public.set_stock_store('NI-BECO');
-  const STOCK_STORE_ID = "ni-calcadao";
+  //   select public.set_stock_store('ECOMMERCE-C18');
+  const STOCK_STORE_ID = "ecommerce-c18";
 
   const saoPauloParts = Object.fromEntries(new Intl.DateTimeFormat("en", {
     year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo",
@@ -249,6 +253,10 @@
   if (!Array.isArray(state.banners)) state.banners = seedBanners;
   if (!Array.isArray(state.coupons)) state.coupons = seedCoupons;
   if (!Array.isArray(state.channels)) state.channels = seedChannels();
+  /* canais novos (ex.: Google Ads) entram num estado salvo antes deles */
+  seedChannels().forEach((channel) => {
+    if (!state.channels.some((saved) => saved.id === channel.id)) state.channels.push(channel);
+  });
   if (state.palette === undefined) state.palette = null;
   let currentPage = "overview";
   let currentOrderFilter = "all";
@@ -307,7 +315,9 @@
   const currency = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
   const number = (value) => new Intl.NumberFormat("pt-BR").format(Number(value || 0));
   const storeById = (id) => stores.find((store) => store.id === id) || { name: "—", short: "—" };
-  const stockStore = () => stores.find((store) => store.id === STOCK_STORE_ID) || stores[0];
+  /* Loja do estoque central: no Supabase é a marcada em stores.fulfills_stock;
+     na demonstração, STOCK_STORE_ID. */
+  const stockStore = () => stores.find((store) => store.stock) || stores.find((store) => store.id === STOCK_STORE_ID) || stores[0];
   const available = (item) => Math.max(0, Number(item.quantity || 0) - Number(item.reserved || 0));
 
   function saveState() {
@@ -334,8 +344,8 @@
     ["#import-store", "#manual-store"].forEach((selector) => { $(selector).innerHTML = stockOption; });
     const hubTag = $("#stock-hub-tag");
     if (hubTag) {
-      hubTag.innerHTML = `Estoque central: <b>${esc(stock.name)}</b><span class="stock-hub-tag__sep">·</span>demais lojas: ponto de retirada`;
-      hubTag.title = "Todo o saldo fica na loja de estoque. As outras unidades atendem como pontos de retirada.";
+      hubTag.innerHTML = `Estoque central: <b>${esc(stock.name)}</b><span class="stock-hub-tag__sep">·</span>lojas físicas: ponto de retirada`;
+      hubTag.title = "Todo o saldo fica no estoque central (loja virtual Ecommerce C18). As lojas físicas atendem como pontos de retirada.";
     }
   }
 
@@ -947,7 +957,7 @@
   async function loadSupabaseData() {
     const client = window.C18_SUPABASE;
     const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult, couponResult, channelResult] = await Promise.all([
-      client.from("stores").select("id, code, name").eq("active", true).order("name"),
+      client.from("stores").select("*").eq("active", true).order("name"),
       fetchAllRows("inventory_catalog_view", "*", "product_name"),
       client.from("orders").select("*, order_items(*), order_events(*), shipments(*)").order("created_at", { ascending: false }).limit(500),
       client.from("receipts").select("*").order("created_at", { ascending: false }).limit(500),
@@ -963,11 +973,16 @@
     if (inventoryResult.error) throw inventoryResult.error;
     if (orderResult.error) throw orderResult.error;
 
-    stores.splice(0, stores.length, ...(storeResult.data || []).map((store) => ({
+    const loadedStores = (storeResult.data || []).map((store) => ({
       id: store.id,
       name: store.name,
-      short: store.code || store.name,
-    })));
+      short: store.code === "ECOMMERCE-C18" ? "Ecommerce C18" : (store.code || store.name),
+      kind: store.kind || "physical",
+      stock: Boolean(store.fulfills_stock),
+    }));
+    // estoque central primeiro, depois as lojas físicas em ordem alfabética
+    loadedStores.sort((a, b) => Number(b.stock) - Number(a.stock));
+    stores.splice(0, stores.length, ...loadedStores);
     fillStoreSelects();
 
     state.inventory = (inventoryResult.data || []).map((item) => ({
@@ -2137,6 +2152,8 @@
     $("#audience-pages").innerHTML = Audience.topPages(report, 12);
     $("#audience-pages-hint").textContent = `${Audience.number(totals.pageviews)} páginas vistas`;
     $("#audience-funnel").innerHTML = Audience.funnelChart(report.funnel || Audience.funnel(audience.events));
+    const bannersBox = $("#audience-banners");
+    if (bannersBox) bannersBox.innerHTML = Audience.bannersTable(report, 10);
     $("#audience-campaigns").innerHTML = Audience.campaignsTable(report);
     $("#audience-devices").innerHTML = Audience.devicesList(report);
     $("#audience-locations").innerHTML = Audience.locationsList(report);
@@ -2172,6 +2189,7 @@
     (report.sources || []).forEach((source) => lines.push(["origem", source.label, source.channel, source.sessions, `${source.share}%`]));
     (report.campaigns || []).forEach((campaign) => lines.push(["campanha", campaign.campaign, `${campaign.source}/${campaign.medium}`, campaign.sessions, campaign.conversions]));
     (report.zones || []).forEach((zone) => lines.push(["regiao_de_calor", zone.label, `${zone.path}#${zone.zone}`, zone.clicks, `${zone.share}%`]));
+    (report.banners || []).forEach((banner) => lines.push(["banner", banner.name, `${banner.position} · ${banner.views} exibições · CTR ${banner.ctr}%`, banner.clicks, banner.conversions]));
     (report.devices || []).forEach((device) => lines.push(["dispositivo", device.label, device.type, device.sessions, `${device.share}%`]));
     (report.locations || []).forEach((location) => lines.push(["cidade", location.name, "", location.sessions, `${location.share}%`]));
 
@@ -2210,8 +2228,13 @@
     return Channels ? Channels.channelById(id) : null;
   }
 
+  /* Catálogo publicável: o estoque publicado nos canais é o saldo do
+     estoque central (Ecommerce C18) — as lojas físicas são pontos de
+     retirada e não entram no saldo. */
   function channelCatalog() {
-    return Channels ? Channels.catalogFromInventory(state.inventory, { siteUrl: SITE_URL }) : [];
+    if (!Channels) return [];
+    const stock = stockStore();
+    return Channels.catalogFromInventory(state.inventory, { siteUrl: SITE_URL, storeId: stock ? stock.id : "" });
   }
 
   /* Linhas prontas para publicar: preço e estoque já passam pela política
@@ -2263,10 +2286,13 @@
       const issues = rows.filter((row) => row._problems.length).length;
       const dot = status === "connected" || status === "syncing" ? "" : status === "error" ? " is-off" : " is-warning";
       const fee = Number(channel.fee || 0);
-      const counts = channel.id === "ga4" || channel.id === "meta-ads" ? audienceEventCounts() : null;
+      const counts = channel.kind === "measurement" || channel.id === "meta-ads" ? audienceEventCounts() : null;
       const conversionCount = counts
-        ? ["add_to_cart", "checkout_intent", "whatsapp"].reduce((sum, kind) => sum + (counts[kind] || 0), 0)
+        ? (channel.id === "google-ads"
+          ? googleAdsRows().length
+          : ["add_to_cart", "checkout_intent", "whatsapp", "purchase"].reduce((sum, kind) => sum + (counts[kind] || 0), 0))
         : null;
+      const measurementLabel = channel.id === "google-ads" ? "Vendas com id do anúncio" : "Conversões no período";
 
       return `<article class="channel-card${record.enabled ? " is-on" : ""}">
         <div class="channel-card__head">
@@ -2277,16 +2303,18 @@
         <dl class="channel-card__facts">
           <dt>Status</dt><dd>${esc(channelStatusLabel(status))}</dd>
           ${channel.kind === "measurement"
-            ? `<dt>Conversões no período</dt><dd>${Audience.number(conversionCount || 0)}</dd>`
+            ? `<dt>${measurementLabel}</dt><dd>${Audience.number(conversionCount || 0)}</dd>`
             : `<dt>Itens prontos</dt><dd>${Audience.number(publishable)} de ${Audience.number(rows.length)}${issues ? ` · ${issues} com pendência` : ""}</dd>`}
           ${fee ? `<dt>Comissão do canal</dt><dd>${fee}% → markup sugerido ${Audience.number(Channels.suggestedMarkup(fee))}%</dd>` : `<dt>Formato do feed</dt><dd>${esc((channel.feedFormat || "json").toUpperCase())}</dd>`}
           <dt>Última sincronização</dt><dd>${esc(record.lastSync || "—")}</dd>
         </dl>
         <div class="channel-card__foot">
           <button class="btn btn--secondary" data-channel-config="${esc(channel.id)}">Configurar</button>
-          ${channel.kind === "measurement"
-            ? `<button class="btn btn--primary" data-channel-test="${esc(channel.id)}">Testar evento</button>`
-            : `<button class="btn btn--primary" data-channel-publish="${esc(channel.id)}">Publicar catálogo</button>`}
+          ${channel.id === "google-ads"
+            ? `<button class="btn btn--secondary" data-channel-ads-csv="${esc(channel.id)}">CSV de conversões</button><button class="btn btn--primary" data-channel-test="${esc(channel.id)}">Testar conexão</button>`
+            : channel.kind === "measurement"
+              ? `<button class="btn btn--primary" data-channel-test="${esc(channel.id)}">Testar evento</button>`
+              : `<button class="btn btn--primary" data-channel-publish="${esc(channel.id)}">Publicar catálogo</button>`}
         </div>
       </article>`;
     };
@@ -2369,6 +2397,7 @@
       ["Preço médio no canal", Audience.money(rows.length ? rows.reduce((sum, row) => sum + row._price, 0) / rows.length : 0)],
       ["Valor publicável", Audience.money(value)],
       ["Formato", String(channel.feedFormat || "json").toUpperCase()],
+      ["Estoque publicado", stockStore().short],
     ].map(([label, value2]) => `<span class="summary-chip"><strong>${value2}</strong> ${esc(label)}</span>`).join("");
 
     const download = $("#feed-download");
@@ -2439,32 +2468,92 @@
     const counts = audienceEventCounts();
     const metaRecord = channelState("meta-ads") || {};
     const ga4Record = channelState("ga4") || {};
+    const adsRecord = channelState("google-ads") || {};
+    const adsConfig = adsRecord.config || {};
     const hint = $("#conversion-hint");
     if (hint) {
       hint.textContent = [metaRecord.enabled ? "Meta CAPI ativo" : "Meta CAPI aguardando segredos",
-        ga4Record.enabled ? "GA4 ativo" : "GA4 aguardando segredos"].join(" · ");
+        ga4Record.enabled ? "GA4 ativo" : "GA4 aguardando segredos",
+        adsRecord.enabled ? "Google Ads ativo" : "Google Ads por CSV até conectar"].join(" · ");
     }
+    const adsName = (event) => {
+      if (event.ads === "purchase") return adsConfig.conversion_name || Channels.GOOGLE_ADS_DEFAULTS.conversionName;
+      if (event.ads === "whatsapp") return adsConfig.whatsapp_conversion_name || "";
+      return "";
+    };
     body.innerHTML = Channels.CONVERSION_EVENTS.map((event) => {
       const count = counts[event.site] || 0;
       const sending = metaRecord.enabled || ga4Record.enabled;
+      const ads = adsName(event);
       return `<tr>
         <td><span class="movement-product"><strong>${esc(event.label)}</strong><small>${esc(event.site)}</small></span></td>
         <td><code>${esc(event.meta)}</code></td>
         <td><code>${esc(event.ga4)}</code></td>
+        <td>${ads ? `<code>${esc(ads)}</code>` : event.ads ? `<small>cadastre a ação em Google Ads → Configurar</small>` : "—"}</td>
         <td>${Audience.number(count)}</td>
         <td>${badge(sending ? "Pronto para envio" : "Aguardando conexão", sending ? "success" : "neutral")}</td>
       </tr>`;
     }).join("");
   }
 
+  /* Conversões com id de clique do Google Ads (gclid/gbraid/wbraid) no
+     período: compra sempre; WhatsApp quando a ação está cadastrada. */
+  function googleAdsRows() {
+    if (!Channels) return [];
+    const config = (channelState("google-ads") || {}).config || {};
+    return Channels.googleAdsConversionRows(audienceEvents(), {
+      conversionName: config.conversion_name,
+      whatsappName: config.whatsapp_conversion_name,
+    });
+  }
+
+  function downloadText(content, filename, mime) {
+    const blob = new Blob([content], { type: `${mime || "text/csv"};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  /* CSV no modelo "conversões de cliques" do Google Ads — o caminho para
+     devolver as vendas ao anúncio antes (ou em vez) da API. */
+  async function exportGoogleAdsCsv() {
+    if (!requirePermission("channels") || !Channels) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      try {
+        const { data, error } = await window.C18_SUPABASE.functions.invoke("google-ads-conversions", {
+          body: { export: true, days: audience.range || 30, pending: false },
+        });
+        if (error) throw error;
+        if (!data || !data.rows) { toast("Nenhuma venda com id de clique do Google Ads no período.", "alert"); return; }
+        downloadText(data.csv, data.filename || `google-ads-conversoes-${stamp}.csv`);
+        toast(`${Audience.number(data.rows)} conversões no CSV do Google Ads${data.ios ? ` (${data.ios} só pela API: gbraid/wbraid)` : ""}.`);
+      } catch (error) {
+        toast(error.message || "Não foi possível gerar o CSV do Google Ads.", "alert");
+      }
+      return;
+    }
+    const rows = googleAdsRows();
+    if (!rows.length) { toast("Nenhuma venda com id de clique do Google Ads no período.", "alert"); return; }
+    downloadText(Channels.toGoogleAdsCsv(rows), `google-ads-conversoes-${stamp}.csv`);
+    toast(`${Audience.number(rows.filter((row) => row["Google Click ID"]).length)} conversões no CSV do Google Ads (Objetivos → Conversões → Uploads).`);
+  }
+
   function renderChannelsNotice() {
     const box = $("#channels-notice");
     if (!box || !Channels) return;
     const enabled = state.channels.filter((channel) => channel.enabled);
+    const stock = stockStore();
+    const stockNote = ` Estoque publicado: <strong>${esc(stock.short)}</strong> (estoque central) — as lojas físicas são pontos de retirada e não entram no saldo dos canais.`;
     const missingSecrets = enabled.length ? "" : " Cadastre os segredos no Supabase (o arquivo <code>.env.example</code> lista todos) e habilite o canal aqui.";
     box.innerHTML = `<span><svg><use href="#i-megaphone"/></svg></span><p>${enabled.length
       ? `<strong>${Audience.number(enabled.length)} canais habilitados.</strong> Preço e estoque saem do cadastro de estoque; a fila de integração (Edge Function <code>integration-worker</code>) envia, retenta e registra cada lote.`
-      : `<strong>Nenhum canal habilitado ainda.</strong> As integrações estão prontas no código: Google Merchant Center, Meta Ads, GA4 e cinco marketplaces.${missingSecrets}`}</p>`;
+      : `<strong>Nenhum canal habilitado ainda.</strong> As integrações estão prontas no código: Google Merchant Center, Meta Ads, GA4, Google Ads e cinco marketplaces.${missingSecrets}`}${stockNote}</p>`;
   }
 
   function renderChannels() {
@@ -2632,7 +2721,21 @@
     const channel = channelMeta(channelId);
     if (!channel) return;
     if (CONFIG.mode !== "supabase" || !window.C18_SUPABASE) {
-      toast(`No modo demonstração o evento de teste para ${channel.name} é simulado.`, "alert");
+      toast(channelId === "google-ads"
+        ? `No modo demonstração a conexão com o Google Ads é simulada — ${Audience.number(googleAdsRows().length)} vendas com id de clique no período.`
+        : `No modo demonstração o evento de teste para ${channel.name} é simulado.`, "alert");
+      return;
+    }
+    if (channelId === "google-ads") {
+      try {
+        const { data, error } = await window.C18_SUPABASE.functions.invoke("google-ads-conversions", { body: { test: true } });
+        if (error) throw error;
+        const result = data || {};
+        if (result.error) throw new Error(result.error);
+        toast(result.hint || (result.ok ? "Google Ads conectado." : "Google Ads ainda não conectado."), result.ok ? "check" : "alert");
+      } catch (error) {
+        toast(error.message || "Não foi possível testar a conexão com o Google Ads.", "alert");
+      }
       return;
     }
     try {
@@ -2700,6 +2803,7 @@
       if (channelPublish) { publishChannel(channelPublish.dataset.channelPublish); return; }
       const channelTest = event.target.closest("[data-channel-test]");
       if (channelTest) { testChannelEvent(channelTest.dataset.channelTest); return; }
+      if (event.target.closest("[data-channel-ads-csv]") || event.target.closest("#conversion-ads-csv")) { exportGoogleAdsCsv(); return; }
       if (event.target.closest('[data-action="import"]')) { if (requirePermission("inventory")) { resetImport(); openModal("#import-modal"); } return; }
       if (event.target.closest('[data-action="manual"]')) { if (requirePermission("inventory")) openManual(); return; }
       if (event.target.closest("[data-close-modal]")) { closeModals(); return; }

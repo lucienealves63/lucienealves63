@@ -178,11 +178,84 @@ test("relatório vazio mantém a estrutura completa", () => {
 });
 
 test("eventos de negócio usam os tipos conhecidos", () => {
-  ["page_view", "click", "scroll", "engagement", "product_view", "category_view", "add_to_cart", "search", "checkout_intent", "whatsapp", "banner_view"]
+  ["page_view", "click", "scroll", "engagement", "product_view", "category_view", "add_to_cart", "search", "checkout_intent", "whatsapp", "banner_view", "banner_click", "purchase"]
     .forEach((kind) => assert.ok(analytics.EVENT_KINDS.includes(kind), `${kind} precisa ser um tipo válido`));
-  assert.deepEqual(analytics.CONVERSION_KINDS, ["add_to_cart", "checkout_intent", "whatsapp"]);
+  assert.deepEqual(analytics.CONVERSION_KINDS, ["add_to_cart", "checkout_intent", "whatsapp", "purchase"]);
+  assert.deepEqual(analytics.CLICK_ID_KEYS, ["gclid", "gbraid", "wbraid", "fbclid"]);
+  assert.deepEqual(Object.keys(analytics.BANNER_POSITIONS), ["home-hero", "category-hero"]);
   /* sem navegador e sem consentimento, nada é gravado */
   assert.equal(analytics.track("evento_inventado"), false);
+});
+
+test("identificadores de clique do Google Ads e da Meta ficam guardados com a UTM", () => {
+  const utm = analytics.utmFromSearch("?utm_source=google&utm_medium=cpc&gclid=Cj0KCQjw_abc-123&fbclid=IwAR2xyz&gbraid=x&outro=1");
+  assert.equal(utm.source, "google");
+  assert.equal(utm.medium, "cpc");
+  assert.equal(utm.gclid, "Cj0KCQjw_abc-123");
+  assert.equal(utm.fbclid, "IwAR2xyz");
+  assert.equal(utm.gbraid, undefined, "identificador curto demais é descartado");
+  assert.equal(utm.outro, undefined, "parâmetro desconhecido não entra");
+  const rejected = analytics.utmFromSearch("?gclid=<script>alert(1)</script>");
+  assert.equal(rejected.gclid, undefined);
+  assert.equal(rejected.source, "google", "só o gclid já marca a origem como Google Ads");
+  /* modo demo do relatório: a sessão vinda do anúncio guarda o gclid */
+  const [event] = analytics.demoEvents({ days: 7, seed: 18 }).filter((item) => item.utm && item.utm.gclid);
+  assert.ok(event, "a base de exemplo traz sessões com gclid");
+});
+
+test("banners mais clicados: exibições, cliques, CTR, sessões e conversões", () => {
+  const at = new Date().toISOString();
+  const base = { path: "/", occurred_at: at, channel: "direct", device: "mobile" };
+  const drop = { banner_id: "banner-drop", banner_name: "Drop de inverno", zone: "home-hero" };
+  const padrao = { banner_id: "banner-padrao", banner_name: "Padrão", zone: "home-hero" };
+  const events = [
+    { ...base, kind: "page_view", session_id: "s1" },
+    { ...base, ...drop, kind: "banner_view", session_id: "s1", target: "Drop de inverno" },
+    { ...base, ...drop, kind: "banner_click", session_id: "s1", target: "Ver coleção" },
+    { ...base, ...drop, kind: "banner_click", session_id: "s1", target: "Ver coleção" },
+    { ...base, kind: "add_to_cart", session_id: "s1", target: "Camiseta" },
+    { ...base, kind: "page_view", session_id: "s2" },
+    { ...base, ...drop, kind: "banner_view", session_id: "s2", target: "Drop de inverno" },
+    { ...base, ...padrao, kind: "banner_view", session_id: "s2", target: "Padrão" },
+    { ...base, ...padrao, kind: "banner_click", session_id: "s2", target: "Imagem" },
+    { ...base, kind: "page_view", session_id: "s3", path: "/produtos.html" },
+    { ...base, kind: "banner_view", session_id: "s3", path: "/produtos.html", banner_id: "banner-cat", banner_name: "Moletons", zone: "category-hero", target: "Moletons" },
+  ];
+  const report = analytics.aggregate(events, { days: 7 });
+  assert.deepEqual(report.banners.map((banner) => banner.id), ["banner-drop", "banner-padrao", "banner-cat"]);
+  const [first, second, third] = report.banners;
+  assert.equal(first.name, "Drop de inverno");
+  assert.equal(first.positionLabel, analytics.BANNER_POSITIONS["home-hero"]);
+  assert.equal(first.views, 2);
+  assert.equal(first.clicks, 2);
+  assert.equal(first.sessions, 1, "sessões distintas que clicaram");
+  assert.equal(first.ctr, 100, "cliques ÷ exibições");
+  assert.equal(first.conversions, 1, "a sessão que clicou converteu");
+  assert.equal(first.topTarget, "Ver coleção");
+  assert.equal(second.clicks, 1);
+  assert.equal(second.ctr, 100);
+  assert.equal(second.conversions, 0);
+  assert.equal(third.clicks, 0);
+  assert.equal(third.ctr, 0);
+  assert.equal(third.position, "category-hero");
+  assert.equal(third.positionLabel, "Banner de categoria");
+  /* cliques em banner não entram no total de conversões, compras entram */
+  assert.equal(report.totals.conversions, 1);
+  assert.deepEqual(analytics.aggregate([], { days: 7 }).banners, []);
+});
+
+test("compras do checkout entram como conversão e aparecem no relatório", () => {
+  const at = new Date().toISOString();
+  const events = [
+    { kind: "page_view", session_id: "s1", occurred_at: at, path: "/checkout.html", channel: "paid_search", device: "desktop" },
+    { kind: "purchase", session_id: "s1", occurred_at: at, path: "/checkout.html", target: "Pix", value: 189.9, channel: "paid_search", device: "desktop" },
+  ];
+  const report = analytics.aggregate(events, { days: 7 });
+  assert.equal(report.totals.conversions, 1);
+  assert.equal(report.pages[0].path, "/checkout.html");
+  assert.equal(report.pages[0].label, analytics.pageLabel("/checkout.html"));
+  assert.equal(report.pages[0].conversions, 1);
+  assert.equal(analytics.pageLabel("/conta.html"), "Minha conta");
 });
 
 /* --------------------------------------------------------- base de exemplo */

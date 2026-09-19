@@ -5,8 +5,10 @@
    (admin/ → Audiência). Duas metades no mesmo arquivo:
 
    1) COLETA (navegador) — registra page views, cliques com posição
-      (mapa de calor), profundidade de rolagem, tempo de leitura e os
-      eventos de compra (ver produto, categoria, adicionar, finalizar).
+      (mapa de calor), profundidade de rolagem, tempo de leitura, os
+      banners vistos e clicados (hero da home e banner de categoria) e os
+      eventos de compra (ver produto, categoria, adicionar, finalizar,
+      pedido fechado no checkout).
       Só grava depois que o visitante aceita no banner de privacidade
       (assets/js/lgpd.js). Com "Só o essencial" nada é medido.
 
@@ -63,11 +65,20 @@ if (typeof window !== "undefined") {
     "checkout_intent",
     "whatsapp",
     "banner_view",
+    "banner_click",
+    "purchase",
   ];
 
-  /* Eventos que contam como conversão para a loja (o pedido fecha no
-     WhatsApp, então a conversa iniciada é o resultado do site). */
-  const CONVERSION_KINDS = ["add_to_cart", "checkout_intent", "whatsapp"];
+  /* Eventos que contam como conversão para a loja: o pedido fechado no
+     checkout (Pix/cartão) ou a conversa iniciada no WhatsApp — e os passos
+     que levam até lá. */
+  const CONVERSION_KINDS = ["add_to_cart", "checkout_intent", "whatsapp", "purchase"];
+
+  /* Posições de banner medidas (mesmos ids do painel → Banners & Paleta). */
+  const BANNER_POSITIONS = {
+    "home-hero": "Home — hero principal",
+    "category-hero": "Banner de categoria",
+  };
 
   const CHANNEL_LABELS = {
     direct: "Direto",
@@ -96,10 +107,10 @@ if (typeof window !== "undefined") {
     "/sobre.html": "A marca",
     "/contato.html": "Contato",
     "/cartao-presente.html": "Cartão presente",
-    "/privacidade.html": "Privacidade",
-    "/404.html": "Página 404",
     "/checkout.html": "Checkout",
     "/conta.html": "Minha conta",
+    "/privacidade.html": "Privacidade",
+    "/404.html": "Página 404",
   };
 
   /* Regiões verticais de cada página (fatias de 0 a 1 da altura do
@@ -151,16 +162,15 @@ if (typeof window !== "undefined") {
       { id: "footer", label: "Rodapé", from: 0.88, to: 1 },
     ],
     "/checkout.html": [
-      { id: "header", label: "Cabeçalho e menu", from: 0, to: 0.08 },
-      { id: "itens", label: "Itens do pedido e entrega", from: 0.08, to: 0.55 },
-      { id: "pagamento", label: "Pagamento e finalização", from: 0.55, to: 0.92 },
-      { id: "footer", label: "Rodapé", from: 0.92, to: 1 },
+      { id: "header", label: "Cabeçalho e menu", from: 0, to: 0.1 },
+      { id: "resumo", label: "Itens, entrega e cadastro", from: 0.1, to: 0.45 },
+      { id: "pagamento", label: "Pix ou cartão e confirmação", from: 0.45, to: 0.88 },
+      { id: "footer", label: "Rodapé", from: 0.88, to: 1 },
     ],
     "/conta.html": [
-      { id: "header", label: "Cabeçalho e menu", from: 0, to: 0.08 },
-      { id: "acesso", label: "Entrar e criar conta", from: 0.08, to: 0.6 },
-      { id: "pedidos", label: "Meus pedidos e dados", from: 0.6, to: 0.92 },
-      { id: "footer", label: "Rodapé", from: 0.92, to: 1 },
+      { id: "header", label: "Cabeçalho e menu", from: 0, to: 0.1 },
+      { id: "cadastro", label: "Cadastro, endereço e pedidos", from: 0.1, to: 0.88 },
+      { id: "footer", label: "Rodapé", from: 0.88, to: 1 },
     ],
   };
 
@@ -187,6 +197,8 @@ if (typeof window !== "undefined") {
     "facebookads", "fb_ads", "instagramads", "tiktokads", "tiktok_ads",
     "bingads", "twitterads", "taboola", "outbrain", "criteo",
   ];
+  /* Parâmetros de clique em anúncio guardados junto do UTM da sessão. */
+  const CLICK_ID_KEYS = ["gclid", "gbraid", "wbraid", "fbclid"];
 
   const $ = (selector, root) => (root || global.document || { querySelector: () => null }).querySelector(selector);
 
@@ -285,6 +297,13 @@ if (typeof window !== "undefined") {
     if (fbclid && !utm.source) { utm.source = "facebook"; utm.medium = "cpc"; }
     const ttclid = params.get("ttclid");
     if (ttclid && !utm.source) { utm.source = "tiktok"; utm.medium = "cpc"; }
+    /* Identificadores do clique no anúncio. Ficam na sessão para as
+       conversões voltarem ao Google Ads (gclid/gbraid/wbraid) e à Meta
+       (fbclid) — são ids do clique, não da pessoa. */
+    CLICK_ID_KEYS.forEach((key) => {
+      const value = params.get(key);
+      if (value && /^[A-Za-z0-9._-]{4,200}$/.test(value)) utm[key] = value;
+    });
     return utm;
   }
 
@@ -370,7 +389,7 @@ if (typeof window !== "undefined") {
         avgSeconds: 0, bounceRate: 0, avgScroll: 0, conversions: 0, conversionRate: 0,
       },
       trend: [], pages: [], sources: [], campaigns: [], referrers: [],
-      devices: [], locations: [], zones: [], targets: [], scroll: [],
+      devices: [], locations: [], zones: [], targets: [], scroll: [], banners: [],
       heat: { path: opts.path || "/", cols: opts.cols || 12, rows: opts.rows || 18, max: 0, cells: [] },
     };
   }
@@ -436,6 +455,8 @@ if (typeof window !== "undefined") {
     const targets = new Map();
     const trend = new Map();
     const scrollByPath = new Map();
+    const banners = new Map();
+    const convertedSessions = new Set();
 
     const bump = (map, key, create) => {
       if (!map.has(key)) map.set(key, create());
@@ -501,6 +522,7 @@ if (typeof window !== "undefined") {
       }
 
       if (CONVERSION_KINDS.includes(event.kind)) {
+        convertedSessions.add(sessionId);
         /* A conversão pertence à origem da SESSÃO (o visitante entra pelo
            anúncio, navega sem o parâmetro e compra em outra página). Sem
            isso a conversão some quando o evento não repete o canal. */
@@ -534,6 +556,31 @@ if (typeof window !== "undefined") {
         const bucket = bump(scrollByPath, path, () => ({ path, label: pageLabel(path), reached: [], sessions: new Set() }));
         bucket.reached.push(Number(event.scroll_ratio));
         bucket.sessions.add(sessionId);
+      }
+
+      /* Banners: quantas vezes cada arte apareceu e quantas foi clicada.
+         A chave é o id do banner (o mesmo do painel); o nome vem junto. */
+      if (event.kind === "banner_view" || event.kind === "banner_click") {
+        const bannerId = String(event.banner_id || event.target || "").trim();
+        if (bannerId) {
+          const bucket = bump(banners, bannerId, () => ({
+            id: bannerId,
+            name: String(event.banner_name || event.target || bannerId),
+            position: String(event.zone || "home-hero"),
+            path,
+            views: 0, clicks: 0, viewSessions: new Set(), clickSessions: new Set(), targets: new Map(),
+          }));
+          if (event.banner_name && bucket.name === bannerId) bucket.name = String(event.banner_name);
+          if (event.kind === "banner_view") {
+            bucket.views += 1;
+            bucket.viewSessions.add(sessionId);
+          } else {
+            bucket.clicks += 1;
+            bucket.clickSessions.add(sessionId);
+            const cta = String(event.target || "Banner").slice(0, 60);
+            bucket.targets.set(cta, (bucket.targets.get(cta) || 0) + 1);
+          }
+        }
       }
     });
 
@@ -643,6 +690,26 @@ if (typeof window !== "undefined") {
       })
       .sort((a, b) => b.sessions - a.sessions);
 
+    report.banners = Array.from(banners.values())
+      .map((item) => {
+        const converted = Array.from(item.clickSessions).filter((id) => convertedSessions.has(id)).length;
+        const topTarget = Array.from(item.targets.entries()).sort((a, b) => b[1] - a[1])[0];
+        return {
+          id: item.id,
+          name: item.name,
+          position: item.position,
+          positionLabel: BANNER_POSITIONS[item.position] || item.position,
+          path: item.path,
+          views: item.views,
+          clicks: item.clicks,
+          sessions: item.clickSessions.size,
+          ctr: item.views ? Math.round((item.clicks / item.views) * 1000) / 10 : 0,
+          conversions: converted,
+          topTarget: topTarget ? topTarget[0] : "",
+        };
+      })
+      .sort((a, b) => b.clicks - a.clicks || b.views - a.views);
+
     report.heat = buildHeat(inRange, { path: opts.path || report.pages[0]?.path || "/", cols: opts.cols, rows: opts.rows });
     return report;
   }
@@ -664,8 +731,8 @@ if (typeof window !== "undefined") {
     { channel: "social", weight: 31, referrerHost: "instagram.com", utm: { source: "instagram", medium: "social", campaign: "drop-semanal" } },
     { channel: "direct", weight: 22, referrerHost: "", utm: {} },
     { channel: "organic", weight: 15, referrerHost: "google.com.br", utm: {} },
-    { channel: "paid", weight: 14, referrerHost: "", utm: { source: "meta", medium: "cpc", campaign: "c18-verao09-conversao" } },
-    { channel: "paid", weight: 6, referrerHost: "", utm: { source: "googleads", medium: "cpc", campaign: "shopping-merchant" } },
+    { channel: "paid", weight: 14, referrerHost: "", clickId: "fbclid", utm: { source: "meta", medium: "cpc", campaign: "c18-verao09-conversao" } },
+    { channel: "paid", weight: 6, referrerHost: "", clickId: "gclid", utm: { source: "googleads", medium: "cpc", campaign: "shopping-merchant" } },
     { channel: "social", weight: 5, referrerHost: "tiktok.com", utm: { source: "tiktok", medium: "social", campaign: "bastidores-loja" } },
     { channel: "referral", weight: 4, referrerHost: "wa.me", utm: {} },
     { channel: "email", weight: 3, referrerHost: "", utm: { source: "newsletter", medium: "email", campaign: "novidades-c18" } },
@@ -682,6 +749,14 @@ if (typeof window !== "undefined") {
     { city: "Rio de Janeiro", state: "RJ", weight: 7 },
     { city: "São Paulo", state: "SP", weight: 3 },
     { city: "Belo Horizonte", state: "MG", weight: 2 },
+  ];
+
+  /* Banners da base de exemplo: o hero padrão e um drop de campanha (a
+     home mostra um por vez — a campanha entra nos últimos 10 dias). */
+  const SAMPLE_BANNERS = [
+    { id: "banner-padrao", name: "Padrão Censura 18", position: "home-hero", ctas: ["Ver o catálogo", "Achar uma loja"], clickRate: 0.22 },
+    { id: "banner-drop-inverno", name: "Drop de inverno", position: "home-hero", ctas: ["Ver o drop", "Achar uma loja"], clickRate: 0.31 },
+    { id: "banner-cat-moletons", name: "Moletons — frio na Baixada", position: "category-hero", ctas: ["Ver moletons"], clickRate: 0.12 },
   ];
 
   const SAMPLE_PRODUCTS = [
@@ -751,7 +826,11 @@ if (typeof window !== "undefined") {
 
         /* O rastreador real guarda o UTM da entrada na sessão: todos os
            eventos seguem atribuídos à mesma origem. */
-        const sessionUtm = source.utm;
+        /* sessões vindas de anúncio carregam o id do clique (gclid/fbclid),
+           que é o que permite devolver a conversão à plataforma */
+        const sessionUtm = source.clickId
+          ? Object.assign({}, source.utm, { [source.clickId]: `demo-${source.clickId}-${dayOffset}-${index}` })
+          : source.utm;
 
         visited.forEach((path, step) => {
           const at = new Date(sessionStart.getTime() + step * (25000 + random() * 90000));
@@ -794,6 +873,28 @@ if (typeof window !== "undefined") {
             utm: sessionUtm, region: { city: city.city, state: city.state },
           });
 
+          /* banner do hero (home) e banner de categoria (catálogo): a arte
+             vista entra como banner_view; uma parte dos visitantes clica */
+          const banner = path === "/"
+            ? SAMPLE_BANNERS[dayOffset >= days - 10 ? 1 : 0]
+            : path === "/produtos.html" && random() < 0.35 ? SAMPLE_BANNERS[2] : null;
+          if (banner) {
+            const bannerBase = {
+              session_id: sessionId, visitor_id: visitorId, path, channel: source.channel, device,
+              banner_id: banner.id, banner_name: banner.name, zone: banner.position,
+              utm: sessionUtm, region: { city: city.city, state: city.state },
+            };
+            events.push({ kind: "banner_view", occurred_at: iso(new Date(at.getTime() + 1500)), target: banner.name, ...bannerBase });
+            if (!bounced && random() < banner.clickRate) {
+              events.push({
+                kind: "banner_click",
+                occurred_at: iso(new Date(at.getTime() + 6500)),
+                target: banner.ctas[random() < 0.75 ? 0 : banner.ctas.length - 1],
+                ...bannerBase,
+              });
+            }
+          }
+
           /* cliques distribuídos pelas faixas da página */
           const clicks = bounced ? 0 : Math.floor(random() * (path === "/" ? 7 : 5));
           for (let click = 0; click < clicks; click += 1) {
@@ -828,8 +929,10 @@ if (typeof window !== "undefined") {
             });
           }
 
-          /* jornada de compra nas páginas de catálogo e produto */
-          if (!bounced && path === "/produto.html" && random() < 0.55) {
+          /* jornada de compra nas páginas de catálogo e produto; quem chega
+             pelo anúncio de busca (gclid) vem decidido e converte mais */
+          const fromAd = Boolean(source.clickId);
+          if (!bounced && (path === "/produto.html" || (fromAd && path === "/produtos.html")) && random() < (fromAd ? 0.8 : 0.55)) {
             const product = SAMPLE_PRODUCTS[Math.floor(random() * SAMPLE_PRODUCTS.length)];
             const base = new Date(at.getTime() + 15000);
             events.push({
@@ -838,7 +941,7 @@ if (typeof window !== "undefined") {
               product_id: product.id, category: product.category, value: product.price,
               utm: sessionUtm, region: { city: city.city, state: city.state },
             });
-            if (random() < 0.5) {
+            if (random() < (fromAd ? 0.7 : 0.5)) {
               events.push({
                 kind: "add_to_cart", session_id: sessionId, visitor_id: visitorId,
                 occurred_at: iso(new Date(base.getTime() + 22000)), path, channel: source.channel, device,
@@ -846,13 +949,34 @@ if (typeof window !== "undefined") {
                 utm: sessionUtm, region: { city: city.city, state: city.state },
               });
               if (random() < 0.62) {
+                const viaCheckout = random() < 0.7;
                 events.push({
-                  kind: random() < 0.7 ? "checkout_intent" : "whatsapp",
+                  kind: viaCheckout ? "checkout_intent" : "whatsapp",
                   session_id: sessionId, visitor_id: visitorId,
                   occurred_at: iso(new Date(base.getTime() + 48000)), path, channel: source.channel, device,
                   value: product.price,
                   utm: sessionUtm, region: { city: city.city, state: city.state },
                 });
+                /* parte de quem inicia fecha o pedido (Pix/cartão) no checkout */
+                if (viaCheckout && random() < (fromAd ? 0.6 : 0.45)) {
+                  const checkoutAt = new Date(base.getTime() + 95000);
+                  events.push({
+                    kind: "page_view", session_id: sessionId, visitor_id: visitorId,
+                    occurred_at: iso(checkoutAt), path: "/checkout.html", title: pageLabel("/checkout.html"),
+                    channel: source.channel, referrer_host: "", utm: sessionUtm, device,
+                    region: { city: city.city, state: city.state, country: "BR" }, landing: "",
+                  });
+                  events.push({
+                    kind: "purchase", session_id: sessionId, visitor_id: visitorId,
+                    occurred_at: iso(new Date(checkoutAt.getTime() + 70000)), path: "/checkout.html",
+                    channel: source.channel, device,
+                    /* na compra, "category" leva o número do pedido (mesma regra
+                       do checkout.html) — é o Order ID que volta ao Google Ads */
+                    product_id: product.id, category: `C18-${String(dayOffset).padStart(2, "0")}${String(index).padStart(3, "0")}`, value: product.price,
+                    target: random() < 0.7 ? "Pix" : "Cartão",
+                    utm: sessionUtm, region: { city: city.city, state: city.state },
+                  });
+                }
               }
             }
           }
@@ -1140,7 +1264,74 @@ if (typeof window !== "undefined") {
         x_ratio: clampRatio(x / width),
         y_ratio: clampRatio(yRatio),
       }));
+
+      /* clique dentro de um banner (hero da home ou banner de categoria):
+         vira banner_click com o id/nome da arte — é o "banner mais clicado"
+         do painel. Só links, botões e a própria imagem contam. */
+      const bannerBox = element && element.closest ? element.closest("[data-banner-id]") : null;
+      if (bannerBox && element && element.closest && element.closest("a,button,img,[data-banner-cta]")) {
+        const cta = describeTarget(element).replace(/^(Link|Botão|CTA):\s*/i, "").slice(0, 60) || "Imagem";
+        record(baseEvent("banner_click", Object.assign(bannerPayload(bannerBox), { target: cta })));
+      }
     }, { capture: true, passive: true });
+  }
+
+  /* ----------------------------------------------------------- banners */
+
+  /* Atributos data-banner-* gravados pelo site-config.js no hero e no
+     banner de categoria (e, no HTML, no hero padrão da marca). */
+  function bannerPayload(element) {
+    const get = (name) => (element && element.getAttribute ? String(element.getAttribute(name) || "") : "");
+    return {
+      banner_id: get("data-banner-id").slice(0, 80),
+      banner_name: (get("data-banner-name") || get("data-banner-id")).slice(0, 120),
+      zone: (get("data-banner-position") || "home-hero").slice(0, 40),
+    };
+  }
+
+  const viewedBanners = new Set();
+
+  function trackBannerView(detail) {
+    const data = detail || {};
+    const id = String(data.banner_id || "").trim();
+    if (!id) return false;
+    /* a mesma arte não conta duas vezes na mesma página (a troca de
+       categoria no catálogo pode reaplicar o banner) */
+    if (viewedBanners.has(id)) return false;
+    viewedBanners.add(id);
+    return record(baseEvent("banner_view", {
+      banner_id: id.slice(0, 80),
+      banner_name: String(data.banner_name || id).slice(0, 120),
+      zone: String(data.zone || data.position || "home-hero").slice(0, 40),
+      target: String(data.banner_name || id).slice(0, 90),
+      category: data.category ? String(data.category).slice(0, 60) : undefined,
+    }));
+  }
+
+  function trackBanners() {
+    /* banners já aplicados quando a medição carregou (hero padrão do HTML
+       ou banner do painel aplicado antes deste script). A leitura espera
+       um instante: com o Supabase ligado a arte do painel substitui o hero
+       padrão logo após o carregamento, e só a arte final deve contar. */
+    const scan = () => {
+      const boxes = document.querySelectorAll ? document.querySelectorAll("[data-banner-id]") : [];
+      Array.prototype.forEach.call(boxes, (box) => {
+        if (box.hidden) return;
+        trackBannerView(bannerPayload(box));
+      });
+    };
+    if (typeof setTimeout === "function") setTimeout(scan, 1200); else scan();
+    /* banners aplicados depois (modo Supabase carrega a arte por rede;
+       o banner de categoria troca com o filtro) */
+    document.addEventListener("c18:banner-applied", (event) => {
+      const detail = (event && event.detail) || {};
+      trackBannerView({
+        banner_id: detail.id || detail.banner_id,
+        banner_name: detail.name || detail.banner_name,
+        zone: detail.position || detail.zone,
+        category: detail.category,
+      });
+    });
   }
 
   function trackScroll() {
@@ -1206,6 +1397,7 @@ if (typeof window !== "undefined") {
     trackPageView();
     trackClicks();
     trackScroll();
+    trackBanners();
     document.addEventListener("c18:lgpd-change", (event) => {
       applyConsent((event.detail && event.detail.status) || consentStatus());
     });
@@ -1216,12 +1408,15 @@ if (typeof window !== "undefined") {
     SESSION_KEY,
     EVENT_KINDS,
     CONVERSION_KINDS,
+    CLICK_ID_KEYS,
+    BANNER_POSITIONS,
     CHANNEL_LABELS,
     DEVICE_LABELS,
     PAGE_LABELS,
     PAGE_ZONES,
     FALLBACK_ZONES,
     aggregate,
+    bannerPayload,
     buildHeat,
     capturedEvents,
     classifySource,
@@ -1236,6 +1431,7 @@ if (typeof window !== "undefined") {
     normalizePath,
     pageLabel,
     track,
+    trackBannerView,
     utmFromSearch,
     zoneAt,
     zonesFor,
