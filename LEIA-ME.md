@@ -354,6 +354,9 @@ ser extraída diretamente dos arquivos.
       (`privacidade.html`) e consentimento explícito no formulário de contato
 - [x] HTTPS sempre: redirecionamento `http://` → `https://` e upgrade
       automático de links inseguros em todas as páginas
+- [x] Estoque único: todo o saldo fica na **loja de estoque central**
+      (padrão: Nova Iguaçu — Calçadão) e a troca de loja é feita em um lugar
+      só — as demais unidades continuam como pontos de retirada
 - [x] Suíte de testes com o Node puro: `node --test tests/`
 
 ## 🔜 Próximos passos sugeridos
@@ -372,7 +375,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 64 testes
+node --test tests/*.test.js   # 70 testes
 # ou, por arquivo:
 node --test tests/gift-card.test.js tests/coupons.test.js \
            tests/checkout.test.js tests/site-config.test.js \

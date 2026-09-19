@@ -3,7 +3,7 @@
 
   const CONFIG = window.C18_CONFIG || { mode: "demo", lowStockThreshold: 3 };
   const Importer = window.C18Importer;
-  const STORE_KEY = "c18-operations-demo-v2";
+  const STORE_KEY = "c18-operations-demo-v3"; // v3: estoque único numa só loja
   const BANNER_DEMO_KEY = "c18:demo-banner";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
   const COUPONS_DEMO_KEY = "c18:demo-coupons";
@@ -50,6 +50,13 @@
     { id: "queimados", name: "Queimados — Centro", short: "Queimados" },
   ];
 
+  // 👉 Estoque único: TODA a mercadoria fica na loja abaixo (estoque central).
+  // As outras unidades não têm saldo próprio — continuam atendendo como
+  // pontos de retirada das compras do site. Para trocar a loja do estoque,
+  // basta mudar o id aqui. No Supabase, use:
+  //   select public.set_stock_store('NI-BECO');
+  const STOCK_STORE_ID = "ni-calcadao";
+
   const saoPauloParts = Object.fromEntries(new Intl.DateTimeFormat("en", {
     year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo",
   }).formatToParts(new Date()).map((part) => [part.type, part.value]));
@@ -72,19 +79,20 @@
     cancelled: { label: "Cancelado" },
   };
 
+  // Todo o saldo nasce na loja de estoque central (STOCK_STORE_ID).
   const seedInventory = [
-    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 1, "UNICA", "P", "ni-calcadao"],
-    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 3, "PRETO", "UNIC", "ni-calcadao"],
-    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 8, "UNICA", "UNIC", "ni-top"],
-    ["0000000412", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 2, "CINZA", "38", "caxias"],
-    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 6, "CINZA", "40", "caxias"],
-    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 12, "BRANCO", "P", "nilopolis"],
-    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 9, "BRANCO", "M", "nilopolis"],
-    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 0, "BRANCO", "G", "nilopolis"],
-    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 4, "PRETO", "UNIC", "queimados"],
-    ["0000000013", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 18, "UNICA", "P", "ni-beco"],
-    ["0000000014", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 14, "UNICA", "M", "ni-beco"],
-    ["0000000203", "CALÇA PASSEIO XADR", "CENSURA 18", "VERÃO 08", "CALCA", 15, 2, "XADREZ", "36", "ni-top"],
+    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 1, "UNICA", "P", STOCK_STORE_ID],
+    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 3, "PRETO", "UNIC", STOCK_STORE_ID],
+    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 8, "UNICA", "UNIC", STOCK_STORE_ID],
+    ["0000000412", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 2, "CINZA", "38", STOCK_STORE_ID],
+    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 6, "CINZA", "40", STOCK_STORE_ID],
+    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 12, "BRANCO", "P", STOCK_STORE_ID],
+    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 9, "BRANCO", "M", STOCK_STORE_ID],
+    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 0, "BRANCO", "G", STOCK_STORE_ID],
+    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 4, "PRETO", "UNIC", STOCK_STORE_ID],
+    ["0000000013", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 18, "UNICA", "P", STOCK_STORE_ID],
+    ["0000000014", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 14, "UNICA", "M", STOCK_STORE_ID],
+    ["0000000203", "CALÇA PASSEIO XADR", "CENSURA 18", "VERÃO 08", "CALCA", 15, 2, "XADREZ", "36", STOCK_STORE_ID],
   ].map(([code, description, brand, collection, category, price, quantity, color, size, storeId]) => ({
     id: `${code}-${storeId}`,
     code,
@@ -141,16 +149,16 @@
   ];
 
   const seedMovements = [
-    { id: 1, code: "0000000940", description: "CORDOBA 6 BOLSOS", type: "import", storeId: "ni-top", quantity: 8, at: "Hoje, 14:20", note: "Importação Alterdata" },
-    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: "caxias", quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047" },
-    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: "ni-calcadao", quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048" },
-    { id: 4, code: "0000000063", description: "SHORT FOLHAS", type: "entry", storeId: "ni-calcadao", quantity: 1, at: "Hoje, 09:32", note: "Recebimento NF 8841" },
+    { id: 1, code: "0000000940", description: "CORDOBA 6 BOLSOS", type: "import", storeId: STOCK_STORE_ID, quantity: 8, at: "Hoje, 14:20", note: "Importação Alterdata" },
+    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: STOCK_STORE_ID, quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047 (retirada em Caxias)" },
+    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: STOCK_STORE_ID, quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048 (retirada no Calçadão)" },
+    { id: 4, code: "0000000063", description: "SHORT FOLHAS", type: "entry", storeId: STOCK_STORE_ID, quantity: 1, at: "Hoje, 09:32", note: "Recebimento NF 8841" },
   ];
 
   const seedReceipts = [
-    { id: "REC-0921", invoice: "NF 8841", supplier: "C18 Confecções", storeId: "ni-calcadao", items: 42, checked: 42, status: "done", receivedAt: "Hoje, 09:32" },
-    { id: "REC-0922", invoice: "NF 8847", supplier: "Distribuidora Street", storeId: "ni-top", items: 68, checked: 37, status: "checking", receivedAt: "Hoje, 11:18" },
-    { id: "REC-0923", invoice: "NF 8850", supplier: "C18 Confecções", storeId: "caxias", items: 31, checked: 0, status: "pending", receivedAt: "Previsto 16:00" },
+    { id: "REC-0921", invoice: "NF 8841", supplier: "C18 Confecções", storeId: STOCK_STORE_ID, items: 42, checked: 42, status: "done", receivedAt: "Hoje, 09:32" },
+    { id: "REC-0922", invoice: "NF 8847", supplier: "Distribuidora Street", storeId: STOCK_STORE_ID, items: 68, checked: 37, status: "checking", receivedAt: "Hoje, 11:18" },
+    { id: "REC-0923", invoice: "NF 8850", supplier: "C18 Confecções", storeId: STOCK_STORE_ID, items: 31, checked: 0, status: "pending", receivedAt: "Previsto 16:00" },
   ];
 
   const seedIntegrations = [
@@ -272,6 +280,7 @@
   const currency = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
   const number = (value) => new Intl.NumberFormat("pt-BR").format(Number(value || 0));
   const storeById = (id) => stores.find((store) => store.id === id) || { name: "—", short: "—" };
+  const stockStore = () => stores.find((store) => store.id === STOCK_STORE_ID) || stores[0];
   const available = (item) => Math.max(0, Number(item.quantity || 0) - Number(item.reserved || 0));
 
   function saveState() {
@@ -292,9 +301,15 @@
   }
 
   function fillStoreSelects() {
-    const options = stores.map((store) => `<option value="${store.id}">${esc(store.name)}</option>`).join("");
-    ["#import-store", "#manual-store"].forEach((selector) => { $(selector).innerHTML = options; });
-    $("#inventory-store").innerHTML = `<option value="all">Todas as lojas</option>${options}`;
+    const stock = stockStore();
+    // Estoque único: importação e movimento manual só na loja de estoque central.
+    const stockOption = `<option value="${stock.id}">${esc(stock.name)} — estoque central</option>`;
+    ["#import-store", "#manual-store"].forEach((selector) => { $(selector).innerHTML = stockOption; });
+    const hubTag = $("#stock-hub-tag");
+    if (hubTag) {
+      hubTag.innerHTML = `Estoque central: <b>${esc(stock.name)}</b><span class="stock-hub-tag__sep">·</span>demais lojas: ponto de retirada`;
+      hubTag.title = "Todo o saldo fica na loja de estoque. As outras unidades atendem como pontos de retirada.";
+    }
   }
 
   function renderMetrics() {
@@ -350,12 +365,10 @@
 
   function renderInventory() {
     const query = Importer.normalizeText($("#inventory-search")?.value || "");
-    const store = $("#inventory-store")?.value || "all";
     const stock = $("#inventory-stock")?.value || "all";
     const filtered = state.inventory.filter((item) => {
       const haystack = Importer.normalizeText([item.code, item.reference, item.description, item.brand, item.category, item.collection, item.color, item.size].join(" "));
       if (query && !haystack.includes(query)) return false;
-      if (store !== "all" && item.storeId !== store) return false;
       const balance = available(item);
       if (stock === "positive" && balance <= 0) return false;
       if (stock === "low" && (balance <= 0 || balance > CONFIG.lowStockThreshold)) return false;
@@ -812,7 +825,7 @@
     if (!order) return;
     currentOrderId = id;
     $("#drawer-title").textContent = `#${order.id}`;
-    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios — PAC</option><option>Correios — SEDEX</option><option>Mercado Envios</option><option>Uber Direct (mesmo dia)</option><option>99 Entregas (mesmo dia)</option><option>Retirada na loja</option><option>Transportadora própria</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
+    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Retirada em</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios — PAC</option><option>Correios — SEDEX</option><option>Mercado Envios</option><option>Uber Direct (mesmo dia)</option><option>99 Entregas (mesmo dia)</option><option>Retirada na loja</option><option>Transportadora própria</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
     renderOrderActions(order);
     $("#order-drawer").classList.add("is-open");
     $("#order-drawer").setAttribute("aria-hidden", "false");
@@ -1954,7 +1967,7 @@
           item.checked = event.target.checked; saveState(); openOrder(order.id);
         }
       }
-      if (event.target.matches("#inventory-store, #inventory-stock")) renderInventory();
+      if (event.target.matches("#inventory-stock")) renderInventory();
       if (event.target.matches("#import-store")) updateImportPreview();
       if (event.target.matches("#coupon-scope")) updateCouponScopeFields();
     });
