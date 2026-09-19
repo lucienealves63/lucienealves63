@@ -166,17 +166,21 @@ Os **endereços e WhatsApp reais** das 6 unidades estão em `STORES`, dentro de
 
 ### 📦 Estoque central: Ecommerce C18
 
-No painel de operações, além das 6 lojas físicas existe a loja virtual
-**Ecommerce C18** — o **estoque central** da operação. É dela que saem o
-catálogo publicado nos canais (Google Merchant, Meta Ads, Google Ads e
-marketplaces) e é nela que os pedidos do site são lançados; as lojas físicas
-continuam com o próprio saldo, importado da Alterdata loja a loja.
+A operação trabalha com **estoque único**: todo o saldo fica na loja virtual
+**Ecommerce C18**, o estoque central — é dela que saem o site, o catálogo
+publicado nos canais (Google Merchant, Meta Ads, Google Ads e marketplaces) e
+a baixa de cada venda. As seis lojas físicas **não têm saldo próprio**:
+funcionam como pontos de retirada das compras do site (o pedido guarda a loja
+de retirada escolhida pela cliente).
 
-- No modo demonstração ela já vem como a primeira loja da lista;
+- No painel de demonstração a loja já vem como estoque central (constante
+  `STOCK_STORE_ID` em `admin/assets/admin.js`); a importação da Alterdata e o
+  movimento manual entram sempre nela;
 - No Supabase, `202609210002_estoque_central_ecommerce.sql` cria a loja
-  (`ECOMMERCE-C18`, `is_central = true`), o gatilho que põe os pedidos do site
-  nela e faz `channel_catalog()` publicar só esse saldo — itens que existem só
-  em loja física aparecem no feed com estoque 0, até entrarem no central.
+  (`ECOMMERCE-C18`, `kind = 'ecommerce'`), marca-a em `stores.fulfills_stock`,
+  transfere para ela qualquer saldo que já estivesse em outra loja e faz
+  `channel_catalog()` publicar o saldo dela. Para trocar a loja do estoque:
+  `select public.set_stock_store('CODIGO');` (somente admin).
 
 ---
 
@@ -325,11 +329,11 @@ dois canais ao mesmo tempo (`maxPublished` e `minPrice` inclusos) e mostra
 o preço do site ao lado do preço do canal.
 
 O estoque publicado é sempre o do **Ecommerce C18** (estoque central) — o
-aviso da página e o resumo do feed mostram isso; as lojas físicas não entram
-no saldo dos canais. Depois vem a **prévia do feed** com as colunas exatas de
-cada canal, as pendências de cada item (sem GTIN, sem imagem pública, título
-longo, sem estoque no central…) e o download (XML no Google, TSV na Amazon,
-CSV nos demais). O botão *Publicar*
+aviso da página e o resumo do feed mostram isso; as lojas físicas são pontos
+de retirada e não têm saldo próprio. Depois vem a **prévia do feed** com as
+colunas exatas de cada canal, as pendências de cada item (sem GTIN, sem
+imagem pública, título longo, sem estoque…) e o download (XML no Google, TSV
+na Amazon, CSV nos demais). O botão *Publicar*
 grava as listagens e enfileira o envio; quem fala com o provedor é a Edge
 Function `channel-publish`, usando os segredos do ambiente.
 
@@ -499,10 +503,11 @@ ser extraída diretamente dos arquivos.
       Protocol) e Mercado Livre, Shopee, Amazon, Magazine Luiza e Americanas
 - [x] Política de preço/estoque por canal (markup da comissão, preço
       psicológico, reserva de estoque) com prévia e download do feed
-- [x] Estoque central **Ecommerce C18**: loja virtual que alimenta os canais
-      e recebe os pedidos do site; lojas físicas com saldo próprio
 - [x] Banner de categoria opcional (uma arte por categoria, sem mudar o
       layout quando não há banner ativo)
+- [x] Estoque único no **Ecommerce C18** (loja virtual = estoque central):
+      é dele que saem site, feeds e marketplaces, e a troca de loja é feita
+      em um lugar só — as seis lojas físicas são pontos de retirada
 - [x] Suíte de testes com o Node puro: `node --test tests/*.test.js`
 
 ## 🔜 Próximos passos sugeridos
@@ -530,7 +535,7 @@ ser extraída diretamente dos arquivos.
 A suíte roda com o Node puro, sem dependências:
 
 ```bash
-node --test tests/*.test.js   # 118 testes (Node puro, sem dependências)
+node --test tests/*.test.js   # 128 testes (Node puro, sem dependências)
 # ou, por arquivo:
 node --test tests/analytics.test.js tests/audience.test.js \
   tests/channels.test.js tests/admin-panel.test.js

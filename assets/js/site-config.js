@@ -271,6 +271,114 @@ window.C18_SITE = window.C18_SITE || {
     return applyCategoryBanner(match);
   }
 
+  /* ------------------------------------------------------------------
+     Banner de categoria (opcional)
+
+     O contêiner já existe em produtos.html e produto.html com o atributo
+     hidden. Quando não há banner ativo para a categoria, ele continua
+     escondido — nada muda no layout. Todo o conteúdo vindo do banco é
+     aplicado com textContent/href (nunca innerHTML), como no hero.
+     ------------------------------------------------------------------ */
+  function safeUrl(value) {
+    const url = String(value || "").trim();
+    if (!url) return "";
+    if (/^\s*(javascript|data|vbscript):/i.test(url)) return "";
+    return url;
+  }
+
+  function applyCategoryBanner(banner) {
+    const box = document.getElementById("category-banner");
+    if (!box) return false;
+    if (!banner || !isLiveNow(banner)) {
+      box.hidden = true;
+      box.removeAttribute("data-category");
+      return false;
+    }
+
+    const image = document.getElementById("category-banner-img");
+    const src = safeUrl(banner.image_path);
+    if (image) {
+      if (src) {
+        image.src = src;
+        image.hidden = false;
+        image.alt = banner.name || "";
+        box.classList.remove("is-missing");
+      } else {
+        image.hidden = true;
+        box.classList.add("is-missing");
+      }
+    }
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof value === "string" ? value.trim() : "";
+      el.textContent = text;
+      el.hidden = !text;
+    };
+
+    const setLink = (id, label, href) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const text = typeof label === "string" ? label.trim() : "";
+      const url = safeUrl(href);
+      if (!text || !url) { el.hidden = true; return; }
+      el.textContent = text;
+      el.href = url;
+      if (/^https?:\/\//i.test(url)) { el.target = "_blank"; el.rel = "noopener"; }
+      else { el.removeAttribute("target"); el.removeAttribute("rel"); }
+      el.hidden = false;
+    };
+
+    setText("category-banner-kicker", banner.title_top);
+    setText("category-banner-title", banner.title_bottom || banner.name);
+    setText("category-banner-text", banner.body_text);
+    setLink("category-banner-cta", banner.cta_label, banner.cta_url);
+    setLink("category-banner-cta-2", banner.cta_secondary_label, banner.cta_secondary_url);
+
+    box.setAttribute("data-category", String(banner.category || ""));
+    box.hidden = false;
+    window.C18SiteBanners.lastApplied = banner;
+    return true;
+  }
+
+  /* Chamado pelo app.js quando o visitante troca o filtro de categoria
+     (ou abre a página de um produto). Ids aceitos: o do site ("camisetas")
+     e o nome vindo do estoque ("T SHIRT", "CAMISETA"…). */
+  function setCategory(categoryId) {
+    const wanted = String(categoryId || "").trim();
+    const box = document.getElementById("category-banner");
+    if (!wanted || wanted === "todos") {
+      if (box) { box.hidden = true; box.removeAttribute("data-category"); }
+      window.C18SiteBanners.current = "";
+      return false;
+    }
+    const needle = wanted
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+    const match = categoryBanners.find((banner) => {
+      const value = String(banner.category || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+      return value === needle;
+    });
+    window.C18SiteBanners.current = wanted;
+    if (!match) return applyCategoryBanner(null);
+    trackBannerView(match);
+    return applyCategoryBanner(match);
+  }
+
+  /* O banner de categoria aparece na medição de audiência (banner_view) —
+     assim o painel mostra se a arte opcional está sendo vista. */
+  function trackBannerView(banner) {
+    const analytics = window.C18Analytics;
+    if (!analytics || typeof analytics.track !== "function") return;
+    analytics.track("banner_view", {
+      target: `Banner de categoria: ${banner.name || banner.category || ""}`,
+      category: banner.category || "",
+    });
+  }
+
   function isLiveNow(banner) {
     if (!banner || banner.active === false) return false;
     const now = Date.now();

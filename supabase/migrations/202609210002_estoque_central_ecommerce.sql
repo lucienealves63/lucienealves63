@@ -1,107 +1,115 @@
 -- Censura 18 — estoque central "Ecommerce C18"
 -- Executar após 202609210001_audiencia_banners_google_ads.sql.
 --
--- O estoque central da operação é a loja virtual "Ecommerce C18". É dele
--- que saem o catálogo publicado nos canais (Google Merchant, Meta, Google
--- Ads e marketplaces) e é nele que os pedidos do site são lançados. As
--- seis lojas físicas continuam com o próprio saldo (importação da
--- Alterdata por loja) e aparecem lado a lado no painel de estoque.
+-- A operação trabalha com ESTOQUE ÚNICO (202609170001: stores.fulfills_stock,
+-- stock_store_id(), set_stock_store()). A loja que concentra o saldo é a loja
+-- virtual "Ecommerce C18": é dela que saem o site, o catálogo publicado nos
+-- canais (Google Merchant, Meta, Google Ads e marketplaces) e a baixa de cada
+-- venda. As seis lojas físicas não têm saldo próprio — funcionam como pontos
+-- de retirada, e o pedido continua guardando a loja de retirada escolhida.
 --
---   stores.kind / stores.is_central  → marca a loja virtual como central
---   central_store_id()               → o id, para SQL, funções e painel
---   channel_catalog(url, store)      → estoque do feed = saldo do central
---                                      (store nulo volta a somar as lojas)
---   orders_default_store()           → pedido do site sem loja vai para o
---                                      Ecommerce C18
+--   stores.kind                    → physical | ecommerce
+--   ECOMMERCE-C18 (fulfills_stock) → passa a ser a loja do estoque
+--   saldo já lançado em outra loja → transferido para o Ecommerce C18
+--   channel_catalog(url, store)    → estoque do feed = saldo da loja de
+--                                    estoque (store nulo soma as lojas)
+--
+-- Para trocar a loja do estoque depois: select public.set_stock_store('CODIGO');
 
 -- =====================================================================
--- Loja virtual = estoque central
+-- Loja virtual
 -- =====================================================================
 
 alter table public.stores
   add column if not exists kind text not null default 'physical'
-    check (kind in ('physical', 'ecommerce')),
-  add column if not exists is_central boolean not null default false;
+    check (kind in ('physical', 'ecommerce'));
 
 comment on column public.stores.kind is
-  'physical = loja de rua/shopping · ecommerce = loja virtual (estoque central).';
-comment on column public.stores.is_central is
-  'Estoque central (Ecommerce C18): alimenta site, feeds e marketplaces e recebe os pedidos do site.';
+  'physical = loja de rua/shopping (ponto de retirada) · ecommerce = loja virtual (estoque central).';
 
--- só um estoque central por vez
-create unique index if not exists stores_single_central_idx
-  on public.stores (is_central)
-  where is_central;
-
-update public.stores set is_central = false
-where is_central and code <> 'ECOMMERCE-C18';
-
-insert into public.stores (code, name, kind, is_central, active)
-values ('ECOMMERCE-C18', 'Ecommerce C18', 'ecommerce', true, true)
+insert into public.stores (code, name, kind, active)
+values ('ECOMMERCE-C18', 'Ecommerce C18', 'ecommerce', true)
 on conflict (code) do update
   set name = excluded.name,
       kind = excluded.kind,
-      is_central = true,
       active = true;
 
-create or replace function public.central_store_id()
-returns uuid
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select id
+-- =====================================================================
+-- Ecommerce C18 vira a loja do estoque (fulfills_stock)
+-- =====================================================================
+
+/* Mesma ordem de set_stock_store(): primeiro tira a marca da loja anterior,
+   depois marca a nova — o índice stores_one_stock_location só admite uma.
+   O saldo que já estivesse na loja anterior é transferido, com o movimento
+   registrado nas duas pontas (transfer_out / transfer_in). */
+do $$
+declare
+  v_new uuid;
+  v_old uuid;
+  r record;
+begin
+  select id into v_new from public.stores where code = 'ECOMMERCE-C18';
+
+  select id into v_old
   from public.stores
-  where is_central and active
+  where fulfills_stock and id <> v_new
   order by created_at
   limit 1;
-$$;
 
-comment on function public.central_store_id() is
-  'Loja do estoque central (Ecommerce C18). Nulo se nenhuma loja estiver marcada.';
+  if v_old is not null then
+    for r in
+      select variant_id, on_hand, reserved, synced_from
+      from public.inventory_balances
+      where store_id = v_old
+    loop
+      insert into public.inventory_movements
+        (store_id, variant_id, kind, quantity_delta, balance_before, balance_after,
+         reference_type, reference_id, note)
+      values
+        (v_old, r.variant_id, 'transfer_out', -r.on_hand, r.on_hand, 0,
+         'migration', '202609210002', 'Estoque central passa para o Ecommerce C18');
 
--- =====================================================================
--- Pedidos do site nascem no estoque central
--- =====================================================================
+      insert into public.inventory_balances
+        (store_id, variant_id, on_hand, reserved, synced_from, synced_at, updated_at)
+      values
+        (v_new, r.variant_id, r.on_hand, r.reserved, r.synced_from, now(), now())
+      on conflict (store_id, variant_id) do update
+        set on_hand = public.inventory_balances.on_hand + excluded.on_hand,
+            reserved = public.inventory_balances.reserved + excluded.reserved,
+            version = public.inventory_balances.version + 1,
+            updated_at = now();
 
-create or replace function public.orders_default_store()
-returns trigger
-language plpgsql
-set search_path = public
-as $$
-begin
-  if new.store_id is null and coalesce(new.source, 'site') = 'site' then
-    new.store_id := public.central_store_id();
+      insert into public.inventory_movements
+        (store_id, variant_id, kind, quantity_delta, balance_before, balance_after,
+         reference_type, reference_id, note)
+      select v_new, r.variant_id, 'transfer_in', r.on_hand, b.on_hand - r.on_hand, b.on_hand,
+             'migration', '202609210002', 'Estoque central passa para o Ecommerce C18'
+      from public.inventory_balances b
+      where b.store_id = v_new and b.variant_id = r.variant_id;
+    end loop;
+
+    delete from public.inventory_balances where store_id = v_old;
   end if;
-  return new;
+
+  update public.stores set fulfills_stock = false where fulfills_stock and id <> v_new;
+  update public.stores set fulfills_stock = true where id = v_new;
 end;
 $$;
 
-drop trigger if exists orders_default_store on public.orders;
-create trigger orders_default_store
-  before insert on public.orders
-  for each row execute function public.orders_default_store();
-
--- pedidos do site já criados sem loja passam para o central
-update public.orders
-set store_id = public.central_store_id()
-where store_id is null and source = 'site' and public.central_store_id() is not null;
-
 -- =====================================================================
--- Catálogo publicável: estoque do feed = saldo do Ecommerce C18
+-- Catálogo publicável: estoque do feed = saldo da loja de estoque
 -- =====================================================================
 
 /* A assinatura muda (ganha p_store_id), então a versão antiga sai antes —
    senão channel_catalog('url') ficaria ambígua entre as duas. Os itens
-   continuam vindo de todas as lojas (o feed lista o catálogo inteiro); só
-   o saldo publicado passa a ser o da loja informada. Com p_store_id nulo
-   (nenhum central marcado) volta a somar todas as lojas, como antes. */
+   continuam vindo de todas as lojas (o feed lista o catálogo inteiro); o
+   saldo publicado é o da loja informada — por padrão, a loja do estoque
+   (Ecommerce C18). Com p_store_id nulo soma todas as lojas, como antes. */
 drop function if exists public.channel_catalog(text);
 
 create or replace function public.channel_catalog(
   p_site_url text default 'https://censura18.com.br',
-  p_store_id uuid default public.central_store_id()
+  p_store_id uuid default public.stock_store_id()
 )
 returns table (
   item_key text,
@@ -155,7 +163,7 @@ as $$
       coalesce(nullif(v.category, ''), '') as category,
       coalesce(nullif(v.collection, ''), '') as collection,
       max(coalesce(v.retail_price, 0)) as base_price,
-      -- saldo publicável: só a loja central (ou todas, se nenhuma for informada)
+      -- saldo publicável: só a loja de estoque (ou todas, se nenhuma for informada)
       coalesce(sum(greatest(0, coalesce(v.on_hand, 0) - coalesce(v.reserved, 0)))
         filter (where p_store_id is null or v.store_id = p_store_id), 0)::integer as stock,
       array_agg(distinct v.color) filter (where v.color is not null) as colors,
@@ -172,16 +180,15 @@ as $$
 $$;
 
 comment on function public.channel_catalog(text, uuid) is
-  'Catálogo publicável nos canais; o estoque é o saldo disponível da loja informada (padrão: estoque central Ecommerce C18).';
+  'Catálogo publicável nos canais; o estoque é o saldo disponível da loja informada (padrão: loja do estoque, Ecommerce C18).';
 
 -- =====================================================================
 -- Permissões
 -- =====================================================================
 
-grant execute on function public.central_store_id() to anon, authenticated;
 grant execute on function public.channel_catalog(text, uuid) to authenticated;
 revoke all on function public.channel_catalog(text, uuid) from public, anon;
 
 -- Conferência depois de rodar:
---   select code, name, kind, is_central from public.stores order by is_central desc, name;
+--   select code, name, kind, fulfills_stock from public.stores order by fulfills_stock desc, name;
 --   select item_key, stock from public.channel_catalog() order by stock desc limit 10;

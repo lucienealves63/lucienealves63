@@ -40,8 +40,12 @@ esquerda. Se o Excel entregar `Cód Produto` como número, o importador recompõ
 padrão Alterdata de 10 dígitos. Enquanto o Alterdata não fornecer uma coluna específica de
 referência, `Cód Produto` também é usado como referência.
 
-A planilha não contém uma coluna de loja. Por isso, a loja de destino é uma
-escolha obrigatória no início de cada importação.
+A planilha não contém uma coluna de loja — e não precisa: **todo o saldo
+entra na loja de estoque central**, marcada em `public.stores.fulfills_stock`
+(na tela, o campo vem fixo com a loja). A troca dessa loja é feita em um
+único lugar — no painel de demonstração, a constante `STOCK_STORE_ID` em
+`admin/assets/admin.js`; no Supabase, `select public.set_stock_store('ECOMMERCE-C18');`.
+Hoje essa loja é a virtual **Ecommerce C18** (veja *Estoque central* abaixo).
 
 ## Seleção antes da importação
 
@@ -70,36 +74,46 @@ registra diferenças de saldo e guarda o lote para auditoria.
 - `inventory_movements`: razão imutável de entradas e saídas;
 - `stock_imports`: lote da planilha, arquivo, usuário, seleção e erros.
 
+**Estoque único.** A operação concentra todo o saldo físico em **uma única
+loja** (`public.stores.fulfills_stock`): a loja virtual **Ecommerce C18**
+(`202609170001` semeia a *Nova Iguaçu — Calçadão*; `202609210002` cria o
+Ecommerce C18 e passa a marca para ele). Um índice único parcial
+(`stores_one_stock_location`) impede que duas lojas fiquem marcadas ao mesmo
+tempo. As seis lojas físicas **não têm saldo próprio**: atendem como **pontos
+de retirada** das compras do site — o pedido segue apontando para a loja de
+retirada escolhida pelo cliente, mas a baixa do estoque acontece sempre na
+loja central (`import_inventory_rows` e `adjust_inventory_stock` ignoram a
+loja recebida e usam `public.stock_store_id()`).
+
+Para trocar a loja do estoque: `select public.set_stock_store('ECOMMERCE-C18');`
+(somente `admin`). O painel reflete a mudança automaticamente.
+
 O Alterdata será o estoque mestre. O dashboard não deve sobrescrever o ERP sem
 um evento rastreável e uma confirmação da integração.
 
 ### Estoque central: Ecommerce C18
 
 O estoque central da operação é a loja virtual **Ecommerce C18**
-(`stores.code = 'ECOMMERCE-C18'`, `kind = 'ecommerce'`, `is_central = true`,
-criada por `202609210002_estoque_central_ecommerce.sql`). As seis lojas físicas
-continuam com o próprio saldo — cada importação da Alterdata escolhe a loja de
-destino, e o Ecommerce C18 aparece como a primeira opção.
+(`stores.code = 'ECOMMERCE-C18'`, `kind = 'ecommerce'`,
+`fulfills_stock = true`), criada por
+`202609210002_estoque_central_ecommerce.sql`. A migration:
 
-O que muda com a loja central:
+- cria a coluna `stores.kind` (`physical` | `ecommerce`) e a loja virtual;
+- tira a marca de estoque da loja anterior e marca o Ecommerce C18 (na ordem
+  certa para não esbarrar no índice `stores_one_stock_location`);
+- **transfere para o Ecommerce C18 qualquer saldo** que já estivesse em outra
+  loja (`inventory_balances`), somando quando a variação já existir lá e
+  registrando o movimento em `inventory_movements` (`kind = 'adjustment'`);
+- recria `channel_catalog(p_site_url, p_store_id)` com `p_store_id` padrão
+  `stock_store_id()`: o estoque publicado nos canais (Google Merchant, Meta,
+  Google Ads e marketplaces) é o saldo do Ecommerce C18; `p_store_id => null`
+  soma todas as lojas.
 
-- **Pedidos do site** nascem nela: o checkout não manda loja e o gatilho
-  `orders_default_store` preenche `orders.store_id` com `central_store_id()`
-  para `source = 'site'`. Pedidos de Instagram/WhatsApp lançados à mão podem
-  apontar para a loja física que vai separar;
-- **Canais** (Google Merchant, Meta, Google Ads e marketplaces) publicam
-  apenas o saldo do Ecommerce C18: `channel_catalog(p_site_url, p_store_id)`
-  usa `central_store_id()` como padrão e conta o disponível só dessa loja. Os
-  itens que existem apenas em loja física continuam listados, mas saem com
-  estoque 0 (`out of stock`, pendência "sem estoque" na prévia do painel).
-  Passar `p_store_id => null` volta a somar todas as lojas;
-- No painel, a página **Canais & Marketing** mostra "Estoque publicado:
-  Ecommerce C18" no aviso e no resumo do feed; o filtro de loja da página
-  **Estoque** lista o Ecommerce C18 antes das lojas físicas.
-
-Só uma loja pode ser central (`stores_single_central_idx`). Para trocar, basta
-`update stores set is_central = false where is_central` e marcar a outra —
-o `central_store_id()` é lido a cada chamada.
+No painel, o Ecommerce C18 é a primeira loja da lista: a etiqueta da página
+**Estoque**, a importação e o movimento manual apontam para ele, e a página
+**Canais & Marketing** mostra "Estoque publicado: Ecommerce C18" no aviso e no
+resumo do feed. Os pedidos continuam guardando a loja de **retirada** escolhida
+pela cliente (coluna *Retirada*), e a baixa acontece no estoque central.
 
 ## Fluxo de pedidos
 
@@ -213,19 +227,20 @@ Implantação específica:
    (banner de categoria), `202609180004_analytics_audience.sql` (audiência
    do site), `202609180005_sales_channels.sql` (canais de venda, já com os
    8 canais no seed), `202609180006_growth_schedules.sql` (agendamentos),
-   `202609190001_customers.sql`, `202609190002_checkout_pagamentos.sql`,
-   `202609200001_hero_stats.sql` e
-   `202609210001_audiencia_banners_google_ads.sql` (banners mais clicados,
-   compra do checkout na audiência e o 9º canal, Google Ads) e
+   `202609190001_customers.sql` (cadastro de clientes com LGPD),
+   `202609190002_checkout_pagamentos.sql` (pedidos do checkout e
+   pagamentos), `202609200001_hero_stats.sql` (faixa de números do
+   hero), `202609210001_audiencia_banners_google_ads.sql` (banners mais
+   clicados, compra do checkout na audiência e o 9º canal, Google Ads) e
    `202609210002_estoque_central_ecommerce.sql` (loja virtual Ecommerce C18
-   como estoque central dos canais e dos pedidos do site);
+   como estoque central único: canais, pedidos e saldo);
 4. Criar o primeiro usuário e promovê-lo para `admin` pelo SQL Editor;
 5. Cadastrar URL e anon key em `admin/assets/config.js`;
 6. Cadastrar os segredos de `.env.example` via Supabase Secrets
    (incluindo `BANNER_AI_PROVIDER` e a chave da IA escolhida);
 7. Publicar as Edge Functions (`gerar-banner`, `integration-worker`,
-   `clearsale-webhook`, `google-merchant-feed`, `marketing-events`,
-   `google-ads-conversions` e `channel-publish`);
+   `clearsale-webhook`, `cotar-frete`, `google-merchant-feed`,
+   `marketing-events`, `google-ads-conversions` e `channel-publish`);
 8. Conferir os agendamentos criados por `202609180006_growth_schedules.sql`
    e `202609210001_audiencia_banners_google_ads.sql`
    (`select jobname, schedule from cron.job`): retenção da audiência todo dia
@@ -405,9 +420,9 @@ RPCs da migration `202609180005_sales_channels.sql` (todas papel `admin`):
   com `dry_run`) e devolve itens, publicáveis, pendências, preço médio e valor
   publicável;
 - `channel_catalog(p_site_url, p_store_id)` — o catálogo agrupado por
-  referência com o saldo disponível do **estoque central** (Ecommerce C18,
-  padrão de `p_store_id`; nulo soma todas as lojas), que também alimenta o
-  feed quando o canal ainda não foi publicado;
+  referência com o saldo disponível do **estoque central** (padrão de
+  `p_store_id` é `stock_store_id()`, o Ecommerce C18; nulo soma todas as
+  lojas), que também alimenta o feed quando o canal ainda não foi publicado;
 - `channel_summary()` — contadores por canal para o cartão do painel.
 
 Edge Functions:

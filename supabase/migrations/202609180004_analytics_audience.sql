@@ -231,6 +231,8 @@ as $$
     when '/cartao-presente.html' then 'Cartão presente'
     when '/privacidade.html' then 'Privacidade'
     when '/404.html' then 'Página 404'
+    when '/checkout.html' then 'Checkout'
+    when '/conta.html' then 'Minha conta'
     else coalesce(nullif(regexp_replace(coalesce(p_path, ''), '^/|\.html$', '', 'g'), ''), 'Página')
   end;
 $$;

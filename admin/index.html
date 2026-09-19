@@ -189,12 +189,12 @@
 
       <section class="page" data-page="inventory">
         <div class="page-head">
-          <div><p class="page-kicker">CATÁLOGO E SALDOS</p><h2>Estoque</h2><p>Produtos e variações com saldo controlado por loja. O estoque central é o <strong>Ecommerce C18</strong> (loja virtual): é dele que saem o site, os feeds e os marketplaces; as lojas físicas têm o próprio saldo.</p></div>
+          <div><p class="page-kicker">CATÁLOGO E SALDOS</p><h2>Estoque</h2><p>Produtos e variações com saldo único, no estoque central — o <strong>Ecommerce C18</strong> (loja virtual, que atende site, feeds e marketplaces). As lojas físicas funcionam como pontos de retirada.</p></div>
           <div class="page-actions" data-permission="inventory"><button class="btn btn--secondary" data-action="manual"><svg><use href="#i-plus"/></svg>Cadastro manual</button><button class="btn btn--primary" data-action="import"><svg><use href="#i-upload"/></svg>Importar Excel</button></div>
         </div>
         <div class="toolbar">
           <label class="field-search"><svg><use href="#i-search"/></svg><input id="inventory-search" type="search" placeholder="Buscar código, produto, marca ou categoria"></label>
-          <select id="inventory-store" aria-label="Filtrar loja"><option value="all">Todas as lojas</option></select>
+          <span class="stock-hub-tag" id="stock-hub-tag"></span>
           <select id="inventory-stock" aria-label="Filtrar saldo"><option value="all">Todos os saldos</option><option value="positive">Com estoque</option><option value="low">Estoque baixo</option><option value="zero">Sem estoque</option></select>
           <button class="filter-button" id="inventory-filter" data-prototype="Filtros avançados"><svg><use href="#i-filter"/></svg>Filtros</button>
         </div>
@@ -212,7 +212,7 @@
         </div>
         <div class="status-tabs" id="order-tabs"></div>
         <article class="panel table-panel">
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Origem</th><th>Loja</th><th>Total</th><th>Pagamento</th><th>Antifraude</th><th>Operação</th><th></th></tr></thead><tbody id="orders-table"></tbody></table></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Origem</th><th>Retirada</th><th>Total</th><th>Pagamento</th><th>Antifraude</th><th>Operação</th><th></th></tr></thead><tbody id="orders-table"></tbody></table></div>
         </article>
       </section>
 
@@ -471,7 +471,7 @@
             <em>Escolher arquivo</em>
           </label>
           <div class="file-loaded" id="file-loaded" hidden><span><svg><use href="#i-file"/></svg></span><div><strong id="loaded-name"></strong><small id="loaded-meta"></small></div><button id="remove-file" aria-label="Remover arquivo"><svg><use href="#i-close"/></svg></button></div>
-          <label class="form-field"><span>Loja do saldo importado <b>*</b></span><select id="import-store"></select><small>A planilha não informa a loja; escolha onde o saldo será aplicado.</small></label>
+          <label class="form-field"><span>Loja do estoque central <b>*</b></span><select id="import-store"></select><small>A planilha não informa a loja — o saldo entra no estoque central, único da operação.</small></label>
           <div class="mapping-note"><svg><use href="#i-check"/></svg><p><strong>Mapeamento Alterdata reconhecido</strong><span>COMPRADOR → Marca · GRUPO → Categoria · Cód Produto → Referência/SKU</span></p></div>
         </div>
 
@@ -513,7 +513,7 @@
           <label class="form-field"><span>Marca <b>*</b></span><input name="brand" required placeholder="CENSURA 18"></label>
           <label class="form-field"><span>Categoria <b>*</b></span><input name="category" required placeholder="T SHIRT"></label>
           <label class="form-field"><span>Coleção</span><input name="collection" placeholder="VERÃO 27"></label>
-          <label class="form-field"><span>Loja <b>*</b></span><select name="store" id="manual-store" required></select></label>
+          <label class="form-field"><span>Loja do estoque central <b>*</b></span><select name="store" id="manual-store" required></select></label>
           <label class="form-field"><span>Cor</span><input name="color" placeholder="PRETO"></label>
           <label class="form-field"><span>Tamanho</span><input name="size" placeholder="M"></label>
           <label class="form-field"><span>Preço de varejo</span><input name="price" inputmode="decimal" placeholder="129,90"></label>

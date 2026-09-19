@@ -142,50 +142,28 @@ test("o CSV de conversões do Google Ads sai da base de exemplo com gclid", () =
   assert.ok(!/undefined|NaN/.test(csv));
 });
 
-test("o estoque central Ecommerce C18 é a primeira loja e o único saldo que vai para os canais", () => {
+test("o estoque central é a loja virtual Ecommerce C18 e é o saldo dela que vai para os canais", () => {
   const panel = bootAdmin();
 
-  const storeOptions = panel.html("#inventory-store");
-  assert.ok(storeOptions.indexOf("Ecommerce C18") < storeOptions.indexOf("Nova Iguaçu"), "loja virtual vem antes das físicas");
-  assert.ok(storeOptions.includes("estoque central"));
+  /* etiqueta da página de estoque e campos de importação/movimento presos à loja */
+  assert.ok(panel.html("#stock-hub-tag").includes("Estoque central: <b>Ecommerce C18</b>"), "etiqueta do estoque central");
+  assert.ok(panel.html("#stock-hub-tag").includes("lojas físicas: ponto de retirada"));
+  assert.ok(panel.html("#import-store").includes("Ecommerce C18 — estoque central"), "importação entra no Ecommerce C18");
+  assert.ok(panel.html("#manual-store").includes("Ecommerce C18 — estoque central"), "movimento manual entra no Ecommerce C18");
+
+  /* pedidos continuam com a loja de retirada escolhida pela cliente */
+  assert.ok(panel.html("#orders-table").includes("NI Calçadão"), "retirada no Calçadão");
+  assert.ok(!panel.html("#orders-table").includes("Ecommerce C18"), "a loja virtual não é ponto de retirada");
 
   panel.navigate("channels");
   panel.get("#feed-channel").value = "mercadolivre";
   panel.get("#feed-channel").fire("change");
   const body = panel.html("#feed-body");
-  const rowOf = (code) => body.split("<tr>").find((row) => row.includes(`&quot;${code}&quot;`) || row.includes(code)) || "";
-
-  /* REGATA SPORT C18 P (0000000080): 30 no Ecommerce C18 + 12 em Nilópolis →
-     publica 29 (30 − 1 de reserva da política); a loja física não soma */
+  const rowOf = (code) => body.split("<tr>").find((row) => row.includes(code)) || "";
+  /* REGATA SPORT C18 P (0000000080): 12 no Ecommerce C18 → publica 11 (1 de reserva da política) */
   const regata = rowOf("0000000080");
   assert.ok(regata.includes("REGATA SPORT C18"));
-  assert.ok(regata.includes('title="29"'), "saldo publicado = só o estoque central");
-  assert.ok(!regata.includes('title="41"'), "sem somar a loja física");
-
-  /* REGATA STRAP (0000000013) só existe em loja física → listada, mas com 0 */
-  const strap = rowOf("0000000013");
-  assert.ok(strap.includes("REGATA STRAP"), "item só de loja física continua no catálogo");
-  assert.ok(strap.includes('title="0"'), "…mas sem saldo publicável");
-});
-
-test("uma demonstração salva antes do estoque central ganha o saldo do Ecommerce C18", () => {
-  const oldState = {
-    inventory: [{ id: "0000000013-ni-beco", code: "0000000013", reference: "0000000013", description: "REGATA STRAP", brand: "CENSURA 18", collection: "VERÃO 08", category: "REGATA", price: 5, quantity: 18, reserved: 0, color: "UNICA", size: "P", storeId: "ni-beco", source: "ALTERDATA" }],
-    orders: [],
-    movements: [],
-    receipts: [],
-    integrations: [],
-    importBatches: [],
-  };
-  const panel = bootAdmin({ localStorage: { "c18-operations-demo-v2": oldState } });
-  panel.navigate("channels");
-  panel.get("#feed-channel").value = "mercadolivre";
-  panel.get("#feed-channel").fire("change");
-  const body = panel.html("#feed-body");
-  assert.ok(body.includes("REGATA STRAP"), "o que já estava salvo continua");
-  assert.ok(body.includes("CORDOBA 6 BOLSOS"), "os itens do estoque central entram");
-  const cordoba = body.split("<tr>").find((row) => row.includes("0000000940")) || "";
-  assert.ok(cordoba.includes('title="14"'), "15 no Ecommerce C18 − 1 de reserva");
+  assert.ok(regata.includes('title="11"'), "saldo publicado = saldo do estoque central menos a reserva");
 });
 
 test("o feed muda de colunas conforme o canal escolhido", () => {

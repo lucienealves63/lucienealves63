@@ -6,7 +6,7 @@
   const Analytics = window.C18Analytics;
   const Audience = window.C18Audience;
   const Channels = window.C18Channels;
-  const STORE_KEY = "c18-operations-demo-v2";
+  const STORE_KEY = "c18-operations-demo-v4"; // v4: estoque único no Ecommerce C18 (loja virtual)
   const BANNER_DEMO_KEY = "c18:demo-banner";
   const CATEGORY_BANNER_DEMO_KEY = "c18:demo-category-banners";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
@@ -46,11 +46,11 @@
     line: "--pv-line",
   };
 
-  /* A primeira loja é o estoque central: a loja virtual "Ecommerce C18".
-     É dela que saem o catálogo publicado nos canais e os pedidos do site;
-     as lojas físicas ficam com o próprio saldo (importação da Alterdata). */
+  /* A primeira loja é a virtual "Ecommerce C18": é o estoque central (único)
+     da operação — de onde saem site, feeds e marketplaces. As seis lojas
+     físicas não têm saldo próprio: funcionam como pontos de retirada. */
   const stores = [
-    { id: "ecommerce-c18", name: "Ecommerce C18 — estoque central", short: "Ecommerce C18", kind: "ecommerce", central: true },
+    { id: "ecommerce-c18", name: "Ecommerce C18", short: "Ecommerce C18", kind: "ecommerce" },
     { id: "ni-calcadao", name: "Nova Iguaçu — Calçadão", short: "NI Calçadão" },
     { id: "ni-beco", name: "Nova Iguaçu — Beco", short: "NI Beco" },
     { id: "ni-top", name: "Nova Iguaçu — Top Shopping", short: "Top Shopping" },
@@ -58,6 +58,13 @@
     { id: "nilopolis", name: "Nilópolis — Mirandela", short: "Nilópolis" },
     { id: "queimados", name: "Queimados — Centro", short: "Queimados" },
   ];
+
+  // 👉 Estoque único: TODA a mercadoria fica na loja virtual Ecommerce C18
+  // (estoque central). As lojas físicas não têm saldo próprio — atendem como
+  // pontos de retirada das compras do site. Para trocar a loja do estoque,
+  // basta mudar o id aqui. No Supabase, use:
+  //   select public.set_stock_store('ECOMMERCE-C18');
+  const STOCK_STORE_ID = "ecommerce-c18";
 
   const saoPauloParts = Object.fromEntries(new Intl.DateTimeFormat("en", {
     year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo",
@@ -81,28 +88,20 @@
     cancelled: { label: "Cancelado" },
   };
 
+  // Todo o saldo nasce na loja de estoque central (STOCK_STORE_ID).
   const seedInventory = [
-    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 1, "UNICA", "P", "ni-calcadao"],
-    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 3, "PRETO", "UNIC", "ni-calcadao"],
-    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 8, "UNICA", "UNIC", "ni-top"],
-    ["0000000412", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 2, "CINZA", "38", "caxias"],
-    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 6, "CINZA", "40", "caxias"],
-    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 12, "BRANCO", "P", "nilopolis"],
-    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 9, "BRANCO", "M", "nilopolis"],
-    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 0, "BRANCO", "G", "nilopolis"],
-    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 4, "PRETO", "UNIC", "queimados"],
-    ["0000000013", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 18, "UNICA", "P", "ni-beco"],
-    ["0000000014", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 14, "UNICA", "M", "ni-beco"],
-    ["0000000203", "CALÇA PASSEIO XADR", "CENSURA 18", "VERÃO 08", "CALCA", 15, 2, "XADREZ", "36", "ni-top"],
-    // estoque central (Ecommerce C18) — é este saldo que os canais publicam
-    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 6, "UNICA", "P", "ecommerce-c18"],
-    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 10, "PRETO", "UNIC", "ecommerce-c18"],
-    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 15, "UNICA", "UNIC", "ecommerce-c18"],
-    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 5, "CINZA", "40", "ecommerce-c18"],
-    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 30, "BRANCO", "P", "ecommerce-c18"],
-    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 24, "BRANCO", "M", "ecommerce-c18"],
-    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 18, "BRANCO", "G", "ecommerce-c18"],
-    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 12, "PRETO", "UNIC", "ecommerce-c18"],
+    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 1, "UNICA", "P", STOCK_STORE_ID],
+    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 3, "PRETO", "UNIC", STOCK_STORE_ID],
+    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 8, "UNICA", "UNIC", STOCK_STORE_ID],
+    ["0000000412", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 2, "CINZA", "38", STOCK_STORE_ID],
+    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 6, "CINZA", "40", STOCK_STORE_ID],
+    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 12, "BRANCO", "P", STOCK_STORE_ID],
+    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 9, "BRANCO", "M", STOCK_STORE_ID],
+    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 0, "BRANCO", "G", STOCK_STORE_ID],
+    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 4, "PRETO", "UNIC", STOCK_STORE_ID],
+    ["0000000013", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 18, "UNICA", "P", STOCK_STORE_ID],
+    ["0000000014", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 14, "UNICA", "M", STOCK_STORE_ID],
+    ["0000000203", "CALÇA PASSEIO XADR", "CENSURA 18", "VERÃO 08", "CALCA", 15, 2, "XADREZ", "36", STOCK_STORE_ID],
   ].map(([code, description, brand, collection, category, price, quantity, color, size, storeId]) => ({
     id: `${code}-${storeId}`,
     code,
@@ -124,7 +123,7 @@
 
   const seedOrders = [
     {
-      id: "C18-1048", customer: "Mariana Souza", date: demoDate("13:42"), origin: "Site", storeId: "ecommerce-c18", total: 259.8,
+      id: "C18-1048", customer: "Mariana Souza", date: demoDate("13:42"), origin: "Site", storeId: "ni-calcadao", total: 259.8,
       payment: "approved", fraud: "approved", status: "picking", sellerCode: "042", couponCode: "PRIMEIRAC18", discountAmount: 20,
       items: [
         { code: "0000000080", name: "Regata Sport C18", color: "Branco", size: "P", qty: 1, checked: false },
@@ -133,7 +132,7 @@
       events: [{ title: "Pedido liberado para separação", at: "Hoje, 13:45" }, { title: "Pagamento aprovado pela Rede", at: "Hoje, 13:44" }, { title: "ClearSale: aprovação automática", at: "Hoje, 13:44" }],
     },
     {
-      id: "C18-1047", customer: "João Pedro Lima", date: demoDate("12:18"), origin: "Site", storeId: "ecommerce-c18", total: 329.9,
+      id: "C18-1047", customer: "João Pedro Lima", date: demoDate("12:18"), origin: "Site", storeId: "caxias", total: 329.9,
       payment: "approved", fraud: "approved", status: "checking",
       items: [{ code: "0000000413", name: "Bermuda Militar Color", color: "Cinza", size: "40", qty: 1, checked: false }],
       events: [{ title: "Separação concluída por Ana", at: "Hoje, 13:10" }, { title: "Pedido liberado", at: "Hoje, 12:21" }],
@@ -145,13 +144,13 @@
       events: [{ title: "Conferência concluída sem divergência", at: "Hoje, 12:08" }, { title: "Separação concluída", at: "Hoje, 11:48" }],
     },
     {
-      id: "C18-1045", customer: "Carlos Henrique", date: demoDate("10:37"), origin: "Site", storeId: "ecommerce-c18", total: 419.8,
+      id: "C18-1045", customer: "Carlos Henrique", date: demoDate("10:37"), origin: "Site", storeId: "ni-top", total: 419.8,
       payment: "authorized", fraud: "review", status: "fraud",
       items: [{ code: "0000000940", name: "Mochila Cordoba 6 Bolsos", color: "Única", size: "Único", qty: 1, checked: false }],
       events: [{ title: "ClearSale: análise manual", at: "Hoje, 10:39" }, { title: "Valor pré-autorizado pela Rede", at: "Hoje, 10:38" }],
     },
     {
-      id: "C18-1044", customer: "Renata Silva", date: demoDate("17:11", 1), origin: "Site", storeId: "ecommerce-c18", total: 119.9,
+      id: "C18-1044", customer: "Renata Silva", date: demoDate("17:11", 1), origin: "Site", storeId: "queimados", total: 119.9,
       payment: "captured", fraud: "approved", status: "shipped", carrier: "Correios", tracking: "QR123456789BR",
       items: [{ code: "0000000023", name: "Boné Bordado", color: "Preto", size: "Único", qty: 1, checked: true }],
       events: [{ title: "Postado nos Correios", at: "Ontem, 17:11" }, { title: "Conferência concluída", at: "Ontem, 15:30" }],
@@ -159,16 +158,16 @@
   ];
 
   const seedMovements = [
-    { id: 1, code: "0000000940", description: "CORDOBA 6 BOLSOS", type: "import", storeId: "ni-top", quantity: 8, at: "Hoje, 14:20", note: "Importação Alterdata" },
-    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: "ecommerce-c18", quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047" },
-    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: "ecommerce-c18", quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048" },
-    { id: 4, code: "0000000063", description: "SHORT FOLHAS", type: "entry", storeId: "ni-calcadao", quantity: 1, at: "Hoje, 09:32", note: "Recebimento NF 8841" },
+    { id: 1, code: "0000000940", description: "CORDOBA 6 BOLSOS", type: "import", storeId: STOCK_STORE_ID, quantity: 8, at: "Hoje, 14:20", note: "Importação Alterdata" },
+    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: STOCK_STORE_ID, quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047 (retirada em Caxias)" },
+    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: STOCK_STORE_ID, quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048 (retirada no Calçadão)" },
+    { id: 4, code: "0000000063", description: "SHORT FOLHAS", type: "entry", storeId: STOCK_STORE_ID, quantity: 1, at: "Hoje, 09:32", note: "Recebimento NF 8841" },
   ];
 
   const seedReceipts = [
-    { id: "REC-0921", invoice: "NF 8841", supplier: "C18 Confecções", storeId: "ni-calcadao", items: 42, checked: 42, status: "done", receivedAt: "Hoje, 09:32" },
-    { id: "REC-0922", invoice: "NF 8847", supplier: "Distribuidora Street", storeId: "ni-top", items: 68, checked: 37, status: "checking", receivedAt: "Hoje, 11:18" },
-    { id: "REC-0923", invoice: "NF 8850", supplier: "C18 Confecções", storeId: "caxias", items: 31, checked: 0, status: "pending", receivedAt: "Previsto 16:00" },
+    { id: "REC-0921", invoice: "NF 8841", supplier: "C18 Confecções", storeId: STOCK_STORE_ID, items: 42, checked: 42, status: "done", receivedAt: "Hoje, 09:32" },
+    { id: "REC-0922", invoice: "NF 8847", supplier: "Distribuidora Street", storeId: STOCK_STORE_ID, items: 68, checked: 37, status: "checking", receivedAt: "Hoje, 11:18" },
+    { id: "REC-0923", invoice: "NF 8850", supplier: "C18 Confecções", storeId: STOCK_STORE_ID, items: 31, checked: 0, status: "pending", receivedAt: "Previsto 16:00" },
   ];
 
   const seedIntegrations = [
@@ -258,10 +257,6 @@
   seedChannels().forEach((channel) => {
     if (!state.channels.some((saved) => saved.id === channel.id)) state.channels.push(channel);
   });
-  /* o estoque central (Ecommerce C18) entra numa demonstração salva antes dele */
-  if (CONFIG.mode === "demo" && Array.isArray(state.inventory) && !state.inventory.some((row) => row.storeId === "ecommerce-c18")) {
-    state.inventory = state.inventory.concat(seedInventory.filter((row) => row.storeId === "ecommerce-c18"));
-  }
   if (state.palette === undefined) state.palette = null;
   let currentPage = "overview";
   let currentOrderFilter = "all";
@@ -320,6 +315,9 @@
   const currency = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
   const number = (value) => new Intl.NumberFormat("pt-BR").format(Number(value || 0));
   const storeById = (id) => stores.find((store) => store.id === id) || { name: "—", short: "—" };
+  /* Loja do estoque central: no Supabase é a marcada em stores.fulfills_stock;
+     na demonstração, STOCK_STORE_ID. */
+  const stockStore = () => stores.find((store) => store.stock) || stores.find((store) => store.id === STOCK_STORE_ID) || stores[0];
   const available = (item) => Math.max(0, Number(item.quantity || 0) - Number(item.reserved || 0));
 
   function saveState() {
@@ -339,16 +337,16 @@
     setTimeout(() => item.remove(), 4200);
   }
 
-  /* Estoque central (Ecommerce C18): loja marcada como central — no Supabase
-     vem de stores.is_central; no modo demonstração é a primeira da lista. */
-  function centralStore() {
-    return stores.find((store) => store.central) || null;
-  }
-
   function fillStoreSelects() {
-    const options = stores.map((store) => `<option value="${store.id}">${esc(store.name)}</option>`).join("");
-    ["#import-store", "#manual-store"].forEach((selector) => { $(selector).innerHTML = options; });
-    $("#inventory-store").innerHTML = `<option value="all">Todas as lojas</option>${options}`;
+    const stock = stockStore();
+    // Estoque único: importação e movimento manual só na loja de estoque central.
+    const stockOption = `<option value="${stock.id}">${esc(stock.name)} — estoque central</option>`;
+    ["#import-store", "#manual-store"].forEach((selector) => { $(selector).innerHTML = stockOption; });
+    const hubTag = $("#stock-hub-tag");
+    if (hubTag) {
+      hubTag.innerHTML = `Estoque central: <b>${esc(stock.name)}</b><span class="stock-hub-tag__sep">·</span>lojas físicas: ponto de retirada`;
+      hubTag.title = "Todo o saldo fica no estoque central (loja virtual Ecommerce C18). As lojas físicas atendem como pontos de retirada.";
+    }
   }
 
   function renderMetrics() {
@@ -404,12 +402,10 @@
 
   function renderInventory() {
     const query = Importer.normalizeText($("#inventory-search")?.value || "");
-    const store = $("#inventory-store")?.value || "all";
     const stock = $("#inventory-stock")?.value || "all";
     const filtered = state.inventory.filter((item) => {
       const haystack = Importer.normalizeText([item.code, item.reference, item.description, item.brand, item.category, item.collection, item.color, item.size].join(" "));
       if (query && !haystack.includes(query)) return false;
-      if (store !== "all" && item.storeId !== store) return false;
       const balance = available(item);
       if (stock === "positive" && balance <= 0) return false;
       if (stock === "low" && (balance <= 0 || balance > CONFIG.lowStockThreshold)) return false;
@@ -872,7 +868,7 @@
     if (!order) return;
     currentOrderId = id;
     $("#drawer-title").textContent = `#${order.id}`;
-    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Loja</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios — PAC</option><option>Correios — SEDEX</option><option>Mercado Envios</option><option>Uber Direct (mesmo dia)</option><option>99 Entregas (mesmo dia)</option><option>Retirada na loja</option><option>Transportadora própria</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
+    $("#order-detail").innerHTML = `<div class="order-summary"><div><span>Cliente</span><strong>${esc(order.customer)}</strong></div><div><span>Retirada em</span><strong>${esc(storeById(order.storeId).short)}</strong></div><div><span>Total</span><strong>${currency(order.total)}</strong></div>${order.sellerCode ? `<div><span>Vendedor</span><strong>${esc(order.sellerCode)}</strong></div>` : ""}${order.couponCode ? `<div><span>Cupom</span><strong>${esc(order.couponCode)}${order.discountAmount ? ` · -${currency(order.discountAmount)}` : ""}</strong></div>` : ""}<div><span>Pagamento</span><strong>${paymentBadge(order.payment)}</strong></div><div><span>Antifraude</span><strong>${fraudBadge(order.fraud)}</strong></div><div><span>Operação</span><strong>${operationBadge(order.status)}</strong></div></div><section class="order-section"><div class="order-section__head"><h3>Itens e conferência</h3><span>${order.items.filter((item) => item.checked).length}/${order.items.length} conferidos</span></div>${order.items.map((item, index) => `<label class="order-item"><span class="order-item-check"><input type="checkbox" data-check-item="${index}" ${item.checked ? "checked" : ""} ${order.status !== "checking" || !can("check") ? "disabled" : ""}></span><div><strong>${esc(item.name)}</strong><small>${esc(item.code)} · ${esc(item.color)} · ${esc(item.size)}</small></div><b>${item.qty}x</b></label>`).join("")}</section>${order.status === "ready" ? `<section class="order-section"><div class="order-section__head"><h3>Dados da expedição</h3></div><div class="shipping-form"><label class="form-field"><span>Transportadora</span><select id="drawer-carrier"><option>Correios — PAC</option><option>Correios — SEDEX</option><option>Mercado Envios</option><option>Uber Direct (mesmo dia)</option><option>99 Entregas (mesmo dia)</option><option>Retirada na loja</option><option>Transportadora própria</option></select></label><label class="form-field"><span>Código de rastreio</span><input id="drawer-tracking" placeholder="Ex.: QR123456789BR"></label></div></section>` : ""}<section class="order-section"><div class="order-section__head"><h3>Histórico</h3></div><ul class="timeline-mini">${order.events.map((event) => `<li><strong>${esc(event.title)}</strong><small>${esc(event.at)}</small></li>`).join("")}</ul></section>`;
     renderOrderActions(order);
     $("#order-drawer").classList.add("is-open");
     $("#order-drawer").setAttribute("aria-hidden", "false");
@@ -980,12 +976,12 @@
     const loadedStores = (storeResult.data || []).map((store) => ({
       id: store.id,
       name: store.name,
-      short: store.code || store.name,
+      short: store.code === "ECOMMERCE-C18" ? "Ecommerce C18" : (store.code || store.name),
       kind: store.kind || "physical",
-      central: Boolean(store.is_central),
+      stock: Boolean(store.fulfills_stock),
     }));
     // estoque central primeiro, depois as lojas físicas em ordem alfabética
-    loadedStores.sort((a, b) => Number(b.central) - Number(a.central));
+    loadedStores.sort((a, b) => Number(b.stock) - Number(a.stock));
     stores.splice(0, stores.length, ...loadedStores);
     fillStoreSelects();
 
@@ -2232,13 +2228,13 @@
     return Channels ? Channels.channelById(id) : null;
   }
 
-  /* Catálogo publicável: os itens vêm de todas as lojas, mas o estoque
-     publicado é só o saldo do estoque central (Ecommerce C18). Sem loja
-     central marcada, soma todas as lojas. */
+  /* Catálogo publicável: o estoque publicado nos canais é o saldo do
+     estoque central (Ecommerce C18) — as lojas físicas são pontos de
+     retirada e não entram no saldo. */
   function channelCatalog() {
     if (!Channels) return [];
-    const central = centralStore();
-    return Channels.catalogFromInventory(state.inventory, { siteUrl: SITE_URL, storeId: central ? central.id : "" });
+    const stock = stockStore();
+    return Channels.catalogFromInventory(state.inventory, { siteUrl: SITE_URL, storeId: stock ? stock.id : "" });
   }
 
   /* Linhas prontas para publicar: preço e estoque já passam pela política
@@ -2401,7 +2397,7 @@
       ["Preço médio no canal", Audience.money(rows.length ? rows.reduce((sum, row) => sum + row._price, 0) / rows.length : 0)],
       ["Valor publicável", Audience.money(value)],
       ["Formato", String(channel.feedFormat || "json").toUpperCase()],
-      ["Estoque publicado", centralStore() ? centralStore().short : "todas as lojas"],
+      ["Estoque publicado", stockStore().short],
     ].map(([label, value2]) => `<span class="summary-chip"><strong>${value2}</strong> ${esc(label)}</span>`).join("");
 
     const download = $("#feed-download");
@@ -2552,10 +2548,8 @@
     const box = $("#channels-notice");
     if (!box || !Channels) return;
     const enabled = state.channels.filter((channel) => channel.enabled);
-    const central = centralStore();
-    const stockNote = central
-      ? ` Estoque publicado: <strong>${esc(central.short)}</strong> (estoque central) — as lojas físicas não entram no saldo dos canais.`
-      : " Nenhuma loja marcada como estoque central: o saldo publicado soma todas as lojas.";
+    const stock = stockStore();
+    const stockNote = ` Estoque publicado: <strong>${esc(stock.short)}</strong> (estoque central) — as lojas físicas são pontos de retirada e não entram no saldo dos canais.`;
     const missingSecrets = enabled.length ? "" : " Cadastre os segredos no Supabase (o arquivo <code>.env.example</code> lista todos) e habilite o canal aqui.";
     box.innerHTML = `<span><svg><use href="#i-megaphone"/></svg></span><p>${enabled.length
       ? `<strong>${Audience.number(enabled.length)} canais habilitados.</strong> Preço e estoque saem do cadastro de estoque; a fila de integração (Edge Function <code>integration-worker</code>) envia, retenta e registra cada lote.`
@@ -2878,7 +2872,7 @@
           item.checked = event.target.checked; saveState(); openOrder(order.id);
         }
       }
-      if (event.target.matches("#inventory-store, #inventory-stock")) renderInventory();
+      if (event.target.matches("#inventory-stock")) renderInventory();
       if (event.target.matches("#import-store")) updateImportPreview();
       if (event.target.matches("#coupon-scope")) updateCouponScopeFields();
       if (event.target.matches("#banner-position")) updateBannerPositionFields();

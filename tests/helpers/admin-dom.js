@@ -239,10 +239,6 @@ function bootAdmin(options) {
 
   const localStorage = createStorage();
   const sessionStorage = createStorage();
-  /* estado salvo de uma visita anterior (demonstração), quando o teste quiser */
-  Object.entries(opts.localStorage || {}).forEach(([key, value]) => {
-    localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
-  });
 
   const sandbox = {
     document: documentRef,

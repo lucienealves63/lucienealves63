@@ -43,6 +43,7 @@ as $$
 declare
   v_id uuid;
   v_position text;
+  v_category text;
   v_image text;
   v_name text;
   v_source text;
@@ -74,6 +75,7 @@ begin
   end if;
   v_id := v_id::uuid;
   v_position := coalesce(nullif(trim(p_payload ->> 'position'), ''), 'home-hero');
+  v_category := nullif(trim(coalesce(p_payload ->> 'category', '')), '');
   v_image := trim(coalesce(p_payload ->> 'image_path', ''));
   v_name := trim(coalesce(p_payload ->> 'name', ''));
   v_source := coalesce(nullif(trim(p_payload ->> 'source'), ''), 'upload');
@@ -90,8 +92,14 @@ begin
   v_ends := nullif(trim(coalesce(p_payload ->> 'ends_at', '')), '');
   v_want_active := coalesce((p_payload ->> 'active')::boolean, false);
 
-  if v_position not in ('home-hero', 'promo-strip') then
+  if v_position not in ('home-hero', 'category-hero', 'promo-strip') then
     raise exception 'Posição de banner inválida';
+  end if;
+  if v_position = 'category-hero' and v_category is null then
+    raise exception 'Informe a categoria do banner (ou escolha outra posição)';
+  end if;
+  if v_position <> 'category-hero' then
+    v_category := null;
   end if;
   if v_source not in ('upload', 'ai', 'static') then
     raise exception 'Origem de banner inválida';
@@ -147,17 +155,18 @@ begin
 
   if v_id is null then
     insert into public.site_banners (
-      position, name, image_path, title_top, title_bottom, body_text,
+      position, category, name, image_path, title_top, title_bottom, body_text,
       cta_label, cta_url, cta_secondary_label, cta_secondary_url,
       stats, source, ai_prompt, active, priority, starts_at, ends_at, created_by
     ) values (
-      v_position, v_name, v_image, v_title_top, v_title_bottom, v_body,
+      v_position, v_category, v_name, v_image, v_title_top, v_title_bottom, v_body,
       v_cta_label, v_cta_url, v_cta2_label, v_cta2_url,
       v_clean_stats, v_source, v_prompt, false, v_priority, v_starts, v_ends, auth.uid()
     ) returning id into v_id;
   else
     update public.site_banners set
       position = v_position,
+      category = v_category,
       name = v_name,
       image_path = v_image,
       title_top = v_title_top,
@@ -183,6 +192,7 @@ begin
     perform public.set_site_banner_active(v_id, true);
   end if;
 
-  return jsonb_build_object('id', v_id, 'active', v_want_active, 'stats', jsonb_array_length(v_clean_stats));
+  return jsonb_build_object('id', v_id, 'active', v_want_active, 'position', v_position,
+                            'category', v_category, 'stats', jsonb_array_length(v_clean_stats));
 end;
 $$;

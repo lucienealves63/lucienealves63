@@ -498,31 +498,32 @@ test("o seed do banco tem os mesmos canais do painel", () => {
   });
 });
 
-test("o banco marca o Ecommerce C18 como estoque central e o catálogo publica só esse saldo", () => {
+test("o banco publica nos canais o saldo da loja de estoque (Ecommerce C18)", () => {
   const migrationsDir = path.join(__dirname, "..", "supabase", "migrations");
   const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")).sort();
   const file = files.find((name) => name.includes("estoque_central"));
   assert.ok(file, "migration do estoque central");
   const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
 
-  assert.match(sql, /add column if not exists is_central boolean not null default false/);
-  assert.match(sql, /check \(kind in \('physical', 'ecommerce'\)\)/);
-  assert.match(sql, /create unique index if not exists stores_single_central_idx[\s\S]*?where is_central/, "só um estoque central");
-  assert.match(sql, /\('ECOMMERCE-C18', 'Ecommerce C18', 'ecommerce', true, true\)/, "a loja virtual nasce como central");
-  assert.match(sql, /on conflict \(code\) do update[\s\S]*?is_central = true/);
-  assert.match(sql, /create or replace function public\.central_store_id\(\)/);
-
   /* a assinatura antiga sai antes da nova para não deixar channel_catalog('url') ambígua */
   const dropAt = sql.indexOf("drop function if exists public.channel_catalog(text);");
   const createAt = sql.indexOf("create or replace function public.channel_catalog(");
   assert.ok(dropAt > -1 && createAt > dropAt, "drop da versão antiga antes da nova");
-  assert.match(sql, /p_store_id uuid default public\.central_store_id\(\)/);
-  assert.match(sql, /filter \(where p_store_id is null or v\.store_id = p_store_id\)/, "saldo publicado = loja central (ou todas, se nula)");
+  assert.match(sql, /p_store_id uuid default public\.stock_store_id\(\)/, "padrão = loja do estoque único");
+  assert.match(sql, /filter \(where p_store_id is null or v\.store_id = p_store_id\)/, "saldo publicado = loja de estoque (ou todas, se nula)");
   assert.match(sql, /grant execute on function public\.channel_catalog\(text, uuid\) to authenticated/);
 
-  /* pedido do site sem loja cai no estoque central */
-  assert.match(sql, /create trigger orders_default_store[\s\S]*?before insert on public\.orders/);
-  assert.match(sql, /new\.store_id := public\.central_store_id\(\)/);
+  /* o corpo continua o mesmo do seed dos canais — só o saldo e a assinatura mudam */
+  const seed = fs.readFileSync(path.join(migrationsDir, "202609180005_sales_channels.sql"), "utf8");
+  const body = (text) => text.slice(text.indexOf("returns table ("), text.indexOf("$$;", text.indexOf("returns table (")));
+  const original = body(seed.slice(seed.indexOf("create or replace function public.channel_catalog(")));
+  const updated = body(sql.slice(createAt));
+  const strip = (text) => text.replace(/\s+/g, " ");
+  assert.equal(
+    strip(updated).replace(/-- saldo publicável[^\n]*?coalesce\(sum\(greatest\(0, coalesce\(v\.on_hand, 0\) - coalesce\(v\.reserved, 0\)\)\) filter \(where p_store_id is null or v\.store_id = p_store_id\), 0\)::integer as stock,/, "sum(greatest(0, coalesce(v.on_hand, 0) - coalesce(v.reserved, 0)))::integer as stock,"),
+    strip(original),
+    "colunas e joins do catálogo não mudaram",
+  );
 
   /* a Edge Function do Merchant continua chamando o RPC só com a URL (o resto tem padrão) */
   const merchant = fs.readFileSync(path.join(__dirname, "..", "supabase", "functions", "google-merchant-feed", "index.ts"), "utf8");
