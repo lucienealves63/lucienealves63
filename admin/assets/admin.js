@@ -3,10 +3,15 @@
 
   const CONFIG = window.C18_CONFIG || { mode: "demo", lowStockThreshold: 3 };
   const Importer = window.C18Importer;
+  const Analytics = window.C18Analytics;
+  const Audience = window.C18Audience;
+  const Channels = window.C18Channels;
   const STORE_KEY = "c18-operations-demo-v2";
   const BANNER_DEMO_KEY = "c18:demo-banner";
+  const CATEGORY_BANNER_DEMO_KEY = "c18:demo-category-banners";
   const PALETTE_DEMO_KEY = "c18:demo-palette";
   const COUPONS_DEMO_KEY = "c18:demo-coupons";
+  const SITE_URL = "https://censura18.com.br";
   const DEFAULT_PALETTE = {
     primary: "#000000",
     primaryContrast: "#ffffff",
@@ -41,7 +46,11 @@
     line: "--pv-line",
   };
 
+  /* A primeira loja é o estoque central: a loja virtual "Ecommerce C18".
+     É dela que saem o catálogo publicado nos canais e os pedidos do site;
+     as lojas físicas ficam com o próprio saldo (importação da Alterdata). */
   const stores = [
+    { id: "ecommerce-c18", name: "Ecommerce C18 — estoque central", short: "Ecommerce C18", kind: "ecommerce", central: true },
     { id: "ni-calcadao", name: "Nova Iguaçu — Calçadão", short: "NI Calçadão" },
     { id: "ni-beco", name: "Nova Iguaçu — Beco", short: "NI Beco" },
     { id: "ni-top", name: "Nova Iguaçu — Top Shopping", short: "Top Shopping" },
@@ -85,6 +94,15 @@
     ["0000000013", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 18, "UNICA", "P", "ni-beco"],
     ["0000000014", "REGATA STRAP", "CENSURA 18", "VERÃO 08", "REGATA", 5, 14, "UNICA", "M", "ni-beco"],
     ["0000000203", "CALÇA PASSEIO XADR", "CENSURA 18", "VERÃO 08", "CALCA", 15, 2, "XADREZ", "36", "ni-top"],
+    // estoque central (Ecommerce C18) — é este saldo que os canais publicam
+    ["0000000063", "SHORT FOLHAS", "CENSURA 18", "VERÃO 08", "SHORT", 15, 6, "UNICA", "P", "ecommerce-c18"],
+    ["0000000946", "XADREZ BORDADA", "CENSURA 18", "VERÃO 09", "MOCHILA", 49.9, 10, "PRETO", "UNIC", "ecommerce-c18"],
+    ["0000000940", "CORDOBA 6 BOLSOS", "CENSURA 18", "VERÃO 08", "MOCHILA", 79, 15, "UNICA", "UNIC", "ecommerce-c18"],
+    ["0000000413", "MILITAR COLOR", "CENSURA 18", "VERÃO 08", "BERMUDA PASSEIO", 29.9, 5, "CINZA", "40", "ecommerce-c18"],
+    ["0000000080", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 30, "BRANCO", "P", "ecommerce-c18"],
+    ["0000000081", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 24, "BRANCO", "M", "ecommerce-c18"],
+    ["0000000082", "REGATA SPORT C18", "CENSURA 18", "VERÃO 08", "REGATA", 14.9, 18, "BRANCO", "G", "ecommerce-c18"],
+    ["0000000023", "BORDADO CAPETA", "CENSURA 18", "VERÃO 08", "BONE", 39.9, 12, "PRETO", "UNIC", "ecommerce-c18"],
   ].map(([code, description, brand, collection, category, price, quantity, color, size, storeId]) => ({
     id: `${code}-${storeId}`,
     code,
@@ -106,7 +124,7 @@
 
   const seedOrders = [
     {
-      id: "C18-1048", customer: "Mariana Souza", date: demoDate("13:42"), origin: "Site", storeId: "ni-calcadao", total: 259.8,
+      id: "C18-1048", customer: "Mariana Souza", date: demoDate("13:42"), origin: "Site", storeId: "ecommerce-c18", total: 259.8,
       payment: "approved", fraud: "approved", status: "picking", sellerCode: "042", couponCode: "PRIMEIRAC18", discountAmount: 20,
       items: [
         { code: "0000000080", name: "Regata Sport C18", color: "Branco", size: "P", qty: 1, checked: false },
@@ -115,7 +133,7 @@
       events: [{ title: "Pedido liberado para separação", at: "Hoje, 13:45" }, { title: "Pagamento aprovado pela Rede", at: "Hoje, 13:44" }, { title: "ClearSale: aprovação automática", at: "Hoje, 13:44" }],
     },
     {
-      id: "C18-1047", customer: "João Pedro Lima", date: demoDate("12:18"), origin: "Site", storeId: "caxias", total: 329.9,
+      id: "C18-1047", customer: "João Pedro Lima", date: demoDate("12:18"), origin: "Site", storeId: "ecommerce-c18", total: 329.9,
       payment: "approved", fraud: "approved", status: "checking",
       items: [{ code: "0000000413", name: "Bermuda Militar Color", color: "Cinza", size: "40", qty: 1, checked: false }],
       events: [{ title: "Separação concluída por Ana", at: "Hoje, 13:10" }, { title: "Pedido liberado", at: "Hoje, 12:21" }],
@@ -127,13 +145,13 @@
       events: [{ title: "Conferência concluída sem divergência", at: "Hoje, 12:08" }, { title: "Separação concluída", at: "Hoje, 11:48" }],
     },
     {
-      id: "C18-1045", customer: "Carlos Henrique", date: demoDate("10:37"), origin: "Site", storeId: "ni-top", total: 419.8,
+      id: "C18-1045", customer: "Carlos Henrique", date: demoDate("10:37"), origin: "Site", storeId: "ecommerce-c18", total: 419.8,
       payment: "authorized", fraud: "review", status: "fraud",
       items: [{ code: "0000000940", name: "Mochila Cordoba 6 Bolsos", color: "Única", size: "Único", qty: 1, checked: false }],
       events: [{ title: "ClearSale: análise manual", at: "Hoje, 10:39" }, { title: "Valor pré-autorizado pela Rede", at: "Hoje, 10:38" }],
     },
     {
-      id: "C18-1044", customer: "Renata Silva", date: demoDate("17:11", 1), origin: "Site", storeId: "queimados", total: 119.9,
+      id: "C18-1044", customer: "Renata Silva", date: demoDate("17:11", 1), origin: "Site", storeId: "ecommerce-c18", total: 119.9,
       payment: "captured", fraud: "approved", status: "shipped", carrier: "Correios", tracking: "QR123456789BR",
       items: [{ code: "0000000023", name: "Boné Bordado", color: "Preto", size: "Único", qty: 1, checked: true }],
       events: [{ title: "Postado nos Correios", at: "Ontem, 17:11" }, { title: "Conferência concluída", at: "Ontem, 15:30" }],
@@ -142,8 +160,8 @@
 
   const seedMovements = [
     { id: 1, code: "0000000940", description: "CORDOBA 6 BOLSOS", type: "import", storeId: "ni-top", quantity: 8, at: "Hoje, 14:20", note: "Importação Alterdata" },
-    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: "caxias", quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047" },
-    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: "ni-calcadao", quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048" },
+    { id: 2, code: "0000000413", description: "MILITAR COLOR", type: "exit", storeId: "ecommerce-c18", quantity: -1, at: "Hoje, 13:10", note: "Reserva pedido C18-1047" },
+    { id: 3, code: "0000000080", description: "REGATA SPORT C18", type: "exit", storeId: "ecommerce-c18", quantity: -1, at: "Hoje, 13:45", note: "Reserva pedido C18-1048" },
     { id: 4, code: "0000000063", description: "SHORT FOLHAS", type: "entry", storeId: "ni-calcadao", quantity: 1, at: "Hoje, 09:32", note: "Recebimento NF 8841" },
   ];
 
@@ -190,6 +208,23 @@
     { id: "coupon-verao09", code: "VERAO09", kind: "percent", value: 15, scope: "collection", target: "VERÃO 09", active: false, starts_at: null, ends_at: null, updatedAt: new Date().toISOString() },
   ];
 
+  /* Canais de venda e marketing. Nenhum vem habilitado: a conexão só vale
+     depois que os segredos existem no servidor (Supabase Secrets). */
+  function seedChannels() {
+    if (!Channels) return [];
+    return Channels.CHANNELS.map((channel) => ({
+      id: channel.id,
+      enabled: false,
+      status: "pending",
+      environment: "A configurar",
+      config: {},
+      policy: { ...(channel.policy || Channels.DEFAULT_POLICY) },
+      lastSync: "Aguardando credenciais",
+      listings: 0,
+      errors: 0,
+    }));
+  }
+
   function freshState() {
     return {
       inventory: seedInventory,
@@ -200,6 +235,7 @@
       importBatches: [],
       banners: seedBanners,
       coupons: seedCoupons,
+      channels: seedChannels(),
       palette: null,
     };
   }
@@ -217,6 +253,15 @@
   let state = loadState();
   if (!Array.isArray(state.banners)) state.banners = seedBanners;
   if (!Array.isArray(state.coupons)) state.coupons = seedCoupons;
+  if (!Array.isArray(state.channels)) state.channels = seedChannels();
+  /* canais novos (ex.: Google Ads) entram num estado salvo antes deles */
+  seedChannels().forEach((channel) => {
+    if (!state.channels.some((saved) => saved.id === channel.id)) state.channels.push(channel);
+  });
+  /* o estoque central (Ecommerce C18) entra numa demonstração salva antes dele */
+  if (CONFIG.mode === "demo" && Array.isArray(state.inventory) && !state.inventory.some((row) => row.storeId === "ecommerce-c18")) {
+    state.inventory = state.inventory.concat(seedInventory.filter((row) => row.storeId === "ecommerce-c18"));
+  }
   if (state.palette === undefined) state.palette = null;
   let currentPage = "overview";
   let currentOrderFilter = "all";
@@ -240,6 +285,9 @@
     integrations: ["admin"],
     banners: ["admin"],
     coupons: ["admin"],
+    /* audiência é leitura: administradora e perfil de consulta veem */
+    audience: ["admin", "viewer"],
+    channels: ["admin"],
   };
 
   function can(permission) {
@@ -289,6 +337,12 @@
     item.innerHTML = `<span><svg><use href="#i-${icon}"></use></svg></span><p>${esc(message)}</p>`;
     $("#toast-region").appendChild(item);
     setTimeout(() => item.remove(), 4200);
+  }
+
+  /* Estoque central (Ecommerce C18): loja marcada como central — no Supabase
+     vem de stores.is_central; no modo demonstração é a primeira da lista. */
+  function centralStore() {
+    return stores.find((store) => store.central) || null;
   }
 
   function fillStoreSelects() {
@@ -449,6 +503,8 @@
     $$('[data-permission="integrations"]').forEach((element) => { element.hidden = !can("integrations"); });
     $$('[data-permission="banners"]').forEach((element) => { element.hidden = !can("banners"); });
     $$('[data-permission="coupons"]').forEach((element) => { element.hidden = !can("coupons"); });
+    $$('[data-permission="audience"]').forEach((element) => { element.hidden = !can("audience"); });
+    $$('[data-permission="channels"]').forEach((element) => { element.hidden = !can("channels"); });
   }
 
   function renderAll() {
@@ -466,6 +522,8 @@
     renderBanners();
     renderCoupons();
     renderPalette();
+    renderAudience();
+    renderChannels();
   }
 
   /* ----------------------------------------------- clientes (cadastro web) */
@@ -506,7 +564,9 @@
     currentPage = page;
     $$("[data-page]").forEach((item) => item.classList.toggle("is-active", item.dataset.page === page));
     $$(".side-nav__item[data-nav]").forEach((item) => item.classList.toggle("is-active", item.dataset.nav === page));
-    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons", customers: "Clientes" }[page];
+    const label = { overview: "Visão geral", inventory: "Estoque", orders: "Pedidos", receipts: "Recebimento", shipping: "Expedição", integrations: "Integrações", banners: "Banners & Paleta", coupons: "Cupons", customers: "Clientes", audience: "Audiência", channels: "Canais & Marketing" }[page];
+    if (page === "audience") refreshAudience();
+    if (page === "channels") renderChannels();
     $("#page-title").textContent = label || "Operações";
     if (page === "customers") buscarClientes($("#customer-search")?.value || "");
     $("#sidebar").classList.remove("is-open");
@@ -900,8 +960,8 @@
 
   async function loadSupabaseData() {
     const client = window.C18_SUPABASE;
-    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult, couponResult] = await Promise.all([
-      client.from("stores").select("id, code, name").eq("active", true).order("name"),
+    const [storeResult, inventoryResult, orderResult, receiptResult, integrationResult, movementResult, bannerResult, paletteResult, couponResult, channelResult] = await Promise.all([
+      client.from("stores").select("*").eq("active", true).order("name"),
       fetchAllRows("inventory_catalog_view", "*", "product_name"),
       client.from("orders").select("*, order_items(*), order_events(*), shipments(*)").order("created_at", { ascending: false }).limit(500),
       client.from("receipts").select("*").order("created_at", { ascending: false }).limit(500),
@@ -910,17 +970,23 @@
       client.from("site_banners").select("*").order("priority", { ascending: true }).order("created_at", { ascending: false }).limit(200),
       client.from("site_palettes").select("*").order("created_at", { ascending: false }).limit(100),
       client.from("discount_coupons").select("*").order("created_at", { ascending: false }).limit(200),
+      client.from("sales_channels").select("*").order("id"),
     ]);
 
     if (storeResult.error) throw storeResult.error;
     if (inventoryResult.error) throw inventoryResult.error;
     if (orderResult.error) throw orderResult.error;
 
-    stores.splice(0, stores.length, ...(storeResult.data || []).map((store) => ({
+    const loadedStores = (storeResult.data || []).map((store) => ({
       id: store.id,
       name: store.name,
       short: store.code || store.name,
-    })));
+      kind: store.kind || "physical",
+      central: Boolean(store.is_central),
+    }));
+    // estoque central primeiro, depois as lojas físicas em ordem alfabética
+    loadedStores.sort((a, b) => Number(b.central) - Number(a.central));
+    stores.splice(0, stores.length, ...loadedStores);
     fillStoreSelects();
 
     state.inventory = (inventoryResult.data || []).map((item) => ({
@@ -1009,6 +1075,7 @@
         id: banner.id,
         dbId: banner.id,
         position: banner.position,
+        category: banner.category || "",
         name: banner.name,
         image_path: banner.image_path,
         storagePath: storagePathFromUrl(banner.image_path),
@@ -1056,16 +1123,50 @@
         rede: ["e.Rede", "REDE", "Pagamentos"],
         clearsale: ["ClearSale", "CS", "Antifraude"],
       };
-      state.integrations = (integrationResult.data || []).map((item) => ({
-        id: item.id,
-        name: integrationMeta[item.id]?.[0] || item.id,
-        initials: integrationMeta[item.id]?.[1] || item.id.slice(0, 3).toUpperCase(),
-        role: integrationMeta[item.id]?.[2] || "Integração",
-        status: item.status,
-        environment: item.environment,
-        lastSync: item.last_success_at ? new Date(item.last_success_at).toLocaleString("pt-BR") : "Aguardando sincronização",
-        queue: Number(item.metadata?.queue || 0),
-      }));
+      state.integrations = (integrationResult.data || []).map((item) => {
+        /* canais de venda/marketing também aparecem na fila de integração */
+        const channel = Channels ? Channels.channelById(item.id) : null;
+        return {
+          id: item.id,
+          name: integrationMeta[item.id]?.[0] || (channel && channel.name) || item.id,
+          initials: integrationMeta[item.id]?.[1] || (channel && channel.initials) || item.id.slice(0, 3).toUpperCase(),
+          role: integrationMeta[item.id]?.[2] || (channel && channel.role) || "Integração",
+          status: item.status,
+          environment: item.environment,
+          lastSync: item.last_success_at ? new Date(item.last_success_at).toLocaleString("pt-BR") : "Aguardando sincronização",
+          queue: Number(item.metadata?.queue || 0),
+        };
+      });
+    }
+
+    if (channelResult && !channelResult.error) {
+      const definitions = Channels ? Channels.CHANNELS : [];
+      state.channels = definitions.map((definition) => {
+        const row = (channelResult.data || []).find((item) => item.id === definition.id);
+        return {
+          id: definition.id,
+          enabled: Boolean(row && row.enabled),
+          status: row ? row.status : "pending",
+          environment: row ? row.environment : "A configurar",
+          config: (row && row.config) || {},
+          policy: Channels.normalizePolicy((row && row.config && row.config.policy) || definition.policy),
+          lastSync: row && row.last_sync_at ? new Date(row.last_sync_at).toLocaleString("pt-BR") : "Aguardando credenciais",
+          listings: Number(row && row.metadata && row.metadata.listings || 0),
+          errors: Number(row && row.metadata && row.metadata.errors || 0),
+        };
+      });
+      /* canais que existem no banco mas não na lista local (extensão futura) */
+      (channelResult.data || []).forEach((row) => {
+        if (!state.channels.some((channel) => channel.id === row.id)) {
+          state.channels.push({
+            id: row.id, enabled: Boolean(row.enabled), status: row.status,
+            environment: row.environment, config: row.config || {},
+            policy: Channels.normalizePolicy((row.config || {}).policy || {}),
+            lastSync: row.last_sync_at ? new Date(row.last_sync_at).toLocaleString("pt-BR") : "Aguardando",
+            listings: 0, errors: 0,
+          });
+        }
+      });
     }
   }
 
@@ -1187,7 +1288,11 @@
       const scheduled = !banner.active && banner.starts_at && new Date(banner.starts_at) > now;
       const status = banner.active ? badge("No ar", "success") : scheduled ? badge("Agendado", "info") : badge("Inativo", "neutral");
       const sourceLabel = { upload: "Upload", ai: "Gerado por IA", static: "Padrão da marca" }[banner.source] || banner.source;
-      const positionLabel = banner.position === "home-hero" ? "Home — hero" : "Faixa promocional";
+      const positionLabel = banner.position === "home-hero"
+        ? "Home — hero"
+        : banner.position === "category-hero"
+          ? `Categoria${banner.category ? `: ${banner.category}` : ""} (opcional)`
+          : "Faixa promocional";
       const until = banner.ends_at ? ` · até ${new Date(banner.ends_at).toLocaleDateString("pt-BR")}` : "";
       const statsLine = heroStatsSummary(banner.stats);
       return `<article class="banner-card${banner.active ? " is-active" : ""}">
@@ -1282,6 +1387,7 @@
       bannerImageSource = banner.source;
       $("#banner-name").value = banner.name || "";
       $("#banner-position").value = banner.position || "home-hero";
+      $("#banner-category").value = banner.category || "";
       $("#banner-title-top").value = banner.title_top || "";
       $("#banner-title-bottom").value = banner.title_bottom || "";
       $("#banner-body").value = banner.body_text || "";
@@ -1302,8 +1408,39 @@
       // Começa com os números que estão no ar para o banner novo não "perder" a faixa.
       fillHeroStats(DEFAULT_HERO_STATS);
     }
+    updateBannerPositionFields();
     showBannerPreview(banner ? bannerDisplayImage(banner) : "");
     openModal("#banner-modal");
+  }
+
+  /* Banner de categoria é opcional: o campo só aparece quando a posição
+     escolhida é "category-hero", e a lista sugere as categorias que
+     existem no estoque (nomes do Alterdata) e as do site (data.js). */
+  function bannerCategoryOptions() {
+    const fromInventory = state.inventory.map((item) => String(item.category || "").trim()).filter(Boolean);
+    const fromSite = (typeof CATEGORIES !== "undefined" && Array.isArray(CATEGORIES))
+      ? CATEGORIES.map((category) => category.id).filter((id) => id !== "todos")
+      : [];
+    return Array.from(new Set(fromInventory.concat(fromSite))).sort();
+  }
+
+  function updateBannerPositionFields() {
+    const position = ($("#banner-position") || {}).value || "home-hero";
+    const field = $("#banner-category-field");
+    const isCategory = position === "category-hero";
+    if (field) field.hidden = !isCategory;
+    const input = $("#banner-category");
+    if (input) input.required = isCategory;
+    const datalist = $("#banner-category-options");
+    if (datalist) {
+      datalist.innerHTML = bannerCategoryOptions().map((value) => `<option value="${esc(value)}"></option>`).join("");
+    }
+    const note = $("#banner-foot-note");
+    if (note) {
+      note.textContent = isCategory
+        ? "O catálogo mostra esta arte só quando o visitante filtra a categoria (ou abre um produto dela). Sem banner ativo, a página fica como hoje."
+        : "A imagem e os textos aparecem na home quando o banner é ativado.";
+    }
   }
 
   function readImageFile(file, maxWidth = 1600) {
@@ -1472,10 +1609,17 @@
 
     const startsRaw = $("#banner-starts").value;
     const endsRaw = $("#banner-ends").value;
+    const position = $("#banner-position").value || "home-hero";
+    const category = $("#banner-category").value.trim();
+    if (position === "category-hero" && !category) {
+      toast("Informe a categoria deste banner (ou escolha outra posição).", "alert");
+      return;
+    }
     const payload = {
       id: bannerEditingId || "",
       name,
-      position: $("#banner-position").value || "home-hero",
+      position,
+      category: position === "category-hero" ? category : "",
       image_path: bannerImage,
       title_top: $("#banner-title-top").value.trim(),
       title_bottom: $("#banner-title-bottom").value.trim(),
@@ -1502,7 +1646,7 @@
       try { await loadSupabaseData(); } catch (_) {}
       renderBanners();
       closeModals();
-      toast(payload.active ? "Banner salvo e no ar na home." : "Banner salvo como inativo.");
+      toast(payload.active ? (payload.position === "category-hero" ? "Banner da categoria no ar." : "Banner salvo e no ar na home.") : "Banner salvo como inativo.");
       return;
     }
 
@@ -1510,13 +1654,15 @@
     const index = state.banners.findIndex((item) => item.id === record.id);
     if (index >= 0) state.banners[index] = record; else state.banners.push(record);
     if (record.active) {
-      state.banners.forEach((item) => { if (item.id !== record.id && item.position === record.position) item.active = false; });
+      state.banners.forEach((item) => {
+        if (item.id !== record.id && item.position === record.position && (item.category || "") === (record.category || "")) item.active = false;
+      });
     }
     saveState();
     syncDemoBanner();
     renderBanners();
     closeModals();
-    toast(record.active ? "Banner salvo e no ar na home." : "Banner salvo como inativo.");
+    toast(record.active ? (record.position === "category-hero" ? `Banner da categoria ${record.category} no ar.` : "Banner salvo e no ar na home.") : "Banner salvo como inativo.");
   }
 
   async function toggleBannerActive(id) {
@@ -1533,13 +1679,17 @@
     } else {
       banner.active = nextActive;
       if (nextActive) {
-        state.banners.forEach((item) => { if (item.id !== id && item.position === banner.position) item.active = false; });
+        state.banners.forEach((item) => {
+          if (item.id !== id && item.position === banner.position && (item.category || "") === (banner.category || "")) item.active = false;
+        });
       }
       saveState();
       syncDemoBanner();
       renderBanners();
     }
-    toast(nextActive ? "Banner ativado. A home já mostra a nova arte." : "Banner desativado. A home volta à arte padrão.");
+    toast(nextActive
+      ? (banner.position === "category-hero" ? `Banner da categoria ${banner.category || ""} ativado.` : "Banner ativado. A home já mostra a nova arte.")
+      : "Banner desativado. A página volta à arte padrão.");
   }
 
   async function deleteBanner(id) {
@@ -1577,9 +1727,17 @@
       (!item.starts_at || new Date(item.starts_at) <= now) &&
       (!item.ends_at || new Date(item.ends_at) >= now)
     );
+    /* banners de categoria ativos (opcionais) — lidos pelo catálogo */
+    const categories = state.banners.filter((item) =>
+      item.position === "category-hero" && item.active &&
+      (!item.starts_at || new Date(item.starts_at) <= now) &&
+      (!item.ends_at || new Date(item.ends_at) >= now)
+    );
     try {
       if (active) localStorage.setItem(BANNER_DEMO_KEY, JSON.stringify(active));
       else localStorage.removeItem(BANNER_DEMO_KEY);
+      if (categories.length) localStorage.setItem(CATEGORY_BANNER_DEMO_KEY, JSON.stringify(categories));
+      else localStorage.removeItem(CATEGORY_BANNER_DEMO_KEY);
     } catch (_) {
       toast("Limite de armazenamento do navegador atingido. Use imagens menores no modo demo.", "alert");
     }
@@ -1865,6 +2023,765 @@
     renderPalette();
     toast("Paleta padrão preto, branco e cinza restaurada.");
   }
+  /* ============================== Audiência do site ====================
+     Os números vêm de assets/js/analytics.js:
+       • modo demonstração → eventos medidos neste navegador + base de
+         exemplo (sintética e determinística, avisada na interface);
+       • modo Supabase     → RPC audience_report (migration
+         202609180004_analytics_audience.sql), agregada no banco.
+     O formato do relatório é o mesmo nos dois casos.
+     =================================================================== */
+  const audience = {
+    range: 30,
+    sample: true,
+    path: "/",
+    report: null,
+    events: [],
+    sampleEvents: [],
+    sampleKey: "",
+  };
+
+  function audienceEvents() {
+    if (!Analytics) return [];
+    const captured = Analytics.capturedEvents();
+    if (CONFIG.mode !== "demo" || !audience.sample) return captured;
+    /* a base de exemplo cobre o dobro do período para existir comparação
+       com o período anterior (limitada a 60 dias para não pesar) */
+    const key = `${audience.range}|${Math.min(audience.range * 2, 60)}`;
+    if (audience.sampleKey !== key) {
+      audience.sampleEvents = Analytics.demoEvents({ days: Math.min(audience.range * 2, 60) });
+      audience.sampleKey = key;
+    }
+    return captured.concat(audience.sampleEvents);
+  }
+
+  /* Contagem por tipo de evento — usada nos painéis de canais sem rodar a
+     agregação completa (que só faz sentido na página de audiência). */
+  function audienceEventCounts() {
+    if (audience.report && audience.report.counts) return audience.report.counts;
+    if (CONFIG.mode === "supabase") return {};
+    /* fora das páginas de audiência/canais não vale gerar a base de exemplo
+       (o painel abre na visão geral e isso custaria milhares de eventos) */
+    if (currentPage !== "audience" && currentPage !== "channels") return {};
+    const counts = {};
+    audienceEvents().forEach((event) => { counts[event.kind] = (counts[event.kind] || 0) + 1; });
+    return counts;
+  }
+
+  function currentAudienceReport() {
+    if (audience.report) return audience.report;
+    if (!Analytics) return { totals: {}, pages: [], sources: [] };
+    audience.events = audienceEvents();
+    const to = new Date();
+    const from = new Date(to.getTime() - audience.range * 86400000);
+    const report = Analytics.aggregate(audience.events, { days: audience.range, path: audience.path });
+    if (audience.sampleKey && audience.range * 2 <= 60) {
+      const previous = Analytics.aggregate(audience.events, {
+        from: new Date(from.getTime() - audience.range * 86400000).toISOString(),
+        to: from.toISOString(),
+        path: audience.path,
+      });
+      report.previous = previous.totals;
+    }
+    if (!report.funnel && Audience) report.funnel = Audience.funnel(audience.events, { from, to });
+    audience.report = report;
+    return report;
+  }
+
+  async function refreshAudience(options) {
+    const opts = options || {};
+    audience.report = null;
+    if (!opts.silent) audience.events = [];
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      try {
+        const to = new Date();
+        const from = new Date(to.getTime() - audience.range * 86400000);
+        const { data, error } = await window.C18_SUPABASE.rpc("audience_report", {
+          p_from: from.toISOString(),
+          p_to: to.toISOString(),
+          p_path: audience.path,
+        });
+        if (error) throw error;
+        audience.report = data || null;
+        if (audience.report) audience.events = [];
+      } catch (error) {
+        toast("Não foi possível ler a audiência: " + (error.message || "verifique a migration de analytics"), "alert");
+      }
+    }
+    renderAudience();
+  }
+
+  function audienceNoticeText(report) {
+    const captured = Analytics ? Analytics.capturedEvents().length : 0;
+    if (CONFIG.mode === "supabase") {
+      return `<strong>Audiência real.</strong> ${Audience.number(report.totals.sessions)} sessões lidas de <code>analytics_events</code> no período. Só entra evento de visitante que aceitou no aviso de privacidade — nenhum dado pessoal é guardado.`;
+    }
+    if (audience.sample) {
+      return `<strong>Base de exemplo ligada.</strong> ${Audience.number(report.totals.sessions)} sessões simuladas (${audience.range * 2} dias gerados) + ${Audience.number(captured)} eventos reais medidos neste navegador. Desligue para ver somente o tráfego verdadeiro.`;
+    }
+    return captured
+      ? `<strong>Somente tráfego real.</strong> ${Audience.number(captured)} eventos medidos neste navegador desde o aceite do aviso de privacidade.`
+      : `<strong>Sem visitas medidas ainda.</strong> Visite o site (fora do painel) e aceite o aviso de privacidade — ou ligue a base de exemplo para explorar os painéis.`;
+  }
+
+  function heatPathOptions(report) {
+    const pages = ((report && report.pages) || []).slice(0, 10).map((page) => page.path);
+    if (!pages.includes(audience.path)) pages.unshift(audience.path);
+    return pages;
+  }
+
+  function renderAudience() {
+    if (!Audience || !Analytics) return;
+    const container = $("#audience-metrics");
+    if (!container) return;
+    if (!can("audience")) {
+      container.innerHTML = "";
+      $("#audience-notice").innerHTML = `<p class="empty-options">A audiência fica disponível para administradores e para o perfil de consulta.</p>`;
+      return;
+    }
+
+    /* o relatório só é calculado quando a página está aberta (a agregação
+       de milhares de eventos não precisa rodar a cada mudança de estoque) */
+    if (currentPage !== "audience") return;
+
+    const report = currentAudienceReport();
+    const totals = report.totals || {};
+
+    $("#audience-notice").innerHTML = `<span><svg><use href="#i-users"/></svg></span><p>${audienceNoticeText(report)}</p>`;
+    container.innerHTML = Audience.metricCards(report);
+    $("#audience-trend").innerHTML = Audience.trendChart(report);
+    $("#audience-sources").innerHTML = Audience.trafficSources(report);
+    $("#audience-source-hint").textContent = `${Audience.number(totals.sessions)} sessões`;
+    $("#audience-referrers").innerHTML = Audience.referrersList(report);
+    $("#audience-pages").innerHTML = Audience.topPages(report, 12);
+    $("#audience-pages-hint").textContent = `${Audience.number(totals.pageviews)} páginas vistas`;
+    $("#audience-funnel").innerHTML = Audience.funnelChart(report.funnel || Audience.funnel(audience.events));
+    const bannersBox = $("#audience-banners");
+    if (bannersBox) bannersBox.innerHTML = Audience.bannersTable(report, 10);
+    $("#audience-campaigns").innerHTML = Audience.campaignsTable(report);
+    $("#audience-devices").innerHTML = Audience.devicesList(report);
+    $("#audience-locations").innerHTML = Audience.locationsList(report);
+    $("#audience-scroll").innerHTML = Audience.scrollTable(report);
+
+    const heatSelect = $("#audience-heat-path");
+    if (heatSelect) {
+      const paths = heatPathOptions(report);
+      heatSelect.innerHTML = paths.map((path) => `<option value="${esc(path)}"${path === audience.path ? " selected" : ""}>${esc(Analytics.pageLabel(path))} — ${esc(path)}</option>`).join("");
+    }
+    $("#audience-heat-zones").innerHTML = Audience.heatZones(report, audience.path);
+    $("#audience-heat-legend").innerHTML = Audience.heatLegend();
+    $("#audience-heat-grid").innerHTML = Audience.heatGrid(report);
+    $("#audience-heat-targets").innerHTML = Audience.hotTargets(report, audience.path, 8);
+  }
+
+  function toggleAudienceSample() {
+    audience.sample = !audience.sample;
+    audience.report = null;
+    const label = $("#audience-sample-label");
+    if (label) label.textContent = audience.sample ? "Exemplo ligado" : "Exemplo desligado";
+    renderAudience();
+    toast(audience.sample
+      ? "Base de exemplo ligada: os números são simulados para explorar os painéis."
+      : "Base de exemplo desligada: só aparecem as visitas reais medidas.");
+  }
+
+  function exportAudienceCsv() {
+    if (!Audience) return;
+    const report = currentAudienceReport();
+    const lines = [["secao", "item", "detalhe", "sessoes_ou_views", "participacao_ou_conversoes"]];
+    (report.pages || []).forEach((page) => lines.push(["pagina", page.label, page.path, page.views, `${page.share}%`]));
+    (report.sources || []).forEach((source) => lines.push(["origem", source.label, source.channel, source.sessions, `${source.share}%`]));
+    (report.campaigns || []).forEach((campaign) => lines.push(["campanha", campaign.campaign, `${campaign.source}/${campaign.medium}`, campaign.sessions, campaign.conversions]));
+    (report.zones || []).forEach((zone) => lines.push(["regiao_de_calor", zone.label, `${zone.path}#${zone.zone}`, zone.clicks, `${zone.share}%`]));
+    (report.banners || []).forEach((banner) => lines.push(["banner", banner.name, `${banner.position} · ${banner.views} exibições · CTR ${banner.ctr}%`, banner.clicks, banner.conversions]));
+    (report.devices || []).forEach((device) => lines.push(["dispositivo", device.label, device.type, device.sessions, `${device.share}%`]));
+    (report.locations || []).forEach((location) => lines.push(["cidade", location.name, "", location.sessions, `${location.share}%`]));
+
+    const csv = lines.map((row) => row.map((cell) => {
+      const text = String(cell ?? "");
+      return /[",\n;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }).join(";")).join("\n");
+
+    const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `audiencia-c18-${audience.range}d.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast("Relatório de audiência exportado em CSV.");
+  }
+
+  /* ============================ Canais & Marketing =====================
+     Google Merchant Center, Meta Ads, GA4 e marketplaces. As definições,
+     a política de preço e a montagem dos feeds estão em
+     admin/assets/channels.js; os segredos ficam no servidor e a
+     sincronização roda nas Edge Functions de supabase/functions/.
+     =================================================================== */
+  let channelEditingId = null;
+  let feedChannelId = "google-merchant";
+  let policyChannelId = "google-merchant";
+
+  function channelState(id) {
+    return state.channels.find((channel) => channel.id === id) || null;
+  }
+
+  function channelMeta(id) {
+    return Channels ? Channels.channelById(id) : null;
+  }
+
+  /* Catálogo publicável: os itens vêm de todas as lojas, mas o estoque
+     publicado é só o saldo do estoque central (Ecommerce C18). Sem loja
+     central marcada, soma todas as lojas. */
+  function channelCatalog() {
+    if (!Channels) return [];
+    const central = centralStore();
+    return Channels.catalogFromInventory(state.inventory, { siteUrl: SITE_URL, storeId: central ? central.id : "" });
+  }
+
+  /* Linhas prontas para publicar: preço e estoque já passam pela política
+     do canal, com as pendências apontadas pela validação do feed. */
+  function channelRows(channelId) {
+    const channel = channelMeta(channelId);
+    if (!channel || !Channels || channel.kind === "measurement") return [];
+    const record = channelState(channelId);
+    const policy = (record && record.policy) || channel.policy || Channels.DEFAULT_POLICY;
+    return channelCatalog().map((item) => {
+      const row = Channels.buildFeedRow(item, channelId, policy);
+      const problems = Channels.validateFeedRow(row, channelId);
+      /* cada canal nomeia preço e estoque de um jeito no feed; o cálculo
+         vale para todos e é o mesmo usado na montagem da linha */
+      const rules = Channels.normalizePolicy(policy);
+      const stock = Channels.stockForChannel(item.stock, channel, rules);
+      const price = Channels.priceForChannel(item.price, channel, rules);
+      const publish = !rules.publishOnlyAvailable || stock > 0;
+      return {
+        ...row,
+        _item: item,
+        _problems: problems,
+        _stock: stock,
+        _price: price,
+        _publish: publish,
+        _status: Channels.listingStatus({ stock: publish ? stock : 0, price, paused: !publish }),
+      };
+    });
+  }
+
+  function channelStatusLabel(status) {
+    return (Channels && Channels.STATUS_LABELS[status]) || status || "pending";
+  }
+
+  function listingStatusLabel(status) {
+    return (Channels && Channels.LISTING_STATUS_LABELS[status]) || status;
+  }
+
+  function renderChannelCards() {
+    const adsBox = $("#channel-cards-ads");
+    const marketBox = $("#channel-cards-marketplaces");
+    if (!adsBox || !marketBox || !Channels) return;
+
+    const card = (channel) => {
+      const record = channelState(channel.id) || {};
+      const status = record.status || "pending";
+      const rows = channelRows(channel.id);
+      const publishable = rows.filter((row) => row._status === "published").length;
+      const issues = rows.filter((row) => row._problems.length).length;
+      const dot = status === "connected" || status === "syncing" ? "" : status === "error" ? " is-off" : " is-warning";
+      const fee = Number(channel.fee || 0);
+      const counts = channel.kind === "measurement" || channel.id === "meta-ads" ? audienceEventCounts() : null;
+      const conversionCount = counts
+        ? (channel.id === "google-ads"
+          ? googleAdsRows().length
+          : ["add_to_cart", "checkout_intent", "whatsapp", "purchase"].reduce((sum, kind) => sum + (counts[kind] || 0), 0))
+        : null;
+      const measurementLabel = channel.id === "google-ads" ? "Vendas com id do anúncio" : "Conversões no período";
+
+      return `<article class="channel-card${record.enabled ? " is-on" : ""}">
+        <div class="channel-card__head">
+          <span class="integration-logo">${esc(channel.initials)}</span>
+          <div><strong>${esc(channel.name)}</strong><small>${esc(channel.role)}</small></div>
+          <i class="status-dot${dot}"></i>
+        </div>
+        <dl class="channel-card__facts">
+          <dt>Status</dt><dd>${esc(channelStatusLabel(status))}</dd>
+          ${channel.kind === "measurement"
+            ? `<dt>${measurementLabel}</dt><dd>${Audience.number(conversionCount || 0)}</dd>`
+            : `<dt>Itens prontos</dt><dd>${Audience.number(publishable)} de ${Audience.number(rows.length)}${issues ? ` · ${issues} com pendência` : ""}</dd>`}
+          ${fee ? `<dt>Comissão do canal</dt><dd>${fee}% → markup sugerido ${Audience.number(Channels.suggestedMarkup(fee))}%</dd>` : `<dt>Formato do feed</dt><dd>${esc((channel.feedFormat || "json").toUpperCase())}</dd>`}
+          <dt>Última sincronização</dt><dd>${esc(record.lastSync || "—")}</dd>
+        </dl>
+        <div class="channel-card__foot">
+          <button class="btn btn--secondary" data-channel-config="${esc(channel.id)}">Configurar</button>
+          ${channel.id === "google-ads"
+            ? `<button class="btn btn--secondary" data-channel-ads-csv="${esc(channel.id)}">CSV de conversões</button><button class="btn btn--primary" data-channel-test="${esc(channel.id)}">Testar conexão</button>`
+            : channel.kind === "measurement"
+              ? `<button class="btn btn--primary" data-channel-test="${esc(channel.id)}">Testar evento</button>`
+              : `<button class="btn btn--primary" data-channel-publish="${esc(channel.id)}">Publicar catálogo</button>`}
+        </div>
+      </article>`;
+    };
+
+    adsBox.innerHTML = Channels.adChannels().map(card).join("");
+    marketBox.innerHTML = Channels.marketplaces().map(card).join("");
+  }
+
+  function fillChannelSelects() {
+    if (!Channels) return;
+    const options = Channels.CHANNELS.map((channel) => `<option value="${esc(channel.id)}">${esc(channel.name)}</option>`).join("");
+    const feedOptions = Channels.CHANNELS.filter((channel) => channel.kind !== "measurement")
+      .map((channel) => `<option value="${esc(channel.id)}">${esc(channel.name)}</option>`).join("");
+    const policySelect = $("#channel-policy-channel");
+    const feedSelect = $("#feed-channel");
+    if (policySelect) policySelect.innerHTML = options;
+    if (feedSelect) feedSelect.innerHTML = feedOptions;
+    if (!Channels.CHANNELS.some((channel) => channel.kind !== "measurement" && channel.id === policyChannelId)) {
+      policyChannelId = Channels.CHANNELS[0].id;
+    }
+    if (policySelect) policySelect.value = policyChannelId;
+    if (feedSelect) feedSelect.value = feedChannelId;
+  }
+
+  function renderChannelPolicy() {
+    if (!Channels) return;
+    const channel = channelMeta(policyChannelId) || Channels.CHANNELS[0];
+    const record = channelState(channel.id) || {};
+    const policy = Channels.normalizePolicy(record.policy || channel.policy);
+    const markup = $("#channel-policy-markup");
+    if (!markup) return;
+    markup.value = String(policy.markup);
+    $("#channel-policy-rounding").value = policy.rounding;
+    $("#channel-policy-buffer").value = String(policy.stockBuffer);
+    $("#channel-policy-min").value = String(policy.minPrice);
+    $("#channel-policy-max").value = String(policy.maxPublished);
+    $("#channel-policy-available").checked = policy.publishOnlyAvailable;
+    const hint = $("#channel-policy-hint");
+    if (hint) hint.textContent = channel.name;
+    const suggestion = $("#channel-policy-suggestion");
+    if (suggestion) {
+      suggestion.textContent = Number(channel.fee)
+        ? `Este canal cobra ~${channel.fee}% de comissão: com ${Audience.number(policy.markup)}% de markup o preço fica ${Audience.money(Channels.priceForChannel(100, channel, policy))} para cada R$ 100,00 de varejo (markup que empata: ${Audience.number(Channels.suggestedMarkup(channel.fee))}%).`
+        : "Canal de mídia: normalmente publica o mesmo preço do site.";
+    }
+  }
+
+  function feedFormatFor(channelId) {
+    const channel = channelMeta(channelId);
+    if (!channel) return { extension: "csv", mime: "text/csv", label: "Baixar CSV" };
+    if (channelId === "google-merchant") return { extension: "xml", mime: "application/xml", label: "Baixar XML" };
+    if (channelId === "amazon") return { extension: "txt", mime: "text/tab-separated-values", label: "Baixar TSV" };
+    return { extension: "csv", mime: "text/csv", label: "Baixar CSV" };
+  }
+
+  function renderFeedPreview() {
+    if (!Channels) return;
+    const channel = channelMeta(feedChannelId) || Channels.CHANNELS[0];
+    const rows = channelRows(channel.id);
+    const columns = Channels.feedColumns(channel.id);
+    const head = $("#feed-head");
+    const body = $("#feed-body");
+    if (!head || !body) return;
+
+    head.innerHTML = `<tr>${columns.map((column) => `<th>${esc(column)}</th>`).join("")}<th>Pendências</th></tr>`;
+    body.innerHTML = rows.map((row) => `<tr>
+      ${columns.map((column) => `<td><span class="feed-cell" title="${esc(row[column])}">${esc(row[column])}</span></td>`).join("")}
+      <td>${row._problems.length
+        ? `<span class="status-badge is-warning" title="${esc(row._problems.join(" · "))}">${row._problems.length}</span>`
+        : `<span class="status-badge is-success">ok</span>`}</td>
+    </tr>`).join("") || Audience.emptyMessage("Nenhum item de catálogo para publicar.", columns.length + 1);
+
+    const publishable = rows.filter((row) => row._publish).length;
+    const withIssues = rows.filter((row) => row._problems.length).length;
+    const value = rows.reduce((sum, row) => sum + row._price * Math.min(1, row._stock), 0);
+    $("#feed-summary").innerHTML = [
+      ["Itens no catálogo", Audience.number(rows.length)],
+      ["Prontos para publicar", Audience.number(publishable)],
+      ["Com pendência", Audience.number(withIssues)],
+      ["Preço médio no canal", Audience.money(rows.length ? rows.reduce((sum, row) => sum + row._price, 0) / rows.length : 0)],
+      ["Valor publicável", Audience.money(value)],
+      ["Formato", String(channel.feedFormat || "json").toUpperCase()],
+      ["Estoque publicado", centralStore() ? centralStore().short : "todas as lojas"],
+    ].map(([label, value2]) => `<span class="summary-chip"><strong>${value2}</strong> ${esc(label)}</span>`).join("");
+
+    const download = $("#feed-download");
+    if (download) {
+      const format = feedFormatFor(channel.id);
+      $("#feed-download-label").textContent = format.label;
+      download.dataset.format = format.extension;
+    }
+  }
+
+  function downloadFeed() {
+    if (!Channels) return;
+    const channel = channelMeta(feedChannelId) || Channels.CHANNELS[0];
+    const rows = channelRows(channel.id);
+    const format = feedFormatFor(channel.id);
+    let content = "";
+    if (channel.id === "google-merchant" && format.extension === "xml") {
+      content = Channels.toGoogleXml(rows, { link: SITE_URL, title: "Censura 18 — Google Merchant Center" });
+    } else if (format.extension === "txt") {
+      content = Channels.toTsv(rows, channel.id);
+    } else {
+      content = Channels.toCsv(rows, channel.id);
+    }
+    const blob = new Blob([content], { type: `${format.mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `c18-${channel.id}-feed.${format.extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast(`Feed de ${channel.name} gerado (${Audience.number(rows.length)} itens).`);
+  }
+
+  function renderChannelListings() {
+    const body = $("#channel-listings");
+    if (!body || !Channels) return;
+    const enabled = state.channels.filter((channel) => channel.enabled);
+    const hint = $("#channel-listings-hint");
+    const previewMode = !enabled.length;
+    const list = previewMode ? [channelState(feedChannelId) || { id: feedChannelId }] : enabled;
+
+    const rows = list.flatMap((record) => channelRows(record.id).map((row) => ({ ...row, _channel: record.id })));
+    if (hint) {
+      hint.textContent = previewMode
+        ? "Prévia: nenhum canal habilitado ainda"
+        : `${Audience.number(enabled.length)} canais habilitados`;
+    }
+    body.innerHTML = rows.map((row) => {
+      const channel = channelMeta(row._channel) || { name: row._channel };
+      const statusType = { published: "success", out_of_stock: "warning", paused: "neutral", draft: "neutral", error: "danger" }[row._status] || "neutral";
+      return `<tr>
+        <td><span class="movement-product"><strong>${esc(channel.name)}</strong><small>${esc((channel.kind === "marketplace" ? "Marketplace" : channel.kind === "feed" ? "Feed" : "Medição"))}</small></span></td>
+        <td>${esc(row._item.title)}</td>
+        <td><span class="code">${esc(row._item.sku)}</span></td>
+        <td><strong>${Audience.money(row._price)}</strong>${row._item.price !== row._price ? `<br><small>site: ${Audience.money(row._item.price)}</small>` : ""}</td>
+        <td>${Audience.number(row._stock)}${row._stock < row._item.stock ? `<br><small>saldo: ${Audience.number(row._item.stock)}</small>` : ""}</td>
+        <td>${badge(listingStatusLabel(row._status), statusType)}${previewMode ? ` ${badge("Prévia", "neutral")}` : ""}</td>
+        <td>${row._problems.length ? `<span class="status-badge is-warning" title="${esc(row._problems.join(" · "))}">${esc(row._problems[0])}</span>` : `<span class="status-badge is-success">Pronto</span>`}</td>
+      </tr>`;
+    }).join("") || Audience.emptyMessage("Nenhum item para publicar.", 7);
+  }
+
+  function renderConversionMap() {
+    const body = $("#conversion-map");
+    if (!body || !Channels) return;
+    const counts = audienceEventCounts();
+    const metaRecord = channelState("meta-ads") || {};
+    const ga4Record = channelState("ga4") || {};
+    const adsRecord = channelState("google-ads") || {};
+    const adsConfig = adsRecord.config || {};
+    const hint = $("#conversion-hint");
+    if (hint) {
+      hint.textContent = [metaRecord.enabled ? "Meta CAPI ativo" : "Meta CAPI aguardando segredos",
+        ga4Record.enabled ? "GA4 ativo" : "GA4 aguardando segredos",
+        adsRecord.enabled ? "Google Ads ativo" : "Google Ads por CSV até conectar"].join(" · ");
+    }
+    const adsName = (event) => {
+      if (event.ads === "purchase") return adsConfig.conversion_name || Channels.GOOGLE_ADS_DEFAULTS.conversionName;
+      if (event.ads === "whatsapp") return adsConfig.whatsapp_conversion_name || "";
+      return "";
+    };
+    body.innerHTML = Channels.CONVERSION_EVENTS.map((event) => {
+      const count = counts[event.site] || 0;
+      const sending = metaRecord.enabled || ga4Record.enabled;
+      const ads = adsName(event);
+      return `<tr>
+        <td><span class="movement-product"><strong>${esc(event.label)}</strong><small>${esc(event.site)}</small></span></td>
+        <td><code>${esc(event.meta)}</code></td>
+        <td><code>${esc(event.ga4)}</code></td>
+        <td>${ads ? `<code>${esc(ads)}</code>` : event.ads ? `<small>cadastre a ação em Google Ads → Configurar</small>` : "—"}</td>
+        <td>${Audience.number(count)}</td>
+        <td>${badge(sending ? "Pronto para envio" : "Aguardando conexão", sending ? "success" : "neutral")}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  /* Conversões com id de clique do Google Ads (gclid/gbraid/wbraid) no
+     período: compra sempre; WhatsApp quando a ação está cadastrada. */
+  function googleAdsRows() {
+    if (!Channels) return [];
+    const config = (channelState("google-ads") || {}).config || {};
+    return Channels.googleAdsConversionRows(audienceEvents(), {
+      conversionName: config.conversion_name,
+      whatsappName: config.whatsapp_conversion_name,
+    });
+  }
+
+  function downloadText(content, filename, mime) {
+    const blob = new Blob([content], { type: `${mime || "text/csv"};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  /* CSV no modelo "conversões de cliques" do Google Ads — o caminho para
+     devolver as vendas ao anúncio antes (ou em vez) da API. */
+  async function exportGoogleAdsCsv() {
+    if (!requirePermission("channels") || !Channels) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      try {
+        const { data, error } = await window.C18_SUPABASE.functions.invoke("google-ads-conversions", {
+          body: { export: true, days: audience.range || 30, pending: false },
+        });
+        if (error) throw error;
+        if (!data || !data.rows) { toast("Nenhuma venda com id de clique do Google Ads no período.", "alert"); return; }
+        downloadText(data.csv, data.filename || `google-ads-conversoes-${stamp}.csv`);
+        toast(`${Audience.number(data.rows)} conversões no CSV do Google Ads${data.ios ? ` (${data.ios} só pela API: gbraid/wbraid)` : ""}.`);
+      } catch (error) {
+        toast(error.message || "Não foi possível gerar o CSV do Google Ads.", "alert");
+      }
+      return;
+    }
+    const rows = googleAdsRows();
+    if (!rows.length) { toast("Nenhuma venda com id de clique do Google Ads no período.", "alert"); return; }
+    downloadText(Channels.toGoogleAdsCsv(rows), `google-ads-conversoes-${stamp}.csv`);
+    toast(`${Audience.number(rows.filter((row) => row["Google Click ID"]).length)} conversões no CSV do Google Ads (Objetivos → Conversões → Uploads).`);
+  }
+
+  function renderChannelsNotice() {
+    const box = $("#channels-notice");
+    if (!box || !Channels) return;
+    const enabled = state.channels.filter((channel) => channel.enabled);
+    const central = centralStore();
+    const stockNote = central
+      ? ` Estoque publicado: <strong>${esc(central.short)}</strong> (estoque central) — as lojas físicas não entram no saldo dos canais.`
+      : " Nenhuma loja marcada como estoque central: o saldo publicado soma todas as lojas.";
+    const missingSecrets = enabled.length ? "" : " Cadastre os segredos no Supabase (o arquivo <code>.env.example</code> lista todos) e habilite o canal aqui.";
+    box.innerHTML = `<span><svg><use href="#i-megaphone"/></svg></span><p>${enabled.length
+      ? `<strong>${Audience.number(enabled.length)} canais habilitados.</strong> Preço e estoque saem do cadastro de estoque; a fila de integração (Edge Function <code>integration-worker</code>) envia, retenta e registra cada lote.`
+      : `<strong>Nenhum canal habilitado ainda.</strong> As integrações estão prontas no código: Google Merchant Center, Meta Ads, GA4, Google Ads e cinco marketplaces.${missingSecrets}`}${stockNote}</p>`;
+  }
+
+  function renderChannels() {
+    if (!Channels) return;
+    fillChannelSelects();
+    renderChannelCards();
+    renderChannelPolicy();
+    renderFeedPreview();
+    renderChannelListings();
+    renderConversionMap();
+    renderChannelsNotice();
+  }
+
+  function openChannelModal(id) {
+    const channel = channelMeta(id);
+    if (!channel) return;
+    channelEditingId = id;
+    const record = channelState(id) || {};
+    const policy = Channels.normalizePolicy(record.policy || channel.policy);
+    const config = record.config || {};
+
+    $("#channel-modal-title").textContent = channel.name;
+    $("#channel-modal-kicker").textContent = Channels.KIND_LABELS[channel.kind] || "Canal";
+    $("#channel-modal-role").textContent = channel.role;
+    $("#channel-modal-secrets").innerHTML = channel.secrets.map((secret) => `<li><code>${esc(secret.name)}</code><small>${esc(secret.label)}</small></li>`).join("");
+    $("#channel-modal-operations").innerHTML = channel.operations.map((operation) => `<span class="op-chip">${esc(operation)}</span>`).join("");
+    const docs = $("#channel-modal-docs");
+    if (docs) docs.href = channel.docs || "#";
+    $("#channel-modal-config").innerHTML = channel.fields.map((field) => `<label class="form-field"><span>${esc(field.label)}${field.required ? " <b>*</b>" : ""}</span><input data-channel-field="${esc(field.key)}" maxlength="160" value="${esc(config[field.key] || "")}" placeholder="${esc(field.placeholder || "")}"></label>`).join("");
+    $("#channel-modal-markup").value = String(policy.markup);
+    $("#channel-modal-rounding").value = policy.rounding;
+    $("#channel-modal-buffer").value = String(policy.stockBuffer);
+    $("#channel-modal-min").value = String(policy.minPrice);
+    $("#channel-modal-enabled").checked = Boolean(record.enabled);
+    $("#channel-modal-suggestion").textContent = Number(channel.fee)
+      ? `Comissão média de ${channel.fee}% → markup que mantém a margem: ${Audience.number(Channels.suggestedMarkup(channel.fee))}%.`
+      : "Canal de mídia: use o mesmo preço do site para não divergir do anúncio.";
+    $("#channel-foot-note").textContent = record.enabled
+      ? "Canal habilitado: a fila de integração processa as operações deste serviço."
+      : "Salvar não envia nada: a publicação do catálogo é o passo seguinte.";
+    openModal("#channel-modal");
+  }
+
+  function collectChannelPayload() {
+    const channel = channelMeta(channelEditingId);
+    if (!channel) return null;
+    const config = {};
+    $$("[data-channel-field]").forEach((input) => {
+      const value = String(input.value || "").trim();
+      if (value) config[input.dataset.channelField] = value;
+    });
+    const missing = channel.fields.filter((field) => field.required && !config[field.key]);
+    return {
+      id: channel.id,
+      config,
+      missing,
+      enabled: $("#channel-modal-enabled").checked,
+      policy: {
+        markup: Number($("#channel-modal-markup").value || 0),
+        rounding: $("#channel-modal-rounding").value,
+        stockBuffer: Number($("#channel-modal-buffer").value || 0),
+        minPrice: Number($("#channel-modal-min").value || 0),
+        maxPublished: Number(($("#channel-policy-max") || {}).value || 0),
+        publishOnlyAvailable: Boolean(($("#channel-policy-available") || {}).checked),
+      },
+    };
+  }
+
+  async function saveChannel(event) {
+    event.preventDefault();
+    if (!requirePermission("channels")) return;
+    const payload = collectChannelPayload();
+    if (!payload) return;
+    const note = $("#channel-foot-note");
+
+    if (payload.enabled && payload.missing.length) {
+      const message = `Preencha ${payload.missing.map((field) => field.label).join(", ")} antes de habilitar o canal.`;
+      if (note) note.textContent = message;
+      toast(message, "alert");
+      return;
+    }
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const button = $("#channel-save");
+      button.disabled = true;
+      const { error } = await window.C18_SUPABASE.rpc("save_sales_channel", { p_payload: payload });
+      button.disabled = false;
+      if (error) {
+        if (note) note.textContent = error.message || "Não foi possível salvar o canal.";
+        toast(error.message || "Não foi possível salvar o canal.", "alert");
+        return;
+      }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderChannels();
+      closeModals();
+      toast("Canal salvo. As credenciais continuam apenas no servidor.");
+      return;
+    }
+
+    const record = channelState(payload.id) || { id: payload.id };
+    record.config = payload.config;
+    record.policy = payload.policy;
+    record.enabled = payload.enabled;
+    record.status = payload.enabled ? "connected" : "pending";
+    record.environment = payload.enabled ? "Produção" : "A configurar";
+    record.lastSync = payload.enabled ? "Pronto para publicar" : "Aguardando credenciais";
+    const index = state.channels.findIndex((channel) => channel.id === payload.id);
+    if (index >= 0) state.channels[index] = record; else state.channels.push(record);
+    saveState();
+    renderChannels();
+    closeModals();
+    toast(payload.enabled ? `${channelMeta(payload.id).name} habilitado.` : `${channelMeta(payload.id).name} salvo (desabilitado).`);
+  }
+
+  async function publishChannel(channelId) {
+    if (!requirePermission("channels")) return;
+    const channel = channelMeta(channelId);
+    const record = channelState(channelId);
+    if (!channel || !record) return;
+    const rows = channelRows(channelId);
+    const publishable = rows.filter((row) => row._publish);
+    const issues = rows.filter((row) => row._problems.length);
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { data, error } = await window.C18_SUPABASE.rpc("publish_catalog_to_channel", {
+        p_channel_id: channelId,
+        p_options: { site_url: SITE_URL, policy: record.policy },
+      });
+      if (error) { toast(error.message || "Não foi possível publicar o catálogo.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+      renderChannels();
+      toast(`Catálogo enviado para ${channel.name}: ${(data && data.published) || publishable.length} itens na fila.`);
+      return;
+    }
+
+    record.listings = publishable.length;
+    record.errors = issues.length;
+    record.lastSync = record.enabled ? `Simulado agora (${publishable.length} itens)` : "Prévia gerada (canal desabilitado)";
+    record.status = record.enabled ? "syncing" : "pending";
+    saveState();
+    renderChannels();
+    toast(record.enabled
+      ? `${channel.name}: ${publishable.length} itens prontos${issues.length ? `, ${issues.length} com pendência` : ""}. No modo demonstração nada é enviado.`
+      : `Prévia de ${channel.name}: ${publishable.length} itens. Habilite o canal e cadastre os segredos para publicar.`, issues.length ? "alert" : "check");
+  }
+
+  async function publishEnabledChannels() {
+    if (!requirePermission("channels")) return;
+    const enabled = state.channels.filter((channel) => channel.enabled);
+    if (!enabled.length) {
+      const channel = channelMeta(feedChannelId);
+      toast(`Nenhum canal habilitado — gerando a prévia de ${channel ? channel.name : feedChannelId}.`, "alert");
+      await publishChannel(feedChannelId);
+      return;
+    }
+    for (const record of enabled) {
+      await publishChannel(record.id);
+    }
+  }
+
+  /* Envia um evento de teste pela Edge Function marketing-events (Meta CAPI
+     e GA4 Measurement Protocol) — só com o Supabase ligado e segredos ok. */
+  async function testChannelEvent(channelId) {
+    if (!requirePermission("channels")) return;
+    const channel = channelMeta(channelId);
+    if (!channel) return;
+    if (CONFIG.mode !== "supabase" || !window.C18_SUPABASE) {
+      toast(channelId === "google-ads"
+        ? `No modo demonstração a conexão com o Google Ads é simulada — ${Audience.number(googleAdsRows().length)} vendas com id de clique no período.`
+        : `No modo demonstração o evento de teste para ${channel.name} é simulado.`, "alert");
+      return;
+    }
+    if (channelId === "google-ads") {
+      try {
+        const { data, error } = await window.C18_SUPABASE.functions.invoke("google-ads-conversions", { body: { test: true } });
+        if (error) throw error;
+        const result = data || {};
+        if (result.error) throw new Error(result.error);
+        toast(result.hint || (result.ok ? "Google Ads conectado." : "Google Ads ainda não conectado."), result.ok ? "check" : "alert");
+      } catch (error) {
+        toast(error.message || "Não foi possível testar a conexão com o Google Ads.", "alert");
+      }
+      return;
+    }
+    try {
+      const { data, error } = await window.C18_SUPABASE.functions.invoke("marketing-events", {
+        body: { test: true, channel: channelId, event: "PageView" },
+      });
+      if (error) throw error;
+      toast(`${channel.name}: evento de teste enviado (${(data && data.sent) || 0} destino(s)).`);
+    } catch (error) {
+      toast(error.message || "Não foi possível enviar o evento de teste.", "alert");
+    }
+  }
+
+  async function saveChannelPolicy(event) {
+    event.preventDefault();
+    if (!requirePermission("channels")) return;
+    const record = channelState(policyChannelId);
+    if (!record) return;
+    record.policy = Channels.normalizePolicy({
+      markup: Number($("#channel-policy-markup").value || 0),
+      rounding: $("#channel-policy-rounding").value,
+      stockBuffer: Number($("#channel-policy-buffer").value || 0),
+      minPrice: Number($("#channel-policy-min").value || 0),
+      maxPublished: Number($("#channel-policy-max").value || 0),
+      publishOnlyAvailable: $("#channel-policy-available").checked,
+    });
+
+    if (CONFIG.mode === "supabase" && window.C18_SUPABASE) {
+      const { error } = await window.C18_SUPABASE.rpc("save_sales_channel", {
+        p_payload: { id: record.id, config: record.config || {}, enabled: record.enabled, policy: record.policy },
+      });
+      if (error) { toast(error.message || "Não foi possível aplicar a política.", "alert"); return; }
+      try { await loadSupabaseData(); } catch (_) {}
+    } else {
+      saveState();
+    }
+    renderChannels();
+    toast(`Política aplicada a ${channelMeta(record.id).name}: markup ${Audience.number(record.policy.markup)}%, reserva ${record.policy.stockBuffer} un.`);
+  }
+
   function bindEvents() {
     document.addEventListener("click", (event) => {
       const nav = event.target.closest("[data-nav]");
@@ -1886,6 +2803,13 @@
       if (couponEdit) { if (requirePermission("coupons")) openCouponModal(couponEdit.dataset.couponEdit); return; }
       const couponDelete = event.target.closest("[data-coupon-delete]");
       if (couponDelete) { deleteCoupon(couponDelete.dataset.couponDelete); return; }
+      const channelConfig = event.target.closest("[data-channel-config]");
+      if (channelConfig) { if (requirePermission("channels")) openChannelModal(channelConfig.dataset.channelConfig); return; }
+      const channelPublish = event.target.closest("[data-channel-publish]");
+      if (channelPublish) { publishChannel(channelPublish.dataset.channelPublish); return; }
+      const channelTest = event.target.closest("[data-channel-test]");
+      if (channelTest) { testChannelEvent(channelTest.dataset.channelTest); return; }
+      if (event.target.closest("[data-channel-ads-csv]") || event.target.closest("#conversion-ads-csv")) { exportGoogleAdsCsv(); return; }
       if (event.target.closest('[data-action="import"]')) { if (requirePermission("inventory")) { resetImport(); openModal("#import-modal"); } return; }
       if (event.target.closest('[data-action="manual"]')) { if (requirePermission("inventory")) openManual(); return; }
       if (event.target.closest("[data-close-modal]")) { closeModals(); return; }
@@ -1957,6 +2881,7 @@
       if (event.target.matches("#inventory-store, #inventory-stock")) renderInventory();
       if (event.target.matches("#import-store")) updateImportPreview();
       if (event.target.matches("#coupon-scope")) updateCouponScopeFields();
+      if (event.target.matches("#banner-position")) updateBannerPositionFields();
     });
 
     $("#inventory-search").addEventListener("input", renderInventory);
@@ -1993,6 +2918,34 @@
     ["dragenter", "dragover"].forEach((name) => bannerDropzone.addEventListener(name, (event) => { event.preventDefault(); bannerDropzone.classList.add("is-dragging"); }));
     ["dragleave", "drop"].forEach((name) => bannerDropzone.addEventListener(name, (event) => { event.preventDefault(); bannerDropzone.classList.remove("is-dragging"); }));
     bannerDropzone.addEventListener("drop", (event) => handleBannerFile(event.dataTransfer.files[0]));
+    /* Audiência */
+    $("#audience-range").addEventListener("change", (event) => {
+      audience.range = Number(event.target.value) || 30;
+      audience.sampleKey = "";
+      refreshAudience();
+    });
+    $("#audience-heat-path").addEventListener("change", (event) => {
+      audience.path = event.target.value || "/";
+      audience.report = null;
+      if (CONFIG.mode === "supabase") refreshAudience(); else renderAudience();
+    });
+    $("#audience-refresh").addEventListener("click", () => { refreshAudience(); toast("Audiência atualizada."); });
+    $("#audience-sample").addEventListener("click", toggleAudienceSample);
+    $("#audience-export").addEventListener("click", exportAudienceCsv);
+
+    /* Canais & Marketing */
+    $("#channels-refresh").addEventListener("click", () => { renderChannels(); toast("Canais e feed atualizados."); });
+    $("#channels-publish").addEventListener("click", publishEnabledChannels);
+    $("#channel-policy-channel").addEventListener("change", (event) => { policyChannelId = event.target.value; renderChannelPolicy(); });
+    $("#channel-policy-form").addEventListener("submit", saveChannelPolicy);
+    $("#channel-form").addEventListener("submit", saveChannel);
+    $("#feed-channel").addEventListener("change", (event) => {
+      feedChannelId = event.target.value;
+      renderFeedPreview();
+      renderChannelListings();
+    });
+    $("#feed-download").addEventListener("click", downloadFeed);
+
     $("#banner-ai-generate").addEventListener("click", runBannerAiGenerate);
     $("#banner-form").addEventListener("submit", saveBanner);
     $("#palette-form").addEventListener("submit", savePalette);

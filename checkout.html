@@ -205,6 +205,7 @@
 <script src="assets/js/pedido.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/lgpd.js"></script>
+<script src="assets/js/analytics.js"></script>
 <script>
 /* ==========================================================================
    checkout.html — fechamento do pedido com Pix ou cartão
@@ -405,6 +406,16 @@
     return `C18-DEMO-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   }
 
+  /* Audiência (assets/js/analytics.js): só grava após o aceite no aviso de
+     privacidade. begin_checkout ao abrir a página com itens; purchase quando
+     o pedido é criado — é a conversão que volta para Meta, GA4 e Google Ads. */
+  function medir(kind, data) {
+    const analytics = window.C18Analytics;
+    if (analytics && typeof analytics.track === "function") {
+      try { analytics.track(kind, data); } catch (_) { /* medição é opcional */ }
+    }
+  }
+
   async function criarPedidoRemoto(payload) {
     const { data, error } = await dbClient().rpc("criar_meu_pedido", { p_pedido: payload });
     if (error) throw error;
@@ -461,6 +472,12 @@
       }
       estado.pedidoCriado = retorno;
       estado.numero = retorno.numero;
+      medir("purchase", {
+        value: Number(retorno.total || estado.resumo.total || 0),
+        target: estado.metodo === "pix" ? "Pix" : "Cartão",
+        product_id: String((estado.resumo.items[0] || {}).id || ""),
+        category: String(retorno.numero || "").slice(0, 60),
+      });
       mostrarSucesso(retorno);
     } catch (erro) {
       const mensagem = /cadastro/i.test(erro?.message || "")
@@ -564,6 +581,11 @@
     }
 
     estado.cliente = C.currente();
+    medir("checkout_intent", {
+      value: Number(estado.resumo.subtotal || 0),
+      target: "Checkout online",
+      product_id: String((estado.resumo.items[0] || {}).id || ""),
+    });
 
     if (!supabaseMode) {
       const demo = (() => {

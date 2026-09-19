@@ -132,7 +132,9 @@
 <main id="main">
 
   <!-- ================================= HERO ================================= -->
-  <section class="hero">
+  <!-- data-banner-*: identificam a arte para a audiência (banner visto/clicado);
+       o site-config.js troca pelos dados do banner ativo no painel. -->
+  <section class="hero" data-banner-id="banner-padrao" data-banner-name="Padrão Censura 18" data-banner-position="home-hero">
     <div class="hero__media" id="hero-media">
       <img id="hero-img" src="assets/img/hero.jpg" alt="" onerror="this.style.display='none';this.parentElement.classList.add('is-missing')">
     </div>
@@ -437,5 +439,6 @@
 <script src="assets/js/gift-card.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/lgpd.js"></script>
+<script src="assets/js/analytics.js"></script>
 </body>
 </html>
